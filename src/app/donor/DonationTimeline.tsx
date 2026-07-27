@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowLeft, Check, Download, Heart } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { HandoverCodes } from '@/components/shared/handover-codes'
 import { PhotoGallery } from '@/components/shared/photo-gallery'
 import { ArrivedScene } from '@/components/illustrations/journey'
 import { Badge } from '@/components/ui/badge'
@@ -114,147 +115,156 @@ export default function DonationTimeline() {
           That item does not exist, or it is not yours.
         </p>
       ) : (
-        <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {/* The acknowledgement leads on a phone. It is the payoff, and burying
+        <>
+          {/* The answer to "where is the code I have to read out". It is on the
+              home screen too, but this is the screen someone opens when they are
+              wondering about this item specifically. */}
+          <HandoverCodes donationId={donation.id} />
+
+          <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            {/* The acknowledgement leads on a phone. It is the payoff, and burying
               it under a status rail on a 360px screen wastes it. */}
-          <div className="space-y-6 md:order-2">
-            {data?.acknowledgement ? (
-              <section className="hairline overflow-hidden rounded-sm bg-card">
-                <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-                  <Heart className="size-4 text-primary" aria-hidden />
-                  <h2 className="font-display text-display-sm">It arrived</h2>
-                </div>
+            <div className="space-y-6 md:order-2">
+              {data?.acknowledgement ? (
+                <section className="hairline overflow-hidden rounded-sm bg-card">
+                  <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                    <Heart className="size-4 text-primary" aria-hidden />
+                    <h2 className="font-display text-display-sm">It arrived</h2>
+                  </div>
 
-                {data.acknowledgement.photo_path ? (
-                  <img
-                    src={photoUrl(data.acknowledgement.photo_path)}
-                    alt={`Sent by ${data.acknowledgement.ngo_name}`}
-                    className="block w-full"
-                  />
-                ) : (
-                  <ArrivedScene className="w-full text-foreground" />
-                )}
+                  {data.acknowledgement.photo_path ? (
+                    <img
+                      src={photoUrl(data.acknowledgement.photo_path)}
+                      alt={`Sent by ${data.acknowledgement.ngo_name}`}
+                      className="block w-full"
+                    />
+                  ) : (
+                    <ArrivedScene className="w-full text-foreground" />
+                  )}
 
-                <div className="space-y-2 p-4">
-                  {data.acknowledgement.note ? (
-                    <p className="text-pretty">"{data.acknowledgement.note}"</p>
-                  ) : null}
-                  <p className="text-sm text-muted-foreground">
-                    — {data.acknowledgement.ngo_name},{' '}
-                    {format(new Date(data.acknowledgement.created_at), 'd MMM yyyy')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    This photo was sent to you alone. Nobody else can open it.
-                  </p>
-                </div>
-              </section>
-            ) : null}
+                  <div className="space-y-2 p-4">
+                    {data.acknowledgement.note ? (
+                      <p className="text-pretty">"{data.acknowledgement.note}"</p>
+                    ) : null}
+                    <p className="text-sm text-muted-foreground">
+                      — {data.acknowledgement.ngo_name},{' '}
+                      {format(new Date(data.acknowledgement.created_at), 'd MMM yyyy')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      This photo was sent to you alone. Nobody else can open it.
+                    </p>
+                  </div>
+                </section>
+              ) : null}
 
-            {donation.status === 'acknowledged' ? (
-              <Button asChild variant="outline" className="min-h-11 w-full">
-                {/* A plain anchor, not fetch — the browser's own download
+              {donation.status === 'acknowledged' ? (
+                <Button asChild variant="outline" className="min-h-11 w-full">
+                  {/* A plain anchor, not fetch — the browser's own download
                     handling is what puts the file somewhere a person can find
                     it again on Android. */}
-                <a href={`/api/donations/${donation.id}/receipt.pdf`} download>
-                  <Download aria-hidden /> Download the record (PDF)
-                </a>
-              </Button>
-            ) : null}
+                  <a href={`/api/donations/${donation.id}/receipt.pdf`} download>
+                    <Download aria-hidden /> Download the record (PDF)
+                  </a>
+                </Button>
+              ) : null}
 
-            {donation.status === 'rejected' && donation.rejected_reason ? (
-              <section className="hairline rounded-sm border-destructive/40 bg-card p-4">
-                <h2 className="font-display text-display-sm text-destructive">It was sent back</h2>
-                <p className="mt-2 text-pretty">{donation.rejected_reason}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Nothing about this counts against you. Fix what is described above and post it
-                  again.
-                </p>
-              </section>
-            ) : null}
+              {donation.status === 'rejected' && donation.rejected_reason ? (
+                <section className="hairline rounded-sm border-destructive/40 bg-card p-4">
+                  <h2 className="font-display text-display-sm text-destructive">
+                    It was sent back
+                  </h2>
+                  <p className="mt-2 text-pretty">{donation.rejected_reason}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Nothing about this counts against you. Fix what is described above and post it
+                    again.
+                  </p>
+                </section>
+              ) : null}
 
-            <section className="hairline space-y-3 rounded-sm bg-card p-4">
-              {/* Every photo they posted, not just the cover — this is the one
+              <section className="hairline space-y-3 rounded-sm bg-card p-4">
+                {/* Every photo they posted, not just the cover — this is the one
                   place a donor goes back to look at what they gave away. */}
-              <PhotoGallery photos={donation.photos ?? []} alt={donation.title} />
-              <h2 className="font-display text-display-sm leading-tight">{donation.title}</h2>
-              <p className="flex flex-wrap gap-1">
-                <Badge>{donation.category}</Badge>
-                <Badge variant="muted">×{donation.quantity}</Badge>
-              </p>
-              {donation.ngo_name ? (
-                <p className="text-sm text-muted-foreground">Claimed by {donation.ngo_name}</p>
+                <PhotoGallery photos={donation.photos ?? []} alt={donation.title} />
+                <h2 className="font-display text-display-sm leading-tight">{donation.title}</h2>
+                <p className="flex flex-wrap gap-1">
+                  <Badge>{donation.category}</Badge>
+                  <Badge variant="muted">×{donation.quantity}</Badge>
+                </p>
+                {donation.ngo_name ? (
+                  <p className="text-sm text-muted-foreground">Claimed by {donation.ngo_name}</p>
+                ) : null}
+              </section>
+            </div>
+
+            <section className="md:order-1">
+              <h2 className="mb-4 font-display text-display-sm">The journey</h2>
+
+              <ol>
+                {STAGES.map((stage, index) => {
+                  const at = reachedAt.get(stage.status)
+                  const done = at !== undefined || (currentIndex >= 0 && index < currentIndex)
+                  const current = index === currentIndex
+                  const last = index === STAGES.length - 1
+
+                  return (
+                    <li key={stage.status} className="relative flex gap-4 pb-6 last:pb-0">
+                      {!last ? (
+                        <span
+                          className={cn(
+                            'absolute left-[11px] top-6 h-full w-0.5',
+                            done ? 'bg-primary' : 'bg-border',
+                          )}
+                          aria-hidden
+                        />
+                      ) : null}
+
+                      <span
+                        className={cn(
+                          'relative grid size-6 shrink-0 place-items-center rounded-full border-2',
+                          done
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-background',
+                          current && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-background',
+                        )}
+                      >
+                        {done ? <Check className="size-3.5" aria-hidden /> : null}
+                      </span>
+
+                      <div className="min-w-0 pt-0.5">
+                        <p className={cn('font-medium', !done && 'text-muted-foreground')}>
+                          {stage.label}
+                          {current && !ended ? (
+                            <span className="ml-2 align-middle text-xs font-normal text-primary">
+                              now
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{stage.hint}</p>
+                        {at ? (
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {format(new Date(at), 'd MMM yyyy, HH:mm')}
+                          </p>
+                        ) : null}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+
+              {data?.pickup?.volunteer_name ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Collected by {data.pickup.volunteer_name}.
+                </p>
+              ) : null}
+
+              {ended ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  This item is {donation.status} and will not move again.
+                </p>
               ) : null}
             </section>
           </div>
-
-          <section className="md:order-1">
-            <h2 className="mb-4 font-display text-display-sm">The journey</h2>
-
-            <ol>
-              {STAGES.map((stage, index) => {
-                const at = reachedAt.get(stage.status)
-                const done = at !== undefined || (currentIndex >= 0 && index < currentIndex)
-                const current = index === currentIndex
-                const last = index === STAGES.length - 1
-
-                return (
-                  <li key={stage.status} className="relative flex gap-4 pb-6 last:pb-0">
-                    {!last ? (
-                      <span
-                        className={cn(
-                          'absolute left-[11px] top-6 h-full w-0.5',
-                          done ? 'bg-primary' : 'bg-border',
-                        )}
-                        aria-hidden
-                      />
-                    ) : null}
-
-                    <span
-                      className={cn(
-                        'relative grid size-6 shrink-0 place-items-center rounded-full border-2',
-                        done
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-background',
-                        current && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-background',
-                      )}
-                    >
-                      {done ? <Check className="size-3.5" aria-hidden /> : null}
-                    </span>
-
-                    <div className="min-w-0 pt-0.5">
-                      <p className={cn('font-medium', !done && 'text-muted-foreground')}>
-                        {stage.label}
-                        {current && !ended ? (
-                          <span className="ml-2 align-middle text-xs font-normal text-primary">
-                            now
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{stage.hint}</p>
-                      {at ? (
-                        <p className="font-mono text-xs text-muted-foreground">
-                          {format(new Date(at), 'd MMM yyyy, HH:mm')}
-                        </p>
-                      ) : null}
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
-
-            {data?.pickup?.volunteer_name ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Collected by {data.pickup.volunteer_name}.
-              </p>
-            ) : null}
-
-            {ended ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                This item is {donation.status} and will not move again.
-              </p>
-            ) : null}
-          </section>
-        </div>
+        </>
       )}
     </AppShell>
   )

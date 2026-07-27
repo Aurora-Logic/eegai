@@ -3,14 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { Share, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { t } from '@/lib/i18n'
-
-/**
- * Chrome fires this before showing its own install UI. Not in lib.dom yet.
- */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import { promptInstall, useInstallKind } from '@/lib/install'
 
 const INSTALL_DISMISSED_KEY = 'eegai.install-dismissed'
 
@@ -25,44 +18,20 @@ const INSTALL_DISMISSED_KEY = 'eegai.install-dismissed'
  */
 const IOS_OFFER_DELAY_MS = 30_000
 
-/** Already installed — the offer would be nonsense. */
-function isStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    // Safari's own non-standard flag, which is the only signal on older iOS.
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-  )
-}
-
 /**
- * iPhone, iPod, or iPad.
+ * Registers the service worker and owns the two moments it produces: a new
+ * version being ready, and the app being installable.
  *
- * iPadOS 13 and later report a desktop Macintosh user agent, so the string alone
- * misses every modern iPad. Touch points are the usual tell: a real Mac reports
- * 0, an iPad reports 5.
- */
-function isIos(): boolean {
-  const ua = navigator.userAgent
-  const iPhone = /iPad|iPhone|iPod/.test(ua)
-  const iPadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1
-  return iPhone || iPadOs
-}
-
-/**
- * Registers the service worker and owns the three moments it produces: a new
- * version being ready, and the app being installable on each of the two
- * platforms that matter.
+ * The installability detection itself lives in `lib/install.ts`, shared with the
+ * explicit button in the header — its listener is registered at module load
+ * because Chrome routinely fires `beforeinstallprompt` before React mounts.
  *
- * **Android and iOS need entirely different treatment.** Chrome hands us a
- * `beforeinstallprompt` event and installs on one tap. Safari has never
- * implemented that event and never will, so on iOS there is no programmatic
- * install at all — the only route is the user finding Share > Add to Home
- * Screen themselves. All we can do is tell them where it is, which means the
- * iOS path is instructions rather than a button, and pretending otherwise would
- * produce a button that does nothing.
+ * This component is only the *automatic* offer, and it takes a permanent
+ * dismissal seriously. That is exactly why the header button exists: a nudge may
+ * be declined forever, but the capability has to stay reachable.
  *
- * All of these are quiet bars at the bottom of the screen rather than modals. A
- * donor mid-post must never be interrupted by any of them.
+ * All of these are quiet bars at the bottom rather than modals. A donor mid-post
+ * must never be interrupted by any of them.
  */
 export function PwaPrompt() {
   const {
@@ -74,59 +43,25 @@ export function PwaPrompt() {
     },
   })
 
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
-  const [showIosGuide, setShowIosGuide] = useState(false)
+  const installKind = useInstallKind()
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(INSTALL_DISMISSED_KEY) === '1',
+  )
+  const [iosDelayPassed, setIosDelayPassed] = useState(false)
 
   useEffect(() => {
-    if (localStorage.getItem(INSTALL_DISMISSED_KEY) === '1') return
-    if (isStandalone()) return
+    if (installKind !== 'ios-instructions' || dismissed) return
+    const timer = window.setTimeout(() => setIosDelayPassed(true), IOS_OFFER_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [installKind, dismissed])
 
-    const onBeforeInstall = (event: Event) => {
-      // Suppress Chrome's own mini-infobar so the offer appears where the rest
-      // of the product's chrome lives.
-      event.preventDefault()
-      setInstallEvent(event as BeforeInstallPromptEvent)
-    }
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-
-    // Once installed, Chrome fires this and the offer must go away immediately —
-    // otherwise it sits there inviting someone to install what they just did.
-    const onInstalled = () => {
-      localStorage.setItem(INSTALL_DISMISSED_KEY, '1')
-      setInstallEvent(null)
-      setShowIosGuide(false)
-    }
-    window.addEventListener('appinstalled', onInstalled)
-
-    let timer: number | undefined
-    if (isIos()) {
-      timer = window.setTimeout(() => setShowIosGuide(true), IOS_OFFER_DELAY_MS)
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-      window.removeEventListener('appinstalled', onInstalled)
-      if (timer !== undefined) window.clearTimeout(timer)
-    }
-  }, [])
-
-  const dismissInstall = () => {
+  const dismiss = () => {
     localStorage.setItem(INSTALL_DISMISSED_KEY, '1')
-    setInstallEvent(null)
-    setShowIosGuide(false)
+    setDismissed(true)
   }
 
-  const acceptInstall = async () => {
-    if (!installEvent) return
-    await installEvent.prompt()
-    await installEvent.userChoice
-    // The event can only be used once, whichever way the user answered.
-    setInstallEvent(null)
-  }
-
-  // An update outranks an install offer: the running code being stale is the
-  // more urgent of the two, and two bars at once is one too many.
+  // An update outranks an install offer: stale running code is the more urgent
+  // of the two, and two bars at once is one too many.
   if (needRefresh) {
     return (
       <Bar>
@@ -148,15 +83,17 @@ export function PwaPrompt() {
     )
   }
 
-  if (installEvent) {
+  if (dismissed) return null
+
+  if (installKind === 'prompt') {
     return (
       <Bar>
         <span className="text-sm">{t('pwa.installOffer')}</span>
         <div className="flex shrink-0 gap-2">
-          <Button size="sm" className="min-h-11" onClick={() => void acceptInstall()}>
+          <Button size="sm" className="min-h-11" onClick={() => void promptInstall()}>
             {t('pwa.install')}
           </Button>
-          <Button size="sm" variant="ghost" className="min-h-11" onClick={dismissInstall}>
+          <Button size="sm" variant="ghost" className="min-h-11" onClick={dismiss}>
             {t('pwa.noThanks')}
           </Button>
         </div>
@@ -164,7 +101,7 @@ export function PwaPrompt() {
     )
   }
 
-  if (showIosGuide) {
+  if (installKind === 'ios-instructions' && iosDelayPassed) {
     return (
       <Bar>
         <div className="min-w-0 flex-1">
@@ -193,7 +130,7 @@ export function PwaPrompt() {
           size="icon"
           variant="ghost"
           className="min-h-11 shrink-0 self-start"
-          onClick={dismissInstall}
+          onClick={dismiss}
           aria-label={t('pwa.gotIt')}
         >
           <X aria-hidden />

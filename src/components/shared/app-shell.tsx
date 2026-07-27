@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { LogOut, Moon, Sun } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { InstallButton } from '@/components/shared/install-button'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { t } from '@/lib/i18n'
@@ -39,12 +41,21 @@ export function AppShell({
             </span>
           </Link>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label={t('theme.toggle')}>
+            <LanguageSwitcher />
+            <InstallButton />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="min-h-11"
+              onClick={toggle}
+              aria-label={t('theme.toggle')}
+            >
               {theme === 'dark' ? <Sun aria-hidden /> : <Moon aria-hidden />}
             </Button>
             <Button
               variant="ghost"
               size="icon"
+              className="min-h-11"
               onClick={() => void signOut()}
               aria-label={t('auth.signOut')}
             >

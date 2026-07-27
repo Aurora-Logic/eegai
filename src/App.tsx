@@ -7,6 +7,7 @@ import { OfflineBanner } from './components/shared/offline-banner'
 import { ProtectedRoute } from './components/shared/protected-route'
 import { PwaPrompt } from './components/shared/pwa-prompt'
 import { RouteFallback } from './components/shared/route-fallback'
+import { useLocale } from './hooks/use-locale'
 import { HOME_FOR_ROLE, useSession } from './hooks/use-session'
 
 /**
@@ -41,6 +42,11 @@ function Root() {
 }
 
 export default function App() {
+  // Subscribing here is what makes the language switch take effect everywhere:
+  // t() reads the active locale at call time, so one re-render from the root
+  // refreshes every string below without unmounting anything.
+  useLocale()
+
   return (
     <>
       <OfflineBanner />

@@ -43,7 +43,7 @@ const LABEL: Record<string, { line: string; kind: string }> = {
  * has the app closed and no data. That is a delivery *fallback* in M8, not a
  * replacement for this.
  */
-export function HandoverCodes() {
+export function HandoverCodes({ donationId }: { donationId?: string } = {}) {
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
 
   const { data } = useQuery({
@@ -52,7 +52,12 @@ export function HandoverCodes() {
     refetchInterval: 30_000,
   })
 
-  const codes = (data?.notifications ?? []).filter((n) => n.payload?.code)
+  // Filtered to one item when rendered on that item's own screen. Asking "where
+  // is my code" and being sent back to a list is the failure this fixes: the
+  // code belongs beside the thing it unlocks, not only on the home screen.
+  const codes = (data?.notifications ?? []).filter(
+    (n) => n.payload?.code && (!donationId || n.payload.donation_id === donationId),
+  )
   if (codes.length === 0) return null
 
   function toggle(id: string) {

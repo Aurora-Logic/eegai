@@ -70,9 +70,27 @@ export default {
       fontFamily: {
         // Noto Sans Tamil is in every stack from day one so that Tamil strings
         // land without reflowing the layout (PLAN.md §8).
-        display: ['"Bricolage Grotesque"', '"Noto Sans Tamil"', 'system-ui', 'sans-serif'],
-        sans: ['"Instrument Sans"', '"Noto Sans Tamil"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Noto Sans Tamil"', 'ui-monospace', 'monospace'],
+        display: [
+          '"Bricolage Grotesque"',
+          '"Noto Sans Tamil"',
+          '"Noto Sans Devanagari"',
+          'system-ui',
+          'sans-serif',
+        ],
+        sans: [
+          '"Instrument Sans"',
+          '"Noto Sans Tamil"',
+          '"Noto Sans Devanagari"',
+          'system-ui',
+          'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          '"Noto Sans Tamil"',
+          '"Noto Sans Devanagari"',
+          'ui-monospace',
+          'monospace',
+        ],
       },
       fontSize: {
         // Display steps only. The 20px floor from PLAN.md §8 is the smallest

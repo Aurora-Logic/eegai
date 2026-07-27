@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
 import { ArrowLeft, Check, MapPin, PackageCheck, TriangleAlert, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { HandoverCodes } from '@/components/shared/handover-codes'
 import { PhotoGallery } from '@/components/shared/photo-gallery'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -145,203 +146,209 @@ export default function NgoItem() {
       ) : (
         /* One column on a phone; the gallery takes the left half from md up so
            the photos stay on screen while the form is being filled in. */
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <PhotoGallery photos={donation.photos ?? []} alt={donation.title} />
+        <>
+          <HandoverCodes donationId={donation.id} />
 
-            <div className="mt-4 space-y-3">
-              <p className="flex flex-wrap gap-1">
-                <Badge>{donation.category}</Badge>
-                <Badge>{CONDITION_LABEL[donation.condition]}</Badge>
-                <Badge variant="muted">×{donation.quantity}</Badge>
-                <Badge variant="outline">{donation.status.replace('_', ' ')}</Badge>
-              </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <PhotoGallery photos={donation.photos ?? []} alt={donation.title} />
 
-              {donation.description ? (
-                <p className="text-pretty text-muted-foreground">{donation.description}</p>
-              ) : null}
+              <div className="mt-4 space-y-3">
+                <p className="flex flex-wrap gap-1">
+                  <Badge>{donation.category}</Badge>
+                  <Badge>{CONDITION_LABEL[donation.condition]}</Badge>
+                  <Badge variant="muted">×{donation.quantity}</Badge>
+                  <Badge variant="outline">{donation.status.replace('_', ' ')}</Badge>
+                </p>
 
-              <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {donation.pickup_address ?? `Coimbatore ${donation.pincode ?? ''}`}
-              </p>
+                {donation.description ? (
+                  <p className="text-pretty text-muted-foreground">{donation.description}</p>
+                ) : null}
 
-              {donation.condition_checklist &&
-              Object.keys(donation.condition_checklist).length > 0 ? (
-                <>
-                  <Separator />
-                  <div>
-                    {/* The gates from §M2, as the donor answered them. This is
+                <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {donation.pickup_address ?? `Coimbatore ${donation.pincode ?? ''}`}
+                </p>
+
+                {donation.condition_checklist &&
+                Object.keys(donation.condition_checklist).length > 0 ? (
+                  <>
+                    <Separator />
+                    <div>
+                      {/* The gates from §M2, as the donor answered them. This is
                         the single most useful thing on the screen for deciding
                         whether to send a volunteer across the city. */}
-                    <h2 className="text-sm font-medium">What the donor confirmed</h2>
-                    <ul className="mt-2 space-y-1 text-sm">
-                      {Object.entries(donation.condition_checklist).map(([key, value]) => (
-                        <li key={key} className="flex items-center gap-2">
-                          <Badge variant={value ? 'success' : 'destructive'}>
-                            {value ? 'yes' : 'no'}
-                          </Badge>
-                          <span className="text-muted-foreground">{key.replace(/_/g, ' ')}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="space-y-5">
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-
-            {donation.status === 'posted' ? (
-              <Button
-                className="min-h-11 w-full"
-                disabled={claim.isPending}
-                onClick={() => claim.mutate()}
-              >
-                {claim.isPending ? 'Claiming…' : t('action.claim')}
-              </Button>
-            ) : null}
-
-            {arrived ? (
-              <>
-                <fieldset>
-                  <legend className="mb-2 text-sm font-medium">
-                    Did everything arrive usable?
-                  </legend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <OutcomeButton
-                      selected={outcome === 'receive'}
-                      onClick={() => {
-                        setOutcome('receive')
-                        setError(null)
-                      }}
-                      icon={<PackageCheck className="size-5" aria-hidden />}
-                      title="Yes, it's all here"
-                      body="The donor sees this, and their item is complete."
-                      tone="good"
-                    />
-                    <OutcomeButton
-                      selected={outcome === 'reject'}
-                      onClick={() => {
-                        setOutcome('reject')
-                        setError(null)
-                      }}
-                      icon={<TriangleAlert className="size-5" aria-hidden />}
-                      title="Something's wrong"
-                      body="Tell the donor what, so the next one is right."
-                      tone="bad"
-                    />
-                  </div>
-                </fieldset>
-
-                {outcome ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="ack-note">
-                        {rejecting ? 'What is wrong?' : 'A line for the donor (optional)'}
-                      </Label>
-                      <Textarea
-                        id="ack-note"
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={4}
-                        maxLength={1000}
-                        placeholder={
-                          rejecting
-                            ? 'Three of the six shirts were torn at the seam.'
-                            : 'These went to the children at our Ganapathy centre.'
-                        }
-                      />
-                      <p
-                        className={cn(
-                          'text-xs',
-                          noteTooShort && note.length > 0
-                            ? 'text-destructive'
-                            : 'text-muted-foreground',
-                        )}
-                      >
-                        {rejecting
-                          ? 'At least a sentence. This is what the donor reads.'
-                          : 'Say where they went. This is the part donors remember.'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>
-                        {rejecting ? 'Photo of the problem' : 'Photo of the items as they arrived'}
-                      </Label>
-
-                      {photoPath ? (
-                        <div className="hairline relative overflow-hidden rounded-sm">
-                          <img
-                            src={photoUrl(photoPath)}
-                            alt="The photo you are about to send"
-                            className="block w-full"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setPhotoPath(null)}
-                            className="absolute right-2 top-2 rounded-sm bg-background/90 p-2 hover:bg-background"
-                            aria-label="Remove this photo"
-                          >
-                            <X className="size-4" aria-hidden />
-                          </button>
-                        </div>
-                      ) : (
-                        <Dropzone
-                          accept="image/jpeg,image/png,image/webp"
-                          maxFiles={1}
-                          busy={uploading}
-                          onFiles={(files) => void addPhoto(files)}
-                          label={
-                            uploading ? 'Compressing and uploading…' : 'Take or choose one photo'
-                          }
-                          hint="Only the donor of this item will ever see it."
-                        />
-                      )}
-                    </div>
-
-                    {/* Sticky on a phone so the action never scrolls out of thumb
-                        reach on a long form; static once there is room for it. */}
-                    <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
-                      <Button
-                        className="min-h-11 w-full"
-                        variant={rejecting ? 'destructive' : 'default'}
-                        disabled={!canSubmit}
-                        onClick={() => submit.mutate()}
-                      >
-                        {submit.isPending ? (
-                          'Sending…'
-                        ) : rejecting ? (
-                          'Send this back to the donor'
-                        ) : (
-                          <>
-                            <Check aria-hidden /> Confirm it arrived
-                          </>
-                        )}
-                      </Button>
-                      {!photoPath ? (
-                        <p className="mt-2 text-center text-xs text-muted-foreground">
-                          Add a photo to finish.
-                        </p>
-                      ) : null}
+                      <h2 className="text-sm font-medium">What the donor confirmed</h2>
+                      <ul className="mt-2 space-y-1 text-sm">
+                        {Object.entries(donation.condition_checklist).map(([key, value]) => (
+                          <li key={key} className="flex items-center gap-2">
+                            <Badge variant={value ? 'success' : 'destructive'}>
+                              {value ? 'yes' : 'no'}
+                            </Badge>
+                            <span className="text-muted-foreground">{key.replace(/_/g, ' ')}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </>
                 ) : null}
-              </>
-            ) : donation.status !== 'posted' ? (
-              <p className="text-muted-foreground">
-                Nothing to do here yet. This item is {donation.status.replace('_', ' ')}.
-              </p>
-            ) : null}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+
+              {donation.status === 'posted' ? (
+                <Button
+                  className="min-h-11 w-full"
+                  disabled={claim.isPending}
+                  onClick={() => claim.mutate()}
+                >
+                  {claim.isPending ? 'Claiming…' : t('action.claim')}
+                </Button>
+              ) : null}
+
+              {arrived ? (
+                <>
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-medium">
+                      Did everything arrive usable?
+                    </legend>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <OutcomeButton
+                        selected={outcome === 'receive'}
+                        onClick={() => {
+                          setOutcome('receive')
+                          setError(null)
+                        }}
+                        icon={<PackageCheck className="size-5" aria-hidden />}
+                        title="Yes, it's all here"
+                        body="The donor sees this, and their item is complete."
+                        tone="good"
+                      />
+                      <OutcomeButton
+                        selected={outcome === 'reject'}
+                        onClick={() => {
+                          setOutcome('reject')
+                          setError(null)
+                        }}
+                        icon={<TriangleAlert className="size-5" aria-hidden />}
+                        title="Something's wrong"
+                        body="Tell the donor what, so the next one is right."
+                        tone="bad"
+                      />
+                    </div>
+                  </fieldset>
+
+                  {outcome ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="ack-note">
+                          {rejecting ? 'What is wrong?' : 'A line for the donor (optional)'}
+                        </Label>
+                        <Textarea
+                          id="ack-note"
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          rows={4}
+                          maxLength={1000}
+                          placeholder={
+                            rejecting
+                              ? 'Three of the six shirts were torn at the seam.'
+                              : 'These went to the children at our Ganapathy centre.'
+                          }
+                        />
+                        <p
+                          className={cn(
+                            'text-xs',
+                            noteTooShort && note.length > 0
+                              ? 'text-destructive'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          {rejecting
+                            ? 'At least a sentence. This is what the donor reads.'
+                            : 'Say where they went. This is the part donors remember.'}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>
+                          {rejecting
+                            ? 'Photo of the problem'
+                            : 'Photo of the items as they arrived'}
+                        </Label>
+
+                        {photoPath ? (
+                          <div className="hairline relative overflow-hidden rounded-sm">
+                            <img
+                              src={photoUrl(photoPath)}
+                              alt="The photo you are about to send"
+                              className="block w-full"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPhotoPath(null)}
+                              className="absolute right-2 top-2 rounded-sm bg-background/90 p-2 hover:bg-background"
+                              aria-label="Remove this photo"
+                            >
+                              <X className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        ) : (
+                          <Dropzone
+                            accept="image/jpeg,image/png,image/webp"
+                            maxFiles={1}
+                            busy={uploading}
+                            onFiles={(files) => void addPhoto(files)}
+                            label={
+                              uploading ? 'Compressing and uploading…' : 'Take or choose one photo'
+                            }
+                            hint="Only the donor of this item will ever see it."
+                          />
+                        )}
+                      </div>
+
+                      {/* Sticky on a phone so the action never scrolls out of thumb
+                        reach on a long form; static once there is room for it. */}
+                      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+                        <Button
+                          className="min-h-11 w-full"
+                          variant={rejecting ? 'destructive' : 'default'}
+                          disabled={!canSubmit}
+                          onClick={() => submit.mutate()}
+                        >
+                          {submit.isPending ? (
+                            'Sending…'
+                          ) : rejecting ? (
+                            'Send this back to the donor'
+                          ) : (
+                            <>
+                              <Check aria-hidden /> Confirm it arrived
+                            </>
+                          )}
+                        </Button>
+                        {!photoPath ? (
+                          <p className="mt-2 text-center text-xs text-muted-foreground">
+                            Add a photo to finish.
+                          </p>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              ) : donation.status !== 'posted' ? (
+                <p className="text-muted-foreground">
+                  Nothing to do here yet. This item is {donation.status.replace('_', ' ')}.
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </AppShell>
   )
