@@ -1,19 +1,37 @@
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Landing from './app/Landing'
-import StyleGuide from './app/StyleGuide'
-import NotFound from './app/NotFound'
 import SignIn from './app/auth/SignIn'
-import SignUp from './app/auth/SignUp'
-import DonorHome from './app/donor/DonorHome'
-import PostItem from './app/donor/PostItem'
-import NgoWall from './app/ngo/NgoWall'
-import VolunteerHome from './app/volunteer/VolunteerHome'
-import AdminHome from './app/admin/AdminHome'
-import DonationTrail from './app/admin/DonationTrail'
+import { DevRoleSwitcher } from './components/shared/dev-role-switcher'
 import { OfflineBanner } from './components/shared/offline-banner'
 import { ProtectedRoute } from './components/shared/protected-route'
 import { PwaPrompt } from './components/shared/pwa-prompt'
+import { RouteFallback } from './components/shared/route-fallback'
 import { HOME_FOR_ROLE, useSession } from './hooks/use-session'
+
+/**
+ * Everything past the front door is split out of the initial bundle.
+ *
+ * The budget in PLAN.md §8 is 250KB gzipped and the single chunk was already at
+ * 195KB before M5 and M6 added a screen each. Splitting by route is the cheapest
+ * fix and it maps onto how the product is actually used: a donor never loads the
+ * admin panels, and nobody loads `browser-image-compression` until they open the
+ * post wizard.
+ *
+ * Landing and SignIn stay eager. They are the first paint for a signed-out
+ * visitor, and a spinner on the front door to save 4KB is a bad trade.
+ */
+const SignUp = lazy(() => import('./app/auth/SignUp'))
+const DonorHome = lazy(() => import('./app/donor/DonorHome'))
+const PostItem = lazy(() => import('./app/donor/PostItem'))
+const DonationTimeline = lazy(() => import('./app/donor/DonationTimeline'))
+const NgoWall = lazy(() => import('./app/ngo/NgoWall'))
+const NgoReceipt = lazy(() => import('./app/ngo/NgoReceipt'))
+const VolunteerHome = lazy(() => import('./app/volunteer/VolunteerHome'))
+const AdminHome = lazy(() => import('./app/admin/AdminHome'))
+const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
+const StyleGuide = lazy(() => import('./app/StyleGuide'))
+const NotFound = lazy(() => import('./app/NotFound'))
 
 /** Sends a signed-in visitor to their own shell; everyone else to the landing page. */
 function Root() {
@@ -26,65 +44,85 @@ export default function App() {
   return (
     <>
       <OfflineBanner />
-      <Routes>
-        <Route path="/" element={<Root />} />
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Root />} />
+          <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/sign-up" element={<SignUp />} />
 
-        <Route
-          path="/donor"
-          element={
-            <ProtectedRoute allow={['donor']}>
-              <DonorHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/donor/post"
-          element={
-            <ProtectedRoute allow={['donor']}>
-              <PostItem />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ngo"
-          element={
-            <ProtectedRoute allow={['ngo']}>
-              <NgoWall />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/volunteer"
-          element={
-            <ProtectedRoute allow={['volunteer']}>
-              <VolunteerHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allow={['admin']}>
-              <AdminHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/items/:id"
-          element={
-            <ProtectedRoute allow={['admin']}>
-              <DonationTrail />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/donor"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <DonorHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/donor/post"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <PostItem />
+              </ProtectedRoute>
+            }
+          />
+          {/* The M6 loop-closer: where an item got to, and what it did there. */}
+          <Route
+            path="/donor/items/:id"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <DonationTimeline />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ngo"
+            element={
+              <ProtectedRoute allow={['ngo']}>
+                <NgoWall />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ngo/items/:id"
+            element={
+              <ProtectedRoute allow={['ngo']}>
+                <NgoReceipt />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/volunteer"
+            element={
+              <ProtectedRoute allow={['volunteer']}>
+                <VolunteerHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allow={['admin']}>
+                <AdminHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/items/:id"
+            element={
+              <ProtectedRoute allow={['admin']}>
+                <DonationTrail />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Throwaway. Delete once the wall is built — PLAN.md §9 M0. */}
-        <Route path="/style-guide" element={<StyleGuide />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* Throwaway. Delete once the wall is built — PLAN.md §9 M0. */}
+          <Route path="/style-guide" element={<StyleGuide />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
       <PwaPrompt />
+      <DevRoleSwitcher />
     </>
   )
 }

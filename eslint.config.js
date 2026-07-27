@@ -6,7 +6,17 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'dev-dist', 'coverage', 'playwright-report', 'test-results', 'node_modules'],
+    ignores: [
+      'dist',
+      'dev-dist',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'node_modules',
+      // Vite's dependency pre-bundle. Third-party output, regenerated on every
+      // dev boot, and it carries eslint-disable comments for rules we do not load.
+      '.vite',
+    ],
   },
 
   // Generated file — its shape is not ours to lint.
