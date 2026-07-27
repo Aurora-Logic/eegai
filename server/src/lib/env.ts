@@ -1,22 +1,27 @@
 import { z } from 'zod'
 
-/**
- * Server-side configuration. Unlike src/lib/env.ts on the client, everything
- * here is genuinely secret and must never be prefixed VITE_.
- */
+// Automatically load .env or .env.local if present (Node.js 20.6+)
+try {
+  process.loadEnvFile('.env.local')
+} catch {
+  try {
+    process.loadEnvFile('.env')
+  } catch {
+    // No .env file found; using process.env directly
+  }
+}
+
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
-  PGHOST: z.string().default('/tmp'),
-  PGDATABASE: z.string().default('eegai'),
-  PGUSER: z.string().default('eegai_app'),
-  PGPASSWORD: z.string().default('eegai_local_dev'),
+  PGHOST: z.string({ required_error: 'PGHOST is required' }),
+  PGDATABASE: z.string({ required_error: 'PGDATABASE is required' }),
+  PGUSER: z.string({ required_error: 'PGUSER is required' }),
+  PGPASSWORD: z.string({ required_error: 'PGPASSWORD is required' }),
   PGPORT: z.coerce.number().int().positive().default(5432),
 
-  // 32+ bytes. The default exists so `npm run dev` works on a fresh clone;
-  // startup refuses it outside development.
-  JWT_SECRET: z.string().min(32).default('dev-only-secret-change-me-000000000000'),
+  JWT_SECRET: z.string({ required_error: 'JWT_SECRET is required' }).min(32, 'JWT_SECRET must be at least 32 characters'),
   SESSION_TTL_HOURS: z.coerce
     .number()
     .int()

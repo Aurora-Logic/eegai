@@ -18,24 +18,85 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import pg from 'pg'
 
+// Automatically load .env or .env.local if present (Node.js 20.6+)
+try {
+  process.loadEnvFile('.env.local')
+} catch {
+  try {
+    process.loadEnvFile('.env')
+  } catch {
+    // Ignore if no env file present
+  }
+}
+
+// Validate required environment variables without hidden fallbacks
+const hasUrl = Boolean(process.env.DATABASE_URL)
+const missingVars = []
+
+if (!hasUrl) {
+  if (!process.env.PGHOST) missingVars.push('PGHOST')
+  if (!process.env.PGDATABASE) missingVars.push('PGDATABASE')
+  if (!process.env.PGUSER) missingVars.push('PGUSER')
+  if (!process.env.PGPASSWORD) missingVars.push('PGPASSWORD')
+
+  if (missingVars.length > 0) {
+    console.error('\n❌ Database execution aborted: missing environment variables in .env:\n')
+    for (const v of missingVars) console.error(`  - ${v}`)
+    console.error('\nPlease specify either DATABASE_URL or (PGHOST, PGDATABASE, PGUSER, PGPASSWORD) in your .env file.\n')
+    process.exit(1)
+  }
+}
+
 const { Client } = pg
 
-const DB_NAME = process.env.PGDATABASE_APP ?? 'eegai'
+let dbUser = process.env.PGUSER
+if (!dbUser && process.env.DATABASE_URL) {
+  try {
+    const url = new URL(process.env.DATABASE_URL)
+    dbUser = url.username
+  } catch {
+    // Ignore URL parse error
+  }
+}
+
+const DB_NAME = process.env.PGDATABASE_APP ?? process.env.PGDATABASE
 const TEST_DB_NAME = `${DB_NAME}_test`
-const APP_ROLE = 'eegai_app'
-const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? 'eegai_local_dev'
+const APP_ROLE = process.env.APP_ROLE ?? dbUser ?? 'eegai_app'
+const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? process.env.PGPASSWORD
 const MIGRATIONS_DIR = 'db/migrations'
 
 const verb = process.argv[2]
 
 async function connect(database) {
-  const client = new Client({ database, host: process.env.PGHOST ?? '/tmp' })
+  const connectionConfig = process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL }
+    : {
+        database,
+        host: process.env.PGHOST,
+        port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432,
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
+      }
+
+  const client = new Client(connectionConfig)
   await client.connect()
   return client
 }
 
 /** Admin connection to the maintenance database, for CREATE/DROP DATABASE. */
 async function connectMaintenance() {
+  if (process.env.DATABASE_URL) {
+    try {
+      const url = new URL(process.env.DATABASE_URL)
+      url.pathname = '/postgres'
+      const client = new Client({ connectionString: url.toString() })
+      await client.connect()
+      return client
+    } catch {
+      // Fallback if URL parsing fails
+    }
+  }
   return connect('postgres')
 }
 
@@ -95,7 +156,12 @@ async function migrate(database = DB_NAME, { quiet = false } = {}) {
     for (const file of migrationFiles()) {
       if (applied.has(file)) continue
 
-      const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
+      let sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
+      // Dynamically replace eegai_app with the actual database user from .env
+      if (APP_ROLE && APP_ROLE !== 'eegai_app') {
+        sql = sql.replaceAll('eegai_app', APP_ROLE)
+      }
+
       // Each migration is one transaction: a syntax error half way through
       // leaves nothing behind.
       await client.query('begin')
@@ -118,6 +184,25 @@ async function migrate(database = DB_NAME, { quiet = false } = {}) {
   }
 }
 
+async function applySeed(database = DB_NAME) {
+  let seed = readFileSync('db/seed.sql', 'utf8')
+  if (APP_ROLE && APP_ROLE !== 'eegai_app') {
+    seed = seed.replaceAll('eegai_app', APP_ROLE)
+  }
+  const client = await connect(database)
+  try {
+    await client.query(seed)
+    console.log('  seeded')
+  } finally {
+    await client.end()
+  }
+
+  const { execFileSync } = await import('node:child_process')
+  execFileSync(process.execPath, ['scripts/seed-images.mjs'], { stdio: 'inherit' })
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+  execFileSync(npxCmd, ['tsx', 'scripts/seed-docs.ts'], { stdio: 'inherit' })
+}
+
 async function reset(database = DB_NAME) {
   const admin = await connectMaintenance()
   try {
@@ -133,23 +218,7 @@ async function reset(database = DB_NAME) {
   }
 
   await migrate(database)
-
-  const seed = readFileSync('db/seed.sql', 'utf8')
-  const client = await connect(database)
-  try {
-    await client.query(seed)
-    console.log('  seeded')
-  } finally {
-    await client.end()
-  }
-
-  // The seeded donations reference storage/seed/*.png. Generating them here
-  // keeps `reset` a single command that leaves a fully demoable app.
-  const { execFileSync } = await import('node:child_process')
-  execFileSync(process.execPath, ['scripts/seed-images.mjs'], { stdio: 'inherit' })
-  // Via tsx because the writer is the same TypeScript one the receipt uses —
-  // one PDF implementation, not two.
-  execFileSync('npx', ['tsx', 'scripts/seed-docs.ts'], { stdio: 'inherit' })
+  await applySeed(database)
 }
 
 function ident(name) {
@@ -164,6 +233,7 @@ function literal(value) {
 const commands = {
   setup,
   migrate: () => migrate(),
+  seed: () => applySeed(),
   reset: () => reset(),
   'reset:test': () => reset(TEST_DB_NAME),
 }

@@ -23,6 +23,7 @@
     "flow": "node scripts/flow-check.mjs",
     "db:setup": "node scripts/db.mjs setup",
     "db:migrate": "node scripts/db.mjs migrate",
+    "db:seed": "node scripts/db.mjs seed",
     "db:reset": "node scripts/db.mjs reset",
     "db:reset:test": "node scripts/db.mjs reset:test",
     "icons": "node scripts/generate-icons.mjs"
