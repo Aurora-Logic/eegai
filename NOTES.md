@@ -85,9 +85,11 @@ the total length says it is one. Regression tests in
 
 - **`storage/` is a local directory, not object storage.** Fine for the pilot,
   wrong for anything with more than one API process.
-- **File authorization is coarse.** Any signed-in user who knows a storage path
-  can read it; paths are unguessable UUIDs. M6 needs this tightened, because
-  acknowledgement photos are meant to be donor-only.
+- ~~**File authorization is coarse.**~~ Fixed in M6, but only halfway on
+  purpose. Acknowledgement photos now live under their own prefix and every read
+  is checked against `acknowledgements` RLS, so holding the path is not enough.
+  Donation photos are deliberately left coarse — they are on a wall visible to
+  every nearby NGO anyway, and a per-request lookup on the hot path buys nothing.
 - **No realtime yet.** M3 asks for a subscription so a claimed brick disappears
   from other NGOs' walls without a refresh. The plan is SSE over Postgres
   `LISTEN/NOTIFY`; right now the wall only refreshes on the claiming client.
@@ -170,3 +172,54 @@ screen made it lose the race. Any assertion on a count needs a
 
 The admin verification tests also had to be marked `describe.serial` — run in
 parallel they raced for the same rows in the pending queue.
+
+## M5 and M6
+
+**The PDF is hand-written, and that was the cheap option.** PLAN.md §10 bans
+casual dependencies. A receipt is one page of left-aligned text, and PDF's
+base-14 fonts mean no font file has to be embedded — which is the only genuinely
+hard part. About 200 lines, versus pdfkit's tree.
+
+The failure mode worth guarding is a _structurally_ broken file: if the xref
+byte offsets drift, some readers repair it silently and others refuse it, so it
+opens fine on the machine that wrote it and not on the donor's. `pdf.test.ts`
+parses the file back and asserts every offset points at the object it claims.
+
+Two known limits, both deliberate. It is one page — content that overflows is
+dropped, not spilled, because the receipt is composed to fit. And it is WinAnsi,
+so **Tamil cannot render**: the app name appears as "EEGAI" alone on the receipt
+until someone subsets Noto Sans Tamil and embeds it. A test documents this rather
+than leaving it to be discovered.
+
+**No real courier is wired, and this is not an oversight.** §11 Q3 is still
+unanswered. An adapter written against API docs that cannot be executed is a
+guess with a plausible shape — it would pass review, ship, and fail on the first
+real booking. M5's own acceptance criterion is the mock, and that is met.
+
+**`exception` maps to no donation state at all.** Every other courier status maps
+onto `in_transit` or `received`. A failed delivery must not quietly mark an item
+received; it becomes a visible stuck shipment for a human. There is a test whose
+only job is to fail if someone later "completes" the mapping.
+
+**In-app OTP is the channel, not a stopgap.** This was already true before M6 —
+`HandoverCodes` reads RLS-scoped notifications — but it was built as scaffolding
+awaiting SMS. It is now designed as the real thing. An SMS gateway costs per
+message, needs a DLT template registration in India, and inserts a delivery
+failure between a volunteer standing at a door and the code that lets them
+leave with someone's belongings. In-app has none of those and the person who
+needs the code is already signed in. SMS is still worth adding in M8 as a
+_fallback_ for a donor with the app closed and no data — not a replacement.
+
+**The dev role switcher hands out a real session.** It selects the oldest account
+of the requested role, which in a seeded database is a seed user. Point it at a
+database with real accounts and it will hand out a real one. That is why the
+NODE_ENV gate is exact-match `'development'` rather than `!== 'production'` — a
+missing variable has to fail closed. The `import.meta.env.DEV` guard on the
+button only hides the door; it does not lock it.
+
+**Route splitting moved the number that matters.** The entry chunk went 196KB →
+111KB gzipped. Total across every chunk is 228KB, still inside the 250KB budget,
+and no single user downloads all of it. The illustrations are split across two
+modules for the same reason: `illustrations/index.tsx` is in the eager bundle for
+landing and auth, `illustrations/journey.tsx` is only reached from lazy routes,
+and importing across the two would drag the landing scene into the donor chunk.

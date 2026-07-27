@@ -17,19 +17,22 @@ below are proposals until you say otherwise.
 | M2 Post an item              | **done**        | wizard, compression, gates, draft, reorder                                    | server-side image re-encode                          |
 | M3 Wall & claiming           | **partly**      | masonry wall, claim RPC, lift-off, first-claim-wins                           | **realtime**, capacity toggle, NGO settings          |
 | M4 Volunteer & OTP           | **schema only** | tables, RLS, `issue_pickup_otps`, `verify_pickup_otp`, column-level OTP grant | every screen, the accept/slot flow, SMS delivery     |
-| M5 Courier                   | **not started** | —                                                                             | adapter interface, mock, one real provider           |
-| M6 Acknowledgement           | **schema only** | `acknowledgements` table + RLS                                                | receipt confirm, reject path, donor timeline, PDF    |
+| M5 Courier                   | **partly**      | adapter interface, mock provider, status mapping, tracking sweep              | one real provider — blocked on §11 Q3                |
+| M6 Acknowledgement           | **done**        | receipt confirm, reject path, donor timeline, PDF record, photo authorisation | a real 80G receipt — blocked on §11 Q2               |
 | M7 Admin                     | **schema only** | admin RLS proven in tests, `audit_log` populated                              | every screen                                         |
 | M8 Notifications & hardening | **partly**      | PWA, offline shell, install prompt                                            | SMS/WhatsApp dispatch, retry, Sentry, error boundary |
 
-**Suggested order, and why:** M7 → M4 → M6 → M5.
+**Suggested order, and why:** M7 → M4 → M6 → M5. All four are now built.
 
-Admin first because nothing else is operable without it — today an NGO can only
-become verified by a hand-written SQL update, so the pilot cannot even start.
-Then M4, because volunteer pickup is the delivery path that needs no third
-party. M6 closes the loop and is what makes a donor post a second time — it is
-the metric in §1. M5 last, because it is blocked on §11's open questions
-anyway.
+Admin first because nothing else was operable without it. Then M4, because
+volunteer pickup is the delivery path that needs no third party. M6 closes the
+loop and is what makes a donor post a second time — it is the metric in §1. M5
+last, because it is blocked on §11's open questions anyway, and it still is: the
+adapter and its mock are done, no real courier is wired.
+
+**What is genuinely left before a pilot:** M3's realtime and capacity toggle,
+M8's notification dispatcher, and the two answers in §11 that unblock a real
+courier and a real receipt. Everything else on the list below is post-v1.
 
 ---
 

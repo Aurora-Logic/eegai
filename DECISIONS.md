@@ -74,3 +74,36 @@ LOCKED` — the four things the plan's guarantees actually rest on.
   schema that no longer exists. Types at the API boundary are currently hand-
   written interfaces per route. Generating types from the live schema is worth
   doing but is not a blocker.
+
+## M6 — the loop back
+
+- **The acknowledgement row and the state change go in one transaction.**
+  Separately, a crash between them leaves an item marked `acknowledged` with no
+  acknowledgement — a donor told their things arrived, shown an empty screen.
+- **The donor timeline is a fixed six-stage rail, not a render of the events.**
+  A list of events says what happened; a rail also says what is still coming,
+  which is what someone checking on their belongings wants. The admin trail keeps
+  the raw list — that view is for disputes, this one is for reassurance.
+- **Both the confirm and reject paths require a photo.** For a confirmation it is
+  what the donor actually wants. For a rejection it is the difference between a
+  record and one party's word against another's.
+- **The PDF says "record of goods donated", not "receipt".** §11 Q2 is
+  unanswered. A document that looks like an 80G certificate but is issued by
+  nobody in particular is worse than no document.
+
+## M5 — courier
+
+- **Adapter plus mock, no real provider.** §11 Q3 is unanswered. Writing an
+  integration against unexecutable docs produces something that passes review and
+  fails on the first real booking.
+- **Fee is stored in paise as an integer, and `paid_by` is 'undecided'.** §11 Q1
+  has no answer, so the column records that rather than inventing a payer.
+
+## Development
+
+- **Dev role switcher over four seeded logins.** Walking one donation end to end
+  means being four people; the login form was most of the cost of a manual pass.
+  Gated on exact `NODE_ENV === 'development'` so a missing variable fails closed.
+- **Route-level code splitting before M5 and M6, not after.** Adding two screens
+  to a 196KB bundle against a 250KB budget would have made the budget the reason
+  to cut scope. Splitting first made it a non-issue.
