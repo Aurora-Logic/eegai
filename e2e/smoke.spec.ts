@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('the wall loads and the style guide is reachable', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Wall of Kindness' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'EEGAI' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Style guide' }).click()
   await expect(page.getByRole('heading', { name: 'Style guide', level: 1 })).toBeVisible()

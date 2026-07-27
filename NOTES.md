@@ -94,3 +94,42 @@ the total length says it is one. Regression tests in
 - **`profiles` has no cross-party read policy.** An NGO cannot yet read the
   donor's name or contact for an item it has claimed, which M4 needs for the
   pickup handoff.
+
+## EEGAI rebrand and the Coimbatore move
+
+The project was Wall of Kindness, launching in Nashik. It is now EEGAI (ஈகை,
+Tamil for giving), launching in Coimbatore. Both changes were more than string
+swaps:
+
+- The font stack carried **Noto Sans Devanagari** for Marathi and Hindi, which
+  is the wrong script for Tamil Nadu. Now Noto Sans Tamil, in all three stacks.
+- The category enum grew from three to six (`education`, `furniture`,
+  `household`). `toys` was **kept**, not dropped: live rows use it, Postgres
+  cannot remove an enum value without rewriting every dependent column, and a
+  toy is a real thing people give. If the brief means to exclude toys, say so
+  and it becomes a data migration rather than a schema one.
+- The database role and database name moved from `wok_app`/`wall_of_kindness`
+  to `eegai_app`/`eegai`, and the repo folder was renamed. Cheap now, painful
+  later.
+
+## Two real bugs found by building the admin
+
+**Enum arrays came back as strings.** `accepts_categories` is
+`donation_category[]`, a custom enum array. node-postgres has no parser
+registered for that OID, so it returned the raw `'{clothes,books}'` string.
+`ngo.accepts_categories.map(...)` then threw and blanked the whole panel. Every
+query now casts `::text[]`.
+
+Worth noting _why this hid for so long_: the RLS test did
+`categories.includes('clothes')`, and `String.prototype.includes` on
+`'{clothes,books}'` returns true. The test was passing for the wrong reason,
+exactly like the earlier concurrency false-pass. **Any assertion that works on
+both a string and an array is not testing what it looks like it is testing.**
+
+**Posting an item did not refresh the donor's list.** The mutation never
+invalidated `['donations']`, so a donor landed back on a 30-second-stale cache
+with their item absent — which reads as "it didn't work" and invites a
+duplicate post.
+
+The error boundary added in the same session caught the first one and showed a
+reference id, which is precisely what it was built for.

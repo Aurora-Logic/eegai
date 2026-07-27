@@ -11,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const INSTALL_DISMISSED_KEY = 'wok.install-dismissed'
+const INSTALL_DISMISSED_KEY = 'eegai.install-dismissed'
 
 /**
  * Registers the service worker and owns the two moments it produces: a new

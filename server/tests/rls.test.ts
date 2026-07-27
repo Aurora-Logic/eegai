@@ -7,7 +7,7 @@ import { adminPool, asActor, closePools, loadFixtures, type Fixture } from './he
  * best-effort, but these two are where a bug means an item is lost or a
  * document leaks."
  *
- * Every query here runs as `wok_app`, the same non-BYPASSRLS role the API uses.
+ * Every query here runs as `eegai_app`, the same non-BYPASSRLS role the API uses.
  */
 let donorA: Fixture
 let donorB: Fixture
@@ -120,7 +120,7 @@ describe('donations', () => {
 
   it('shows an NGO only posted items in its accepted categories', async () => {
     const { rows: accepted } = await adminPool.query(
-      `select n.accepts_categories from public.ngos n
+      `select n.accepts_categories::text[] as accepts_categories from public.ngos n
        join public.profiles p on p.id = n.profile_id where p.user_id = $1`,
       [ngoA.userId],
     )

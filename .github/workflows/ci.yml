@@ -33,7 +33,7 @@ jobs:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
-      APP_DB_PASSWORD: wok_ci
+      APP_DB_PASSWORD: eegai_ci
 
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
-      APP_DB_PASSWORD: wok_ci
+      APP_DB_PASSWORD: eegai_ci
 
     steps:
       - uses: actions/checkout@v4
@@ -114,9 +114,9 @@ jobs:
       - name: Critical flows
         run: npm run test:e2e
         env:
-          PGUSER: wok_app
-          PGPASSWORD: wok_ci
-          PGDATABASE: wall_of_kindness
+          PGUSER: eegai_app
+          PGPASSWORD: eegai_ci
+          PGDATABASE: eegai
 
       - uses: actions/upload-artifact@v4
         if: failure()

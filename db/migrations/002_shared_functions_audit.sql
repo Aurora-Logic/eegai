@@ -37,7 +37,7 @@ alter table public.audit_log enable row level security;
 create policy audit_log_admin_read on public.audit_log
   for select using (app.is_admin());
 
-grant select on public.audit_log to wok_app;
+grant select on public.audit_log to eegai_app;
 
 comment on table public.audit_log is
   'Append-only. Written by app.write_audit(); never updated or deleted by application code.';

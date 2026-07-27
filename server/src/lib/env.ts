@@ -9,9 +9,9 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   PGHOST: z.string().default('/tmp'),
-  PGDATABASE: z.string().default('wall_of_kindness'),
-  PGUSER: z.string().default('wok_app'),
-  PGPASSWORD: z.string().default('wok_local_dev'),
+  PGDATABASE: z.string().default('eegai'),
+  PGUSER: z.string().default('eegai_app'),
+  PGPASSWORD: z.string().default('eegai_local_dev'),
   PGPORT: z.coerce.number().int().positive().default(5432),
 
   // 32+ bytes. The default exists so `npm run dev` works on a fresh clone;

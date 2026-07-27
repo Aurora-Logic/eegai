@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
 
-const STORAGE_KEY = 'wok.theme'
+const STORAGE_KEY = 'eegai.theme'
 
 function resolveInitialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY)

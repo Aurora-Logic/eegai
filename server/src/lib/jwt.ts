@@ -3,7 +3,7 @@ import { env } from './env.ts'
 import type { Actor } from './db.ts'
 
 const secret = new TextEncoder().encode(env.JWT_SECRET)
-const ISSUER = 'wall-of-kindness'
+const ISSUER = 'eegai'
 
 export interface SessionClaims extends Actor {
   fullName: string
@@ -42,4 +42,4 @@ export async function verifySession(token: string): Promise<SessionClaims | null
   }
 }
 
-export const SESSION_COOKIE = 'wok_session'
+export const SESSION_COOKIE = 'eegai_session'

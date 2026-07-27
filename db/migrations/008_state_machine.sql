@@ -36,7 +36,7 @@ insert into app.donation_transitions (from_status, to_status, allowed_roles) val
 comment on table app.donation_transitions is
   'The LOCKED state machine from PLAN.md §7. Mirrored in src/lib/state-machine.ts.';
 
-grant select on app.donation_transitions to wok_app;
+grant select on app.donation_transitions to eegai_app;
 
 create or replace function app.guard_donation_transition()
 returns trigger
@@ -141,7 +141,7 @@ begin
 end;
 $$;
 
-grant execute on function app.claim_donation(uuid, uuid) to wok_app;
+grant execute on function app.claim_donation(uuid, uuid) to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- Claim expiry (PLAN.md §7): widen at 24h, return to donor at 72h.
@@ -179,4 +179,4 @@ begin
 end;
 $$;
 
-grant execute on function app.expire_stale_posts() to wok_app;
+grant execute on function app.expire_stale_posts() to eegai_app;

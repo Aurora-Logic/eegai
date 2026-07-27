@@ -11,10 +11,26 @@ export class ApiError extends Error {
     message: string,
     readonly code?: string,
     readonly issues?: unknown,
+    /** Echoed by the server; the one string worth showing a user on failure. */
+    readonly requestId?: string,
   ) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+let mostRecentRequestId: string | null = null
+
+/** The id of the last request the client made, for the error boundary. */
+export function lastRequestId(): string | null {
+  return mostRecentRequestId
+}
+
+function newRequestId(): string {
+  // crypto.randomUUID needs a secure context; the fallback keeps the id format
+  // valid on plain http during local testing rather than sending nothing.
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 interface ApiErrorBody {
@@ -25,6 +41,8 @@ interface ApiErrorBody {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response
+  const requestId = newRequestId()
+  mostRecentRequestId = requestId
 
   try {
     response = await fetch(`/api${path}`, {
@@ -32,14 +50,25 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...init,
       headers: {
         ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        // Generated client-side so the id exists even if the request never
+        // reaches the server, and so a retry is distinguishable from a repeat.
+        'X-Request-Id': requestId,
         ...init.headers,
       },
     })
   } catch {
     // A network failure is the common case on patchy 4G, and it deserves a
     // message about connectivity rather than a generic error.
-    throw new ApiError(0, "You're offline. Check your connection and try again.")
+    throw new ApiError(
+      0,
+      "You're offline. Check your connection and try again.",
+      undefined,
+      undefined,
+      requestId,
+    )
   }
+
+  mostRecentRequestId = response.headers.get('x-request-id') ?? requestId
 
   if (response.status === 204) return undefined as T
 
@@ -51,6 +80,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       body.error ?? 'That did not go through. Try again.',
       body.code,
       body.issues,
+      mostRecentRequestId ?? requestId,
     )
   }
 

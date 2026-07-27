@@ -1,10 +1,11 @@
 import pg from 'pg'
 import { env } from './env.ts'
+import { currentRequestId } from './context.ts'
 
 const { Pool } = pg
 
 /**
- * The API connects as `wok_app`, which has no BYPASSRLS. Every policy in
+ * The API connects as `eegai_app`, which has no BYPASSRLS. Every policy in
  * db/migrations therefore applies to every query this pool runs — the database
  * is the authorization boundary, not the route handlers.
  */
@@ -19,7 +20,10 @@ export const pool = new Pool({
 })
 
 pool.on('error', (error) => {
-  console.error('[db] idle client error', error)
+  // Imported lazily to keep this module free of a cycle through env/logger.
+  void import('./logger.ts').then(({ log }) =>
+    log.error('idle client error', { err: error.message }),
+  )
 })
 
 export interface Actor {
@@ -47,12 +51,20 @@ export async function withActor<T>(actor: Actor | null, fn: (tx: Tx) => Promise<
   const client = await pool.connect()
   try {
     await client.query('begin')
-    await client.query('select set_config($1, $2, true), set_config($3, $4, true)', [
-      'app.user_id',
-      actor?.userId ?? '',
-      'app.user_role',
-      actor?.role ?? '',
-    ])
+    // All three are transaction-local (`true`), so a pooled connection can
+    // never leak one request's identity into the next. app.request_id is what
+    // write_audit() stamps onto every row it writes.
+    await client.query(
+      `select set_config($1, $2, true), set_config($3, $4, true), set_config($5, $6, true)`,
+      [
+        'app.user_id',
+        actor?.userId ?? '',
+        'app.user_role',
+        actor?.role ?? '',
+        'app.request_id',
+        currentRequestId(),
+      ],
+    )
 
     const result = await fn(client)
     await client.query('commit')

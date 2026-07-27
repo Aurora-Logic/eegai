@@ -15,9 +15,9 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['favicon-48.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Wall of Kindness',
-        short_name: 'The Wall',
-        description: 'Give what you no longer need to an NGO that needs it.',
+        name: 'EEGAI — Where giving finds its way',
+        short_name: 'EEGAI',
+        description: 'A digital ecosystem for meaningful giving in Coimbatore.',
         lang: 'en-IN',
         theme_color: '#21324F',
         background_color: '#EBE7DC',

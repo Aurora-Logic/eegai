@@ -26,7 +26,7 @@ async function signInAsDonor(page: import('@playwright/test').Page) {
 test.beforeEach(async ({ page }) => {
   // The draft persists in localStorage by design, which would leak between tests.
   await page.goto('/')
-  await page.evaluate(() => localStorage.removeItem('wok.donation-draft'))
+  await page.evaluate(() => localStorage.removeItem('eegai.donation-draft'))
 })
 
 test('a donor posts an item through the whole wizard', async ({ page }) => {

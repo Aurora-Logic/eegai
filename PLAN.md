@@ -1,4 +1,7 @@
-# Wall of Kindness — Build Plan for Claude Code
+# EEGAI (ஈகை) — Build Plan
+
+> Tagline: "Where giving finds its way."
+> Formerly called Wall of Kindness; renamed to EEGAI, Tamil for giving.
 
 > Work milestone by milestone, top to bottom. Do not start a milestone until the
 > previous one's acceptance criteria all pass. Stop and ask before deviating from
@@ -133,7 +136,7 @@ Write these as numbered migrations in `/supabase/migrations`. Every table:
 `available_slots` (jsonb — days × morning/evening)
 
 **`donations`** — `donor_id`, `title`, `description`, `category` (enum:
-`clothes` | `books` | `toys`), `quantity`, `condition` (enum: `like_new` |
+`clothes` | `books` | `toys` | `education` | `furniture` | `household`), `quantity`, `condition` (enum: `like_new` |
 `good` | `usable`), `condition_checklist` (jsonb — the answers, stored for
 disputes), `pickup_address`, `pincode`, `lat`, `lng`, `status` (enum, see §7),
 `claimed_by_ngo_id`, `claimed_at`, `claim_expires_at`, `delivery_method` (enum:

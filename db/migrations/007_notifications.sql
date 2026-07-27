@@ -37,4 +37,4 @@ create policy notifications_self_read on public.notifications
 create policy notifications_admin_all on public.notifications
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.notifications to wok_app;
+grant select, insert, update on public.notifications to eegai_app;

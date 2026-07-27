@@ -120,7 +120,7 @@ create policy donations_ngo_update_claimed on public.donations
 create policy donations_admin_all on public.donations
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update, delete on public.donations to wok_app;
+grant select, insert, update, delete on public.donations to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- donation_photos — 1 to 5 per donation (PLAN.md §6)
@@ -212,4 +212,4 @@ create policy donation_photos_donor_write on public.donation_photos
 create policy donation_photos_admin on public.donation_photos
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update, delete on public.donation_photos to wok_app;
+grant select, insert, update, delete on public.donation_photos to eegai_app;

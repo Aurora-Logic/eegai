@@ -77,8 +77,8 @@ grant select (
   id, donation_id, volunteer_id, slot_date, slot,
   collect_attempts, deliver_attempts, collected_at, delivered_at,
   created_at, updated_at
-) on public.pickups to wok_app;
-grant insert, update, delete on public.pickups to wok_app;
+) on public.pickups to eegai_app;
+grant insert, update, delete on public.pickups to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- OTP issue and verify — both server-side only (PLAN.md §M4)
@@ -181,8 +181,8 @@ $$;
 
 revoke all on function app.issue_pickup_otps(uuid) from public;
 revoke all on function app.verify_pickup_otp(uuid, text, text) from public;
-grant execute on function app.issue_pickup_otps(uuid) to wok_app;
-grant execute on function app.verify_pickup_otp(uuid, text, text) to wok_app;
+grant execute on function app.issue_pickup_otps(uuid) to eegai_app;
+grant execute on function app.verify_pickup_otp(uuid, text, text) to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- shipments
@@ -218,7 +218,7 @@ create policy shipments_party_read on public.shipments
 create policy shipments_admin_all on public.shipments
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.shipments to wok_app;
+grant select, insert, update on public.shipments to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- acknowledgements — the loop back to the donor
@@ -266,4 +266,4 @@ create policy acknowledgements_ngo_write on public.acknowledgements
 create policy acknowledgements_admin_all on public.acknowledgements
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.acknowledgements to wok_app;
+grant select, insert, update on public.acknowledgements to eegai_app;

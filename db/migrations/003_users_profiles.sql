@@ -36,7 +36,7 @@ create policy users_self_update on public.users
   for update using (id = app.current_user_id())
   with check (id = app.current_user_id());
 
-grant select, update on public.users to wok_app;
+grant select, update on public.users to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- profiles
@@ -81,7 +81,7 @@ create policy profiles_self_update on public.profiles
   for update using (user_id = app.current_user_id())
   with check (user_id = app.current_user_id());
 
-grant select, update on public.profiles to wok_app;
+grant select, update on public.profiles to eegai_app;
 
 -- A user must not be able to promote themselves by PATCHing their own profile.
 -- The self-update policy above allows the row, so the column is guarded here.
@@ -193,6 +193,6 @@ revoke all on function app.register_user(text, text, text, public.user_role, tex
 revoke all on function app.find_login(text) from public;
 revoke all on function app.touch_last_login(uuid) from public;
 
-grant execute on function app.register_user(text, text, text, public.user_role, text) to wok_app;
-grant execute on function app.find_login(text) to wok_app;
-grant execute on function app.touch_last_login(uuid) to wok_app;
+grant execute on function app.register_user(text, text, text, public.user_role, text) to eegai_app;
+grant execute on function app.find_login(text) to eegai_app;
+grant execute on function app.touch_last_login(uuid) to eegai_app;

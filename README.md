@@ -1,4 +1,6 @@
-# Wall of Kindness
+# EEGAI (ஈகை)
+
+> Where giving finds its way.
 
 A donation platform for physical goods, launching in Coimbatore, Tamil Nadu. A
 donor photographs an item they no longer need, posts it, and a verified NGO
@@ -22,7 +24,7 @@ brew install postgresql@16
 brew services start postgresql@16
 
 npm install
-npm run db:setup      # creates the wok_app role and both databases
+npm run db:setup      # creates the eegai_app role and both databases
 npm run db:reset      # migrations + seed + placeholder photos
 npm run dev           # API on :8787, web on :5173
 ```
@@ -53,7 +55,7 @@ db/migrations numbered SQL, applied by scripts/db.mjs
 ```
 
 **Authorization lives in Postgres, not in route handlers.** The API connects as
-`wok_app`, a role with no `BYPASSRLS`, and announces the caller by setting two
+`eegai_app`, a role with no `BYPASSRLS`, and announces the caller by setting two
 transaction-local GUCs from a verified JWT. Every RLS policy in `db/migrations`
 therefore applies to every query the API runs. The NGO wall has no `WHERE`
 clause filtering by category or radius — the policy does that, so it cannot

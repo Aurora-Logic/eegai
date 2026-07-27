@@ -11,7 +11,7 @@
  *
  * Connects as the local superuser (your macOS account, which Homebrew's
  * Postgres trusts over the unix socket) for DDL, and creates a separate
- * low-privilege `wok_app` role that the API uses. The API role has no
+ * low-privilege `eegai_app` role that the API uses. The API role has no
  * BYPASSRLS, which is what makes the policies in db/migrations real.
  */
 import { readFileSync, readdirSync } from 'node:fs'
@@ -20,10 +20,10 @@ import pg from 'pg'
 
 const { Client } = pg
 
-const DB_NAME = process.env.PGDATABASE_APP ?? 'wall_of_kindness'
+const DB_NAME = process.env.PGDATABASE_APP ?? 'eegai'
 const TEST_DB_NAME = `${DB_NAME}_test`
-const APP_ROLE = 'wok_app'
-const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? 'wok_local_dev'
+const APP_ROLE = 'eegai_app'
+const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? 'eegai_local_dev'
 const MIGRATIONS_DIR = 'db/migrations'
 
 const verb = process.argv[2]

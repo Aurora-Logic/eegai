@@ -5,6 +5,7 @@ import { SESSION_COOKIE, verifySession, type SessionClaims } from '../lib/jwt.ts
 export type AppEnv = {
   Variables: {
     actor: SessionClaims | null
+    requestId: string
   }
 }
 

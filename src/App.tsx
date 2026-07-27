@@ -9,6 +9,7 @@ import PostItem from './app/donor/PostItem'
 import NgoWall from './app/ngo/NgoWall'
 import VolunteerHome from './app/volunteer/VolunteerHome'
 import AdminHome from './app/admin/AdminHome'
+import DonationTrail from './app/admin/DonationTrail'
 import { OfflineBanner } from './components/shared/offline-banner'
 import { ProtectedRoute } from './components/shared/protected-route'
 import { PwaPrompt } from './components/shared/pwa-prompt'
@@ -67,6 +68,14 @@ export default function App() {
           element={
             <ProtectedRoute allow={['admin']}>
               <AdminHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/items/:id"
+          element={
+            <ProtectedRoute allow={['admin']}>
+              <DonationTrail />
             </ProtectedRoute>
           }
         />

@@ -3,15 +3,15 @@ import pg from 'pg'
 const { Pool } = pg
 
 /**
- * Connects as `wok_app` — the same low-privilege, non-BYPASSRLS role the API
+ * Connects as `eegai_app` — the same low-privilege, non-BYPASSRLS role the API
  * uses. Testing RLS as a superuser would prove nothing at all.
  */
 export const testPool = new Pool({
   host: process.env.PGHOST ?? '/tmp',
   port: Number(process.env.PGPORT ?? 5432),
-  database: 'wall_of_kindness_test',
-  user: 'wok_app',
-  password: process.env.APP_DB_PASSWORD ?? 'wok_local_dev',
+  database: 'eegai_test',
+  user: 'eegai_app',
+  password: process.env.APP_DB_PASSWORD ?? 'eegai_local_dev',
   max: 6,
 })
 
@@ -45,7 +45,7 @@ export async function asActor<T>(
 /** Superuser connection, for arranging fixtures RLS would otherwise hide. */
 export const adminPool = new Pool({
   host: process.env.PGHOST ?? '/tmp',
-  database: 'wall_of_kindness_test',
+  database: 'eegai_test',
   max: 4,
 })
 
@@ -71,7 +71,10 @@ export async function loadFixtures() {
     ngo_id: string | null
   }>(
     `select u.id as user_id, p.id as profile_id, p.role, p.full_name,
-            n.accepts_categories, n.id as ngo_id
+            -- text[] so this is a real array; the enum array OID is unparsed
+            -- by node-postgres and .includes() on the raw string would give
+            -- accidentally-correct answers.
+            n.accepts_categories::text[] as accepts_categories, n.id as ngo_id
      from public.users u
      join public.profiles p on p.user_id = u.id
      left join public.ngos n on n.profile_id = p.id

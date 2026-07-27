@@ -1,6 +1,6 @@
 {
-  "app.name": "Wall of Kindness",
-  "app.tagline": "Give what you no longer need to someone in Coimbatore who does.",
+  "app.name": "EEGAI",
+  "app.tagline": "Where giving finds its way.",
   "landing.cityNote": "Coimbatore only, for now.",
   "landing.howTitle": "How it works",
   "action.post": "Post an item",
@@ -57,8 +57,7 @@
   "volunteer.subtitle": "Collections waiting near you.",
   "volunteer.empty": "Nothing to collect yet. This opens up in M4.",
   "admin.title": "Admin",
-  "admin.subtitle": "Verification, moderation and disputes.",
-  "admin.empty": "The verification queues arrive in M7.",
+  "admin.subtitle": "Verification, moderation, disputes and the numbers.",
   "toast.claimed": "Claimed.",
   "toast.posted": "It's on the wall.",
   "empty.wall": "Nothing on the wall yet. Post the first thing.",
@@ -82,5 +81,17 @@
   "styleguide.type": "Type",
   "styleguide.motion": "Motion",
   "styleguide.components": "Components",
-  "styleguide.liftDemo": "Replay lift-off"
+  "styleguide.liftDemo": "Replay lift-off",
+  "app.nameScript": "ஈகை",
+  "app.subtagline": "Give what you no longer need to someone in Coimbatore who does.",
+  "category.clothes": "Clothes",
+  "category.books": "Books",
+  "category.toys": "Toys",
+  "category.education": "Educational materials",
+  "category.furniture": "Furniture",
+  "category.household": "Household essentials",
+  "error.boundaryTitle": "Something broke on this screen.",
+  "error.boundaryBody": "Nothing you posted is lost. Reload and it will most likely work.",
+  "error.goHome": "Go home",
+  "error.reference": "Reference"
 }

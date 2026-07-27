@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
 import { Check, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
@@ -21,16 +21,17 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
 import { api, ApiError } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
+  CATEGORIES,
   CONDITION_GATES,
   donationDraftSchema,
   type Category,
   type Condition,
 } from '@/lib/validation/donation'
 
-const DRAFT_KEY = 'wok.donation-draft'
+const DRAFT_KEY = 'eegai.donation-draft'
 const STEPS = ['Photos', 'What it is', 'Condition', 'Pickup', 'Review'] as const
 
 interface Draft {
@@ -61,6 +62,7 @@ const EMPTY: Draft = {
 
 export default function PostItem() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<Draft>(() => {
     // A dropped connection must not cost someone their whole post (PLAN.md §M2).
@@ -82,8 +84,11 @@ export default function PostItem() {
 
   const submit = useMutation({
     mutationFn: () => api.post<{ id: string }>('/donations', draft),
-    onSuccess: () => {
+    onSuccess: async () => {
       localStorage.removeItem(DRAFT_KEY)
+      // Without this the donor lands back on a cached list and their item is
+      // simply absent for the next 30 seconds, which reads as "it didn't work".
+      await queryClient.invalidateQueries({ queryKey: ['donations'] })
       navigate('/donor', { replace: true })
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : t('error.generic')),
@@ -205,9 +210,11 @@ export default function PostItem() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="clothes">Clothes</SelectItem>
-                <SelectItem value="books">Books</SelectItem>
-                <SelectItem value="toys">Toys</SelectItem>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {t(`category.${c}` as StringKey)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

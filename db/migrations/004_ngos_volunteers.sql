@@ -57,7 +57,7 @@ create policy ngos_self_update on public.ngos
 create policy ngos_admin_all on public.ngos
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.ngos to wok_app;
+grant select, insert, update on public.ngos to eegai_app;
 
 -- An NGO must not verify itself. Same shape as the profiles role guard.
 create or replace function app.guard_ngo_verification()
@@ -120,7 +120,7 @@ create policy ngo_documents_owner on public.ngo_documents
 create policy ngo_documents_admin on public.ngo_documents
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.ngo_documents to wok_app;
+grant select, insert, update on public.ngo_documents to eegai_app;
 
 -- ---------------------------------------------------------------------------
 -- volunteers
@@ -169,7 +169,7 @@ create policy volunteers_self_update on public.volunteers
 create policy volunteers_admin_all on public.volunteers
   for all using (app.is_admin()) with check (app.is_admin());
 
-grant select, insert, update on public.volunteers to wok_app;
+grant select, insert, update on public.volunteers to eegai_app;
 
 create trigger guard_volunteer_verification
   before update on public.volunteers

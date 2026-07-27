@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { ErrorBoundary } from './components/shared/error-boundary'
 import { SessionProvider } from './hooks/use-session'
 import './globals.css'
 
@@ -24,12 +25,14 @@ if (!rootEl) throw new Error('Root element #root is missing from index.html')
 
 createRoot(rootEl).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <SessionProvider>
-          <App />
-        </SessionProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <SessionProvider>
+            <App />
+          </SessionProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

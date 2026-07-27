@@ -22,8 +22,14 @@ declare
   ngo_pins constant text[] := array['641001', '641004', '641012', '641006', '641028'];
   ngo_lat constant double precision[] := array[11.0168, 11.0060, 11.0180, 11.0300, 11.0060];
   ngo_lng constant double precision[] := array[76.9558, 76.9490, 76.9660, 77.0080, 77.0290];
+  -- Deliberately uneven, so the RLS category filter is visible on a fresh
+  -- reset: signing in as NGO 4 must show a different wall from NGO 1.
   ngo_cats constant text[] := array[
-    'clothes,books,toys', 'clothes,toys', 'clothes', 'books', 'books,toys'
+    'clothes,books,toys,education,furniture,household',
+    'clothes,toys,household',
+    'clothes,furniture',
+    'books,education',
+    'books,toys,household'
   ];
 
   donor_names constant text[] := array[
@@ -39,7 +45,13 @@ declare
     'Story books for 8-10 year olds', 'Board games', 'Children''s sweaters',
     'Engineering reference books', 'Soft toys', 'Kurtas, barely worn',
     'Exam guides', 'Building blocks', 'Denim jeans', 'Tamil novels',
-    'Toy cars'
+    'Toy cars', 'Study table', 'Steel almirah', 'Geometry boxes',
+    'Mixer grinder', 'Stainless steel vessels', 'Plastic chairs',
+    'Notebooks, unused', 'Ceiling fan', 'School bags', 'Bedsheets and pillow covers'
+  ];
+
+  cats constant text[] := array[
+    'clothes', 'books', 'toys', 'education', 'furniture', 'household'
   ];
 
   statuses constant text[] := array[
@@ -169,9 +181,11 @@ begin
 
     -- The claim-coherence CHECK requires an NGO on everything except posted
     -- and cancelled.
+    -- NGO 1 accepts every category, so seeded claims are always coherent with
+    -- the accepts_categories filter rather than only appearing to be.
     v_ngo := case
       when v_status in ('posted', 'cancelled') then null
-      else v_ngo_ids[1 + (i % 5)]
+      else v_ngo_ids[1]
     end;
 
     insert into public.donations (
@@ -182,12 +196,19 @@ begin
     )
     values (
       v_donor_profiles[1 + (i % 6)],
-      titles[1 + (i % 15)],
+      titles[1 + (i % 25)],
       'Seeded item ' || i::text || ' for local development.',
-      (array['clothes','books','toys'])[1 + (i % 3)]::public.donation_category,
+      cats[1 + (i % 6)]::public.donation_category,
       1 + (i % 5),
       (array['like_new','good','usable'])[1 + (i % 3)]::public.donation_condition,
-      '{"washed":true,"undamaged":true,"complete_pairs":true,"would_wear":true}'::jsonb,
+      (case cats[1 + (i % 6)]
+        when 'clothes' then '{"washed":true,"undamaged":true,"complete_pairs":true,"would_wear":true}'
+        when 'books' then '{"complete":true,"dry":true,"binding":true}'
+        when 'toys' then '{"all_pieces":true,"clean":true,"safe":true,"battery":true}'
+        when 'education' then '{"unused_pages":true,"complete_set":true,"working":true,"current":true}'
+        when 'furniture' then '{"structurally_sound":true,"no_pests":true,"complete_fittings":true,"ready_to_move":true}'
+        else '{"clean":true,"working":true,"complete":true,"safe":true}'
+      end)::jsonb,
       'House ' || i::text || ', Coimbatore',
       ngo_pins[1 + (i % 5)],
       ngo_lat[1 + (i % 5)] + 0.004,
@@ -232,6 +253,80 @@ begin
     end if;
   end loop;
 
-  raise notice 'seeded: 2 admins, 5 NGOs, 4 volunteers, 6 donors, 30 donations';
+  -- -------------------------------------------------------------------------
+  -- Verification documents, so the admin queue has something to review.
+  -- NGO 1 is verified with reviewed papers; NGOs 4 and 5 get a pending set.
+  -- -------------------------------------------------------------------------
+  insert into public.ngo_documents (ngo_id, doc_type, storage_path, reviewed)
+  select v_ngo_ids[1], d, 'seed/doc-' || d || '.pdf', true
+  from unnest(array['registration_certificate', '80g_certificate', 'darpan_listing']) d;
+
+  insert into public.ngo_documents (ngo_id, doc_type, storage_path, reviewed)
+  select v_ngo_ids[4], d, 'seed/doc-' || d || '.pdf', false
+  from unnest(array['registration_certificate', 'pan_card']) d;
+
+  insert into public.ngo_documents (ngo_id, doc_type, storage_path, reviewed)
+  select v_ngo_ids[5], d, 'seed/doc-' || d || '.pdf', false
+  from unnest(array['registration_certificate', '80g_certificate']) d;
+
+  -- Two NGOs waiting on verification, so the queue is not empty on reset.
+  for i in 6..7 loop
+    insert into public.users (phone, password_hash)
+    values ('910000000' || i::text, pw)
+    returning id into v_user;
+
+    insert into public.profiles (user_id, full_name, phone, role, pincode, lat, lng)
+    values (v_user, 'Kovai Karunai Illam ' || (i - 5)::text, '910000000' || i::text, 'ngo',
+            '641014', 10.9903, 76.9905)
+    returning id into v_profile;
+
+    insert into public.ngos (
+      profile_id, name, registration_number, address, pincode, lat, lng,
+      verification_status, monthly_capacity, accepts_categories, contact_person, contact_phone
+    )
+    values (
+      v_profile, 'Kovai Karunai Illam ' || (i - 5)::text, 'TN/2024/' || (2000 + i)::text,
+      'Ramanathapuram, Coimbatore', '641014', 10.9903, 76.9905,
+      'pending', 30, '{clothes,books}'::public.donation_category[],
+      'Kovai Karunai Illam ' || (i - 5)::text, '910000000' || i::text
+    )
+    returning id into v_ngo;
+
+    insert into public.ngo_documents (ngo_id, doc_type, storage_path, reviewed)
+    values (v_ngo, 'registration_certificate', 'seed/doc-registration_certificate.pdf', false);
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- Shipments for the courier half of the in-transit items.
+  -- -------------------------------------------------------------------------
+  insert into public.shipments (donation_id, provider, awb_number, fee_paise, paid_by, status)
+  select d.id, 'mock', 'MOCK' || lpad((row_number() over (order by d.created_at))::text, 10, '0'),
+         9900, 'donor', 'in_transit'
+  from public.donations d
+  where d.delivery_method = 'courier' and d.status in ('in_transit', 'received', 'acknowledged');
+
+  -- -------------------------------------------------------------------------
+  -- Notification history: some delivered, one failed, one still queued — so the
+  -- dispatcher's retry and dead-letter states are visible without waiting.
+  -- -------------------------------------------------------------------------
+  insert into public.notifications (profile_id, channel, template_key, payload, sent_at, error, attempts)
+  select d.donor_id, 'sms', 'donation_claimed',
+         jsonb_build_object('donation_id', d.id, 'title', d.title),
+         now() - interval '2 hours', null, 1
+  from public.donations d where d.status = 'claimed';
+
+  insert into public.notifications (profile_id, channel, template_key, payload, sent_at, error, attempts)
+  select d.donor_id, 'whatsapp', 'item_received',
+         jsonb_build_object('donation_id', d.id),
+         now() - interval '1 hour', null, 1
+  from public.donations d where d.status = 'received';
+
+  insert into public.notifications (profile_id, channel, template_key, payload, sent_at, error, attempts)
+  select d.donor_id, 'sms', 'pickup_scheduled',
+         jsonb_build_object('donation_id', d.id),
+         null, 'provider timeout', 3
+  from public.donations d where d.status = 'scheduled' limit 1;
+
+  raise notice 'seeded: 2 admins, 7 NGOs (5 verified, 2 pending), 4 volunteers, 6 donors, 30 donations';
 end
 $seed$;

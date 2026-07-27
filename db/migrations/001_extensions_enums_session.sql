@@ -1,7 +1,7 @@
 -- 001 — extensions, the enum vocabulary, and request-scoped identity.
 --
 -- This replaces what Supabase gave us for free. The important idea is that RLS
--- is still doing the authorization work: the API connects as `wok_app`, a role
+-- is still doing the authorization work: the API connects as `eegai_app`, a role
 -- with no BYPASSRLS, and announces who the caller is by setting two GUCs inside
 -- the request transaction. Policies read those through app.current_user_id()
 -- and app.current_user_role().
@@ -95,6 +95,6 @@ as $$
   select earth_distance(ll_to_earth(lat_a, lng_a), ll_to_earth(lat_b, lng_b)) / 1000.0;
 $$;
 
-grant usage on schema app to wok_app;
-grant execute on all functions in schema app to wok_app;
-grant usage on schema public to wok_app;
+grant usage on schema app to eegai_app;
+grant execute on all functions in schema app to eegai_app;
+grant usage on schema public to eegai_app;
