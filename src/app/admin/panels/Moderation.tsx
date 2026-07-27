@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import { AddItemDialog } from './AddItemDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -53,6 +54,10 @@ export function Moderation() {
 
   return (
     <section className="space-y-4">
+      <div className="flex justify-end">
+        <AddItemDialog />
+      </div>
+
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {

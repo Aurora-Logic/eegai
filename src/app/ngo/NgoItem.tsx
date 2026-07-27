@@ -31,6 +31,7 @@ interface Donation {
   pincode: string | null
   pickup_address: string | null
   condition_checklist: Record<string, boolean> | null
+  posted_on_behalf_by: string | null
   photos: { path: string }[]
 }
 
@@ -178,7 +179,21 @@ export default function NgoItem() {
                       {/* The gates from §M2, as the donor answered them. This is
                         the single most useful thing on the screen for deciding
                         whether to send a volunteer across the city. */}
-                      <h2 className="text-sm font-medium">What the donor confirmed</h2>
+                      <h2 className="text-sm font-medium">
+                        {donation.posted_on_behalf_by
+                          ? 'What the donor confirmed, through an administrator'
+                          : 'What the donor confirmed'}
+                      </h2>
+                      {donation.posted_on_behalf_by ? (
+                        // Said plainly. These answers carry less weight than a
+                        // donor ticking the boxes with the item in front of
+                        // them, and an organisation deciding whether to send a
+                        // volunteer is entitled to know which it is.
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Recorded by an administrator on the donor&apos;s behalf, not entered by
+                          the donor.
+                        </p>
+                      ) : null}
                       <ul className="mt-2 space-y-1 text-sm">
                         {Object.entries(donation.condition_checklist).map(([key, value]) => (
                           <li key={key} className="flex items-center gap-2">

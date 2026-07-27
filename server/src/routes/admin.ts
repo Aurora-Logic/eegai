@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { withActor } from '../lib/db.ts'
 import { log } from '../lib/logger.ts'
 import { hashPassword } from '../lib/password.ts'
@@ -651,4 +652,67 @@ adminRoutes.put('/legal/:slug', async (c) => {
 
   log.info('legal document published', { slug, version })
   return c.json({ slug, version })
+})
+
+/**
+ * Post an item for a donor who is not online.
+ *
+ * Reuses donationDraftSchema, so the condition gates are enforced exactly as
+ * they are for a donor posting for themselves — an admin cannot skip them by
+ * coming through a different door. What differs is only who the record says
+ * asserted the answers.
+ */
+adminRoutes.post('/donations', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const donorId = typeof body?.donorId === 'string' ? body.donorId : null
+  const parsed = donationDraftSchema.safeParse(body)
+
+  if (!donorId) return c.json({ error: 'Choose the donor this belongs to.' }, 400)
+  if (!parsed.success) {
+    return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
+  }
+
+  const draft = parsed.data
+
+  try {
+    const donationId = await withActor(actor, async (tx) => {
+      const { rows } = await tx.query(
+        `select app.admin_create_donation(
+           $1, $2, $3, $4::public.donation_category, $5,
+           $6::public.donation_condition, $7::jsonb, $8, $9
+         ) as id`,
+        [
+          donorId,
+          draft.title,
+          draft.description ?? null,
+          draft.category,
+          draft.quantity,
+          draft.condition,
+          JSON.stringify(draft.conditionChecklist),
+          draft.pickupAddress,
+          draft.pincode,
+        ],
+      )
+      const id = rows[0]?.id as string
+
+      // Same deferred 1-5 photo constraint as the donor path, checked at COMMIT.
+      for (const [index, path] of draft.photoPaths.entries()) {
+        await tx.query(
+          'insert into public.donation_photos (donation_id, storage_path, sort_order) values ($1, $2, $3)',
+          [id, path, index],
+        )
+      }
+      return id
+    })
+
+    log.info('donation posted on behalf', { donation_id: donationId, donor_id: donorId })
+    return c.json({ id: donationId }, 201)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message.includes('not an active donor')) {
+      return c.json({ error: 'That is not an active donor account.' }, 400)
+    }
+    throw error
+  }
 })

@@ -26,7 +26,8 @@ const DONATION_COLUMNS = `
   d.id, d.title, d.description, d.category, d.quantity, d.condition,
   d.pickup_address, d.pincode, d.lat, d.lng, d.status,
   d.claimed_by_ngo_id, d.claimed_at, d.claim_expires_at, d.delivery_method,
-  d.rejected_reason, d.visible_radius_km, d.posted_at, d.created_at, d.updated_at
+  d.rejected_reason, d.visible_radius_km, d.posted_at, d.created_at, d.updated_at,
+  d.posted_on_behalf_by
 `
 
 /** Photos are joined as an aggregate so one round trip returns a whole brick. */
