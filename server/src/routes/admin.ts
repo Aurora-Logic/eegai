@@ -615,3 +615,40 @@ function generatePassphrase(): string {
 function isPgError(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code
 }
+
+/**
+ * Publish an edit to a legal document.
+ *
+ * Through app.publish_legal_document, which bumps the version only when the body
+ * actually changed — fixing a typo in a title should not invalidate every
+ * recorded agreement. Admin-ness is checked inside the function as well as by
+ * the route, because the route check is the one a refactor can drop.
+ */
+const legalPatchSchema = z.object({
+  title: z.string().trim().min(2).max(120),
+  body: z.string().trim().min(50, 'A legal document needs more than a sentence.').max(60_000),
+})
+
+adminRoutes.put('/legal/:slug', async (c) => {
+  const actor = actorOf(c)
+  const slug = c.req.param('slug')
+  const parsed = legalPatchSchema.safeParse(await c.req.json().catch(() => null))
+
+  if (!parsed.success) {
+    return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
+  }
+
+  const version = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query('select app.publish_legal_document($1, $2, $3) as version', [
+      slug,
+      parsed.data.title,
+      parsed.data.body,
+    ])
+    return rows[0]?.version as number | undefined
+  })
+
+  if (version === undefined) return c.json({ error: 'No such document.' }, 404)
+
+  log.info('legal document published', { slug, version })
+  return c.json({ slug, version })
+})

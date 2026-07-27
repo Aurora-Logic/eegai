@@ -94,6 +94,12 @@ export const api = {
       method: 'POST',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }),
+  /** Full replacement — the whole resource, as with a legal document's text. */
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'PUT',
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }),
   /** Partial update — send only what changed, never the whole record. */
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, {

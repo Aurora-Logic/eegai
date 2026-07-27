@@ -7,6 +7,7 @@ import { NgoQueue } from './panels/NgoQueue'
 import { VolunteerQueue } from './panels/VolunteerQueue'
 import { Moderation } from './panels/Moderation'
 import { People } from './panels/People'
+import { LegalPanel } from './panels/LegalPanel'
 
 const TABS = [
   { value: 'overview', label: 'Overview' },
@@ -14,6 +15,7 @@ const TABS = [
   { value: 'volunteers', label: 'Volunteers' },
   { value: 'items', label: 'Items' },
   { value: 'people', label: 'People' },
+  { value: 'legal', label: 'Legal' },
 ] as const
 
 export default function AdminHome() {
@@ -56,6 +58,9 @@ export default function AdminHome() {
         </TabsContent>
         <TabsContent value="people">
           <People />
+        </TabsContent>
+        <TabsContent value="legal">
+          <LegalPanel />
         </TabsContent>
       </Tabs>
     </AppShell>
