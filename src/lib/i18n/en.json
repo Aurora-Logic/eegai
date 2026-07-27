@@ -1,14 +1,12 @@
 {
   "app.name": "Wall of Kindness",
   "app.tagline": "Give what you no longer need to someone in Coimbatore who does.",
-
   "action.post": "Post an item",
   "action.claim": "Claim this",
   "action.cancel": "Cancel",
   "action.back": "Back",
   "action.next": "Next",
   "action.retry": "Try again",
-
   "auth.signIn": "Sign in",
   "auth.signOut": "Sign out",
   "auth.signingIn": "Signing in…",
@@ -27,12 +25,13 @@
   "auth.roleQuestion": "How will you use the wall?",
   "auth.noAccount": "No account yet?",
   "auth.haveAccount": "Already registered?",
-
   "donor.title": "Your items",
   "donor.subtitle": "Everything you've put on the wall, and where it got to.",
   "donor.postTitle": "Post an item",
-
   "post.photosHint": "Add up to five photos. Take them in daylight if you can.",
+  "post.dropLabel": "Drop photos here, or tap to choose",
+  "post.dropHint": "JPEG, PNG or WebP · {left} more",
+  "post.uploading": "Compressing and uploading…",
   "post.title": "What is it?",
   "post.category": "Category",
   "post.condition": "Condition",
@@ -42,31 +41,24 @@
   "post.address": "Pickup address",
   "post.pincode": "Pincode",
   "post.submit": "Put it on the wall",
-
   "ngo.wallTitle": "The wall",
   "ngo.wallSubtitle": "Items posted near you, in the categories you accept.",
   "ngo.claimsTitle": "Your claims",
   "ngo.tabWall": "The wall",
   "ngo.tabClaims": "Your claims",
-
   "volunteer.title": "Pickups",
   "volunteer.subtitle": "Collections waiting near you.",
   "volunteer.empty": "Nothing to collect yet. This opens up in M4.",
-
   "admin.title": "Admin",
   "admin.subtitle": "Verification, moderation and disputes.",
   "admin.empty": "The verification queues arrive in M7.",
-
   "toast.claimed": "Claimed.",
   "toast.posted": "It's on the wall.",
-
   "empty.wall": "Nothing on the wall yet. Post the first thing.",
   "empty.claims": "You haven't claimed anything yet. The wall is next door.",
   "empty.donor": "Nothing here yet. Post the first thing.",
-
   "error.offline": "You're offline. The post is saved here and will go up when you reconnect.",
   "error.generic": "That didn't go through. Check your connection and send it again.",
-
   "pwa.updateReady": "A new version is ready.",
   "pwa.reload": "Reload",
   "pwa.later": "Later",
@@ -74,11 +66,9 @@
   "pwa.install": "Add",
   "pwa.noThanks": "No thanks",
   "pwa.offline": "You're offline. You can still look at what you've already opened.",
-
   "theme.toggle": "Switch theme",
   "theme.light": "Light",
   "theme.dark": "Dark",
-
   "styleguide.title": "Style guide",
   "styleguide.subtitle": "Throwaway route. Delete once the wall is built.",
   "styleguide.colour": "Colour",

@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
-import { Check, Loader2, Trash2, X } from 'lucide-react'
+import { Check, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { PhotoGrid } from '@/components/shared/photo-grid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dropzone } from '@/components/ui/dropzone'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { api, photoUrl, ApiError } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
@@ -75,14 +77,16 @@ export default function PostItem() {
     onError: (e) => setError(e instanceof ApiError ? e.message : t('error.generic')),
   })
 
-  async function addPhotos(files: FileList | null) {
-    if (!files?.length) return
+  async function addPhotos(files: File[]) {
+    if (!files.length) return
     setError(null)
     setUploading(true)
 
     try {
+      // The Dropzone already caps the count, but the draft can change between
+      // the pick and the upload, so the room is recomputed here.
       const room = 5 - draft.photoPaths.length
-      for (const file of Array.from(files).slice(0, room)) {
+      for (const file of files.slice(0, room)) {
         // Compressed before it ever leaves the phone — most donors are on
         // patchy 4G and a 6MB camera shot would simply never arrive.
         const compressed = await imageCompression(file, {
@@ -129,42 +133,27 @@ export default function PostItem() {
         <section className="space-y-4">
           <p className="text-muted-foreground">{t('post.photosHint')}</p>
 
-          <div className="grid grid-cols-3 gap-2">
-            {draft.photoPaths.map((path, index) => (
-              <div key={path} className="hairline relative overflow-hidden rounded-sm">
-                <img src={photoUrl(path)} alt={`Photo ${index + 1}`} className="block w-full" />
-                <button
-                  type="button"
-                  onClick={() => patch({ photoPaths: draft.photoPaths.filter((p) => p !== path) })}
-                  className="absolute right-1 top-1 rounded-sm bg-background/90 p-1"
-                  aria-label={`Remove photo ${index + 1}`}
-                >
-                  <X className="size-4" aria-hidden />
-                </button>
-              </div>
-            ))}
-          </div>
+          <PhotoGrid
+            paths={draft.photoPaths}
+            onReorder={(photoPaths) => patch({ photoPaths })}
+            onRemove={(path) => patch({ photoPaths: draft.photoPaths.filter((p) => p !== path) })}
+          />
 
           {draft.photoPaths.length < 5 && (
-            <div>
-              <Label htmlFor="photos" className="sr-only">
-                Add photos
-              </Label>
-              <Input
-                id="photos"
-                type="file"
-                accept="image/*"
-                multiple
-                capture="environment"
-                disabled={uploading}
-                onChange={(e) => void addPhotos(e.target.files)}
-              />
-            </div>
+            <Dropzone
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              maxFiles={5 - draft.photoPaths.length}
+              busy={uploading}
+              onFiles={(files) => void addPhotos(files)}
+              label={uploading ? t('post.uploading') : t('post.dropLabel')}
+              hint={t('post.dropHint', { left: 5 - draft.photoPaths.length })}
+            />
           )}
 
-          {uploading ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" aria-hidden /> Compressing and uploading.
+          {error ? (
+            <p role="alert" className="hairline rounded-sm bg-card p-3 text-sm text-destructive">
+              {error}
             </p>
           ) : null}
         </section>
