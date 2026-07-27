@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Ban, RotateCcw } from 'lucide-react'
+import { CreateAccountDialog } from './CreateAccountDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import {
   AlertDialog,
@@ -49,7 +50,7 @@ export function People() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Everyone with an account. Read-only — suspension is not built yet.
+          Everyone with an account. Accounts are created here — there is no public sign-up.
         </p>
         <Select value={role} onValueChange={setRole}>
           <SelectTrigger className="w-44" aria-label="Filter by role">
@@ -63,6 +64,8 @@ export function People() {
             <SelectItem value="admin">Admins</SelectItem>
           </SelectContent>
         </Select>
+
+        <CreateAccountDialog />
       </div>
 
       {isLoading ? (

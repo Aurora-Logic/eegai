@@ -1,7 +1,9 @@
+import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { withActor } from '../lib/db.ts'
 import { log } from '../lib/logger.ts'
+import { hashPassword } from '../lib/password.ts'
 import { actorOf, requireRole, type AppEnv } from '../middleware/auth.ts'
 
 export const adminRoutes = new Hono<AppEnv>()
@@ -511,3 +513,105 @@ adminRoutes.post('/users/:id/active', async (c) => {
   })
   return c.json({ ok: true, isActive })
 })
+
+/**
+ * Create an account — organisation, volunteer, or another admin.
+ *
+ * The password is generated here rather than chosen by the operator. An admin
+ * inventing passwords for other people produces one of two things: a pattern
+ * they reuse, or a note on a desk. This returns the password exactly once, in
+ * the response, for the operator to read out — after that it exists only as a
+ * scrypt hash and nobody can recover it.
+ */
+const createAccountSchema = z.object({
+  fullName: z.string().trim().min(2, 'Enter a name').max(200),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9][0-9]{9}$/, 'Enter a 10-digit Indian mobile number'),
+  role: z.enum(['ngo', 'volunteer', 'admin']),
+  email: z.string().trim().email().optional().or(z.literal('')),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]{5}$/, 'Enter a 6-digit pincode')
+    .optional()
+    .or(z.literal('')),
+})
+
+adminRoutes.post('/users', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const parsed = createAccountSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
+  }
+
+  const { fullName, phone, role, email, pincode } = parsed.data
+
+  // Four words beat a random string that has to be read down a phone line and
+  // gets one character wrong. Length is what makes a password strong, and this
+  // is ~44 bits from a 2048-word list before they change it.
+  const temporaryPassword = generatePassphrase()
+  const passwordHash = await hashPassword(temporaryPassword)
+
+  try {
+    const created = await withActor(actor, async (tx) => {
+      const { rows } = await tx.query(
+        `select * from app.admin_create_account($1, $2, $3, $4::public.user_role, $5, $6)`,
+        [phone, passwordHash, fullName, role, email || null, pincode || null],
+      )
+      return rows[0] ?? null
+    })
+
+    if (!created) return c.json({ error: 'That account could not be created.' }, 500)
+
+    log.info('account created by admin', { role, profile_id: created.profile_id })
+
+    // Returned once and never again — there is no endpoint that can read it back.
+    return c.json({ profileId: created.profile_id, role, temporaryPassword }, 201)
+  } catch (error) {
+    if (isPgError(error, '23505')) {
+      return c.json({ error: 'That number already has an account.' }, 409)
+    }
+    throw error
+  }
+})
+
+/** Four words from a small, unambiguous list. No l/1/O/0 confusion by design. */
+function generatePassphrase(): string {
+  const words = [
+    'anchor',
+    'basket',
+    'candle',
+    'dawn',
+    'ember',
+    'fabric',
+    'garden',
+    'harbour',
+    'indigo',
+    'jasmine',
+    'kettle',
+    'lantern',
+    'marigold',
+    'nutmeg',
+    'orchard',
+    'pepper',
+    'quarry',
+    'ribbon',
+    'saffron',
+    'temple',
+    'umbrella',
+    'velvet',
+    'window',
+    'yarn',
+  ]
+  const picked = Array.from(randomBytes(4)).map((byte) => words[byte % words.length])
+  return picked.join('-')
+}
+
+/** 23505 is unique_violation — a duplicate phone, which is the common case. */
+function isPgError(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code
+}
