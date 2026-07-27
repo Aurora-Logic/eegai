@@ -8,8 +8,10 @@ import { observability } from './middleware/observability.ts'
 import { log } from './lib/logger.ts'
 import { authRoutes } from './routes/auth.ts'
 import { adminRoutes } from './routes/admin.ts'
+import { acknowledgementRoutes } from './routes/acknowledgements.ts'
 import { donationRoutes } from './routes/donations.ts'
 import { pickupRoutes } from './routes/pickups.ts'
+import { shipmentRoutes, trackOpenShipments } from './routes/shipments.ts'
 import { uploadRoutes } from './routes/uploads.ts'
 
 const app = new Hono<AppEnv>()
@@ -37,7 +39,9 @@ app.get('/api/health', async (c) => {
 app.route('/api/auth', authRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/donations', donationRoutes)
+app.route('/api/acknowledgements', acknowledgementRoutes)
 app.route('/api/pickups', pickupRoutes)
+app.route('/api/shipments', shipmentRoutes)
 app.route('/api/uploads', uploadRoutes)
 app.route('/api/files', uploadRoutes)
 
@@ -73,6 +77,20 @@ setInterval(() => {
     }
   }).catch((error) => log.error('expiry sweep failed', { err: String(error) }))
 }, EXPIRY_INTERVAL_MS).unref()
+
+/**
+ * Courier tracking poll (PLAN.md §M5). Five minutes is frequent enough that a
+ * donor refreshing after a delivery notification sees the right thing, and slow
+ * enough not to annoy a provider's rate limiter.
+ */
+const TRACKING_INTERVAL_MS = 5 * 60 * 1000
+setInterval(() => {
+  trackOpenShipments()
+    .then((count) => {
+      if (count > 0) log.info('tracking sweep', { polled: count })
+    })
+    .catch((error) => log.error('tracking sweep failed', { err: String(error) }))
+}, TRACKING_INTERVAL_MS).unref()
 
 serve({ fetch: app.fetch, port: env.PORT, hostname: '127.0.0.1' }, (info) => {
   log.info('api listening', { port: info.port, env: env.NODE_ENV })
