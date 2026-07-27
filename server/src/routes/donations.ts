@@ -3,7 +3,22 @@ import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { transition, IllegalTransitionError } from '../../../src/lib/state-machine.ts'
 import type { DonationStatus } from '../../../src/lib/validation/donation.ts'
 import { withActor, withSystemActor } from '../lib/db.ts'
+import { renderPdf, type PdfBlock } from '../lib/pdf.ts'
 import { actorOf, requireAuth, requireRole, type AppEnv } from '../middleware/auth.ts'
+
+/**
+ * The pilot is in Coimbatore, so every timestamp a donor or an NGO reads is
+ * rendered in IST regardless of where the server happens to run.
+ */
+const IST = 'Asia/Kolkata'
+
+function formatIst(value: string | Date, withTime = true): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    ...(withTime ? { timeStyle: 'short' as const } : {}),
+    timeZone: IST,
+  }).format(new Date(value))
+}
 
 export const donationRoutes = new Hono<AppEnv>()
 
@@ -285,4 +300,223 @@ donationRoutes.post('/:id/delivery', requireAuth, async (c) => {
   })
 
   return c.json({ ok: true, method })
+})
+
+/**
+ * The donor timeline (PLAN.md §M6) — everything that happened to one item.
+ *
+ * Two-step on purpose. Visibility is proved first under the caller's own RLS;
+ * only then are the events read. `donation_events` is an owner-run view, so it
+ * does *not* enforce RLS itself (see 010_traceability.sql) — querying it before
+ * establishing that the caller can see the donation would hand anyone the
+ * history of any item by guessing a UUID.
+ */
+donationRoutes.get('/:id/timeline', requireAuth, async (c) => {
+  const actor = actorOf(c)
+  const id = c.req.param('id')
+
+  const visible = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select ${DONATION_COLUMNS}, ${PHOTO_AGG},
+              n.name as ngo_name, n.address as ngo_address, n.has_80g
+       from public.donations d
+       left join public.ngos n on n.id = d.claimed_by_ngo_id
+       where d.id = $1`,
+      [id],
+    )
+    return rows[0] ?? null
+  })
+
+  if (!visible) return c.json({ error: 'That item is not on the wall.' }, 404)
+
+  const [events, acknowledgement, pickup] = await Promise.all([
+    withSystemActor(async (tx) => {
+      const { rows } = await tx.query(
+        `select e.id, e.created_at, e.event, e.from_status, e.to_status,
+                p.role as actor_role
+         from public.donation_events e
+         left join public.profiles p on p.user_id = e.actor_id
+         where e.donation_id = $1
+         order by e.created_at`,
+        [id],
+      )
+      return rows
+    }),
+    withActor(actor, async (tx) => {
+      const { rows } = await tx.query(
+        `select a.photo_path, a.note, a.created_at, n.name as ngo_name
+         from public.acknowledgements a
+         join public.ngos n on n.id = a.ngo_id
+         where a.donation_id = $1`,
+        [id],
+      )
+      return rows[0] ?? null
+    }),
+    withActor(actor, async (tx) => {
+      const { rows } = await tx.query(
+        `select pk.slot_date, pk.slot, pk.collected_at, pk.delivered_at,
+                vp.full_name as volunteer_name
+         from public.pickups pk
+         left join public.volunteers v on v.id = pk.volunteer_id
+         left join public.profiles vp on vp.id = v.profile_id
+         where pk.donation_id = $1`,
+        [id],
+      )
+      return rows[0] ?? null
+    }),
+  ])
+
+  return c.json({ donation: visible, events, acknowledgement, pickup })
+})
+
+/**
+ * The PDF receipt (PLAN.md §M6).
+ *
+ * Scoped by RLS the same way as the timeline, and only for an item that actually
+ * completed — a receipt for goods still in a volunteer's bag would be a document
+ * asserting something untrue.
+ *
+ * It is deliberately titled a *record of goods donated*, not a tax receipt.
+ * PLAN.md §11 Q2 — which legal entity issues the receipt — is still unanswered,
+ * and a document that looks like an 80G certificate but is issued by nobody in
+ * particular is worse than no document at all. When §11 is settled this becomes
+ * a real receipt; until then it is an honest record, which is still the thing a
+ * donor wants to keep.
+ */
+donationRoutes.get('/:id/receipt.pdf', requireAuth, async (c) => {
+  const actor = actorOf(c)
+  const id = c.req.param('id')
+
+  const data = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select d.id, d.title, d.category, d.condition, d.quantity, d.status,
+              d.posted_at, d.pincode,
+              dp.full_name as donor_name,
+              n.name as ngo_name, n.address as ngo_address, n.has_80g,
+              a.note as ngo_note, a.created_at as acknowledged_at
+       from public.donations d
+       join public.profiles dp on dp.id = d.donor_id
+       left join public.ngos n on n.id = d.claimed_by_ngo_id
+       left join public.acknowledgements a on a.donation_id = d.id
+       where d.id = $1`,
+      [id],
+    )
+    return rows[0] ?? null
+  })
+
+  if (!data) return c.json({ error: 'That item is not on the wall.' }, 404)
+
+  if (data.status !== 'acknowledged') {
+    return c.json(
+      { error: 'A receipt is issued once the organisation confirms the items arrived.' },
+      409,
+    )
+  }
+
+  // Short, human-quotable, and derived rather than stored — there is no counter
+  // to get out of step with, and it maps straight back to the donation id.
+  const reference = `EEG-${String(data.id).slice(0, 8).toUpperCase()}`
+
+  const blocks: PdfBlock[] = [
+    { kind: 'text', text: 'EEGAI', font: 'bold', size: 26, gapAfter: 2 },
+    {
+      kind: 'text',
+      text: 'Where giving finds its way. Coimbatore, Tamil Nadu.',
+      size: 10,
+      gapAfter: 14,
+    },
+    { kind: 'rule', gapAfter: 20 },
+
+    { kind: 'text', text: 'Record of goods donated', font: 'bold', size: 16, gapAfter: 16 },
+
+    { kind: 'text', text: `Reference    ${reference}`, font: 'mono', size: 10, gapAfter: 2 },
+    {
+      kind: 'text',
+      text: `Issued       ${formatIst(new Date(), false)}`,
+      font: 'mono',
+      size: 10,
+      gapAfter: 18,
+    },
+
+    { kind: 'text', text: 'Donor', font: 'bold', size: 11, gapAfter: 2 },
+    { kind: 'text', text: String(data.donor_name), gapAfter: 16 },
+
+    { kind: 'text', text: 'What was given', font: 'bold', size: 11, gapAfter: 2 },
+    { kind: 'text', text: String(data.title), gapAfter: 2 },
+    {
+      kind: 'text',
+      text:
+        `${data.category} - ${String(data.condition).replace(/_/g, ' ')} condition - ` +
+        `quantity ${data.quantity}`,
+      size: 10,
+      gapAfter: 16,
+    },
+
+    { kind: 'text', text: 'Received by', font: 'bold', size: 11, gapAfter: 2 },
+    { kind: 'text', text: String(data.ngo_name ?? 'Unrecorded'), gapAfter: 2 },
+    ...(data.ngo_address
+      ? [{ kind: 'text' as const, text: String(data.ngo_address), size: 10, gapAfter: 16 }]
+      : [{ kind: 'space' as const, height: 10 }]),
+
+    { kind: 'text', text: 'When', font: 'bold', size: 11, gapAfter: 2 },
+    {
+      kind: 'text',
+      text: `Posted on the wall   ${formatIst(data.posted_at)}`,
+      size: 10,
+      gapAfter: 2,
+    },
+    {
+      kind: 'text',
+      text: `Confirmed received   ${formatIst(data.acknowledged_at)}`,
+      size: 10,
+      gapAfter: 16,
+    },
+
+    ...(data.ngo_note
+      ? [
+          {
+            kind: 'text' as const,
+            text: 'What the organisation said',
+            font: 'bold' as const,
+            size: 11,
+            gapAfter: 4,
+          },
+          { kind: 'text' as const, text: String(data.ngo_note), size: 10, gapAfter: 16 },
+        ]
+      : []),
+
+    { kind: 'space', height: 8 },
+    { kind: 'rule', gapAfter: 14 },
+
+    {
+      kind: 'text',
+      text:
+        'This is a record that the goods described above were collected and confirmed received ' +
+        'by the organisation named. It is not a tax receipt and it does not by itself support a ' +
+        'deduction under Section 80G.',
+      size: 9,
+      gapAfter: 8,
+    },
+    {
+      kind: 'text',
+      text: data.has_80g
+        ? 'The receiving organisation holds 80G registration. Ask them directly for a tax receipt.'
+        : 'The receiving organisation has not recorded an 80G registration with us.',
+      size: 9,
+      gapAfter: 8,
+    },
+    {
+      kind: 'text',
+      text: `Verify this record at eegai.org using reference ${reference}.`,
+      size: 9,
+    },
+  ]
+
+  const pdf = renderPdf(blocks, `EEGAI record ${reference}`)
+
+  return c.body(new Uint8Array(pdf), 200, {
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="eegai-${reference}.pdf"`,
+    'Cache-Control': 'private, no-store',
+  })
 })

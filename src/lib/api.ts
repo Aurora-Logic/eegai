@@ -94,9 +94,15 @@ export const api = {
       method: 'POST',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }),
-  upload: <T>(path: string, file: File) => {
+  /**
+   * `fields` carries the upload kind. Acknowledgement photos are stored under a
+   * different prefix and read back through an RLS check, so the server has to be
+   * told which sort it is receiving — see server/src/routes/uploads.ts.
+   */
+  upload: <T>(path: string, file: File, fields?: Record<string, string>) => {
     const form = new FormData()
     form.append('file', file)
+    for (const [key, value] of Object.entries(fields ?? {})) form.append(key, value)
     return request<T>(path, { method: 'POST', body: form })
   },
 }
