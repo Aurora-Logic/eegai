@@ -33,6 +33,22 @@ export default defineConfig({
           { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
+      // Without this there is no service worker on `npm run dev`, so Chrome's
+      // installability criteria are never met and `beforeinstallprompt` never
+      // fires — which reads as "the install prompt is broken" when in fact
+      // there was nothing to install. NOTES.md deferred the worker to M8 to
+      // avoid shipping a cache with nothing useful in it; that reasoning was
+      // about production, and it cost the whole PWA its testability in dev.
+      //
+      // The trade-off is real: a dev service worker can serve stale assets after
+      // an edit. `registerType: 'prompt'` means you are asked rather than
+      // swapped under, and a hard reload always wins.
+      devOptions: {
+        enabled: true,
+        type: 'module',
+        navigateFallback: 'index.html',
+        suppressWarnings: true,
+      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
         // SPA offline shell — any navigation while offline is served the

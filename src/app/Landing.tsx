@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { Button } from '@/components/ui/button'
 import { WallScene } from '@/components/illustrations'
 import { t } from '@/lib/i18n'
@@ -13,10 +14,18 @@ export default function Landing() {
   return (
     <main className="plaster-ground min-h-dvh">
       <div className="mx-auto max-w-5xl px-6 py-12">
+        {/* First thing, top right, before anything asks them to read English.
+            The landing page is where a Tamil or Hindi speaker actually arrives,
+            so this is the one place the picker cannot be missing. */}
+        <div className="mb-6 flex justify-end">
+          <LanguageSwitcher />
+        </div>
+
         <section className="grid items-center gap-10 md:grid-cols-2">
           <div className="order-2 md:order-1">
             <h1 className="max-w-[16ch] text-balance font-display text-display-lg sm:text-display-xl">
-              {t('app.name')}
+              <span lang="ta">{t('app.nameScript')}</span>
+              <span className="sr-only">{t('app.name')}</span>
             </h1>
             <p className="mt-4 max-w-[42ch] text-lg text-muted-foreground">{t('app.tagline')}</p>
 

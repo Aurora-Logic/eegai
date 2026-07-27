@@ -29,16 +29,14 @@ export function AppShell({
     <div className="plaster-ground min-h-dvh">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          {/* The name in both scripts, always together. Tamil is the language of
-              the city this launches in, and showing it only on the landing page
-              would make it decoration rather than the name. The Tamil sits on
-              the same baseline at a slightly larger size because Noto Sans Tamil
-              runs optically smaller than Bricolage at equal point size. */}
+          {/* The logotype is the Tamil wordmark alone. `lang` so a screen reader
+              reaches for a Tamil voice, and an sr-only Latin name so the link
+              still announces as EEGAI to anyone whose reader has no Tamil. */}
           <Link to="/" className="flex items-baseline gap-2">
-            <span className="font-display text-display-sm">{t('app.name')}</span>
-            <span aria-hidden className="text-lg leading-none text-muted-foreground">
+            <span lang="ta" className="font-display text-display-md leading-none">
               {t('app.nameScript')}
             </span>
+            <span className="sr-only">{t('app.name')}</span>
           </Link>
           <div className="flex items-center gap-1">
             <LanguageSwitcher />

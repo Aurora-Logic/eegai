@@ -28,9 +28,15 @@ export default function AdminHome() {
         value={TABS.some((item) => item.value === tab) ? tab : 'overview'}
         onValueChange={(next) => setParams(next === 'overview' ? {} : { tab: next })}
       >
-        <TabsList className="mb-6 flex-wrap">
+        {/* Five tabs do not fit a phone. `flex-wrap` let the fifth drop onto a
+            second line while the pill background kept the base height, so
+            "People" floated outside its own container looking like a stray
+            heading. A single scrolling row is the fix: it cannot wrap, the
+            background always covers it, and side-scrolling a tab strip is a
+            gesture people already know. */}
+        <TabsList className="mb-6 flex h-auto w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map((item) => (
-            <TabsTrigger key={item.value} value={item.value}>
+            <TabsTrigger key={item.value} value={item.value} className="min-h-9 shrink-0">
               {item.label}
             </TabsTrigger>
           ))}
