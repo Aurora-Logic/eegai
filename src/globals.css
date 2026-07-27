@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Wall of Kindness design tokens — PLAN.md §8.
+ *
+ * The six brand colours are the source of truth and are declared once, as HSL
+ * triplets, under their real names. Every shadcn semantic token below is an
+ * alias onto one of them. Changing a brand hex here repaints the whole product;
+ * nothing else in the codebase should ever hardcode a colour.
+ *
+ * Triplets are unwrapped (`44 27% 89%`, not `hsl(...)`) so Tailwind can splice
+ * an alpha channel in via `hsl(var(--token) / <alpha-value>)`.
+ */
+
+@layer base {
+  :root {
+    /* ---- Brand ---- */
+    --plaster: 44 27% 89%; /* #EBE7DC limewash wall — page ground */
+    --indigo: 218 41% 22%; /* #21324F block-print ink — all primary text */
+    --marigold: 40 82% 50%; /* #E8A317 the giving colour — primary action */
+    --kraft: 34 42% 64%; /* #C9A87C cardboard/courier — cards, labels */
+    --moss: 129 18% 35%; /* #4A6B4F received / success */
+    --vermilion: 9 61% 47%; /* #C0442E rejected / destructive only */
+
+    /* ---- Semantic (light: plaster ground, indigo ink) ---- */
+    --background: var(--plaster);
+    --foreground: var(--indigo);
+
+    --card: 44 30% 93%;
+    --card-foreground: var(--indigo);
+
+    --popover: 44 30% 95%;
+    --popover-foreground: var(--indigo);
+
+    --primary: var(--marigold);
+    --primary-foreground: 218 45% 14%;
+
+    --secondary: var(--kraft);
+    --secondary-foreground: 218 45% 16%;
+
+    --muted: 44 20% 84%;
+    --muted-foreground: 218 20% 42%;
+
+    --accent: 34 42% 82%;
+    --accent-foreground: 218 45% 16%;
+
+    --destructive: var(--vermilion);
+    --destructive-foreground: var(--plaster);
+
+    --success: var(--moss);
+    --success-foreground: var(--plaster);
+
+    --border: 44 18% 78%;
+    --input: 44 18% 78%;
+    --ring: var(--marigold);
+
+    /* The brick's 1px hairline. Indigo, not the muted border — the wall reads
+     * as ink-on-plaster and the tiles need the harder edge. */
+    --hairline: 218 41% 22%;
+    --hairline-opacity: 0.22;
+
+    --radius: 0.25rem;
+
+    /* ---- Motion ----
+     * The brick lift-off is the one animation in the product (PLAN.md §8).
+     * Everything else is instant, so there is deliberately no "slow" token. */
+    --lift-duration: 380ms;
+    --lift-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .dark {
+    /* Inverted: indigo ground, plaster ink. Marigold is unchanged by design. */
+    --background: 218 41% 13%;
+    --foreground: var(--plaster);
+
+    --card: 218 38% 18%;
+    --card-foreground: var(--plaster);
+
+    --popover: 218 38% 16%;
+    --popover-foreground: var(--plaster);
+
+    --primary: var(--marigold);
+    --primary-foreground: 218 45% 12%;
+
+    --secondary: 34 30% 45%;
+    --secondary-foreground: var(--plaster);
+
+    --muted: 218 30% 24%;
+    --muted-foreground: 44 15% 68%;
+
+    --accent: 218 30% 28%;
+    --accent-foreground: var(--plaster);
+
+    /* Both lifted ~8pp: the light-mode values fail contrast on an indigo ground. */
+    --destructive: 9 61% 57%;
+    --destructive-foreground: 218 45% 12%;
+
+    --success: 129 22% 48%;
+    --success-foreground: 218 45% 12%;
+
+    --border: 218 25% 30%;
+    --input: 218 25% 30%;
+    --ring: 40 82% 55%;
+
+    --hairline: var(--plaster);
+    --hairline-opacity: 0.28;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Nothing in the product scroll-jumps; this only smooths anchor links. */
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    /* Devanagari sits on a lower baseline than Latin. Extra leading here keeps
+     * mixed en/mr/hi lines from colliding once those strings land. */
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Display face is never below 20px (PLAN.md §8) — enforced by the `font-display`
+   * utility pairing in tailwind.config.ts, reinforced here for raw headings. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Visible keyboard focus is a quality floor item, not a preference. Mouse
+   * clicks stay clean via :focus-visible. */
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-ring;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    /* The brick fades instead of lifting; see .brick-lift below. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* The plaster ground. A very low-contrast grain so tiles read as pinned to a
+   * wall rather than floating on a flat page. Pure CSS — no image request. */
+  .plaster-ground {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.035) 0.5px, transparent 0.5px);
+    background-size: 4px 4px;
+  }
+
+  /* 1px indigo hairline used by every brick. */
+  .hairline {
+    box-shadow: 0 0 0 1px hsl(var(--hairline) / var(--hairline-opacity));
+  }
+}
