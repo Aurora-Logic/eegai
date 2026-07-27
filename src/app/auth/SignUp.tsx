@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, Boxes, HandHeart, Truck } from 'lucide-react'
 import { AuthLayout } from '@/components/shared/auth-layout'
-import { GivingScene } from '@/components/illustrations'
+import { RoleScene } from '@/components/illustrations/roles'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,7 +71,10 @@ export default function SignUp() {
     <AuthLayout
       title={t('auth.signUpTitle')}
       subtitle={t('auth.signUpSubtitle')}
-      illustration={<GivingScene className="w-full max-w-sm" />}
+      // Follows the role radio. That radio is the only decision on this page
+      // that changes what the whole account becomes, and it is a small
+      // low-contrast control whose consequence is invisible until much later.
+      illustration={<RoleScene role={role} className="w-full max-w-sm" />}
       footer={
         <>
           {t('auth.haveAccount')}{' '}

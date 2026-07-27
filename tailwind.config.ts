@@ -118,10 +118,18 @@ export default {
           '0%': { opacity: '1' },
           '100%': { opacity: '0' },
         },
+        // The landing hero only. Things hanging on a wall move a little; a
+        // perfectly still drawing of hung cloth reads as a diagram. Two degrees
+        // and a slow cycle, which is loitering rather than animation.
+        sway: {
+          '0%, 100%': { transform: 'rotate(-1.6deg)' },
+          '50%': { transform: 'rotate(1.6deg)' },
+        },
       },
       animation: {
         'brick-lift': 'brick-lift var(--lift-duration) var(--lift-ease) forwards',
         'brick-fade': 'brick-fade 150ms linear forwards',
+        sway: 'sway 6s ease-in-out infinite',
       },
     },
   },
