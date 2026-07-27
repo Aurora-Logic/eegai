@@ -53,12 +53,13 @@ test.describe.serial('verification decisions', () => {
     }).toPass({ timeout: 5000 })
   })
 
-  test('a rejection cannot be saved without a reason', async ({ page }) => {
+  test('a rejection needs a reason, and then actually saves', async ({ page }) => {
     await signIn(page, ADMIN)
     await page.getByRole('tab', { name: 'Organisations' }).click()
 
     const card = page.getByRole('listitem').first()
     await expect(card).toBeVisible()
+    const name = await card.locator('p').first().innerText()
     await card.getByRole('button', { name: 'Reject' }).click()
 
     const dialog = page.getByRole('dialog')
@@ -66,6 +67,21 @@ test.describe.serial('verification decisions', () => {
 
     await dialog.getByLabel('Reason').fill('Registration number does not match DARPAN.')
     await expect(dialog.getByRole('button', { name: 'Reject' })).toBeEnabled()
+
+    // Pressing it matters. The previous version of this test stopped here, at
+    // the enabled button — so it never touched the audit_log insert behind it,
+    // which had been failing with a 500 on every rejection and suspension in the
+    // product. A test that stops one step short of the write cannot see that.
+    await dialog.getByRole('button', { name: 'Reject' }).click()
+
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+
+    // Gone from the pending queue, which only happens if the write went through.
+    await expect(async () => {
+      const remaining = await page.getByRole('listitem').allInnerTexts()
+      expect(remaining.some((text) => text.includes(name))).toBe(false)
+    }).toPass({ timeout: 5000 })
   })
 })
 

@@ -128,13 +128,16 @@ adminRoutes.post('/ngos/:id/verify', async (c) => {
 
     if (rows[0] && reason) {
       // The reason belongs in the trail, not only in an SMS nobody keeps.
-      await tx.query(
-        `insert into public.audit_log (actor_id, entity, entity_id, action, after, request_id)
-         values (app.current_user_id(), 'ngos', $1, 'verification_reason',
-                 jsonb_build_object('status', $2::text, 'reason', $3::text),
-                 app.current_request_id())`,
-        [c.req.param('id'), status, reason],
-      )
+      // Through the function, not a direct insert: audit_log is SELECT-only to
+      // the API role so history cannot be forged, and inserting here raised
+      // "permission denied" — a 500 the operator read as "that did not go
+      // through". See 014_verification_reason.sql.
+      await tx.query('select app.record_verification_reason($1, $2, $3, $4)', [
+        'ngos',
+        c.req.param('id'),
+        status,
+        reason,
+      ])
     }
 
     return rows[0] ?? null
@@ -196,13 +199,16 @@ adminRoutes.post('/volunteers/:id/verify', async (c) => {
     )
 
     if (rows[0] && reason) {
-      await tx.query(
-        `insert into public.audit_log (actor_id, entity, entity_id, action, after, request_id)
-         values (app.current_user_id(), 'volunteers', $1, 'verification_reason',
-                 jsonb_build_object('status', $2::text, 'reason', $3::text),
-                 app.current_request_id())`,
-        [c.req.param('id'), status, reason],
-      )
+      // Through the function, not a direct insert: audit_log is SELECT-only to
+      // the API role so history cannot be forged, and inserting here raised
+      // "permission denied" — a 500 the operator read as "that did not go
+      // through". See 014_verification_reason.sql.
+      await tx.query('select app.record_verification_reason($1, $2, $3, $4)', [
+        'volunteers',
+        c.req.param('id'),
+        status,
+        reason,
+      ])
     }
 
     return rows[0] ?? null
