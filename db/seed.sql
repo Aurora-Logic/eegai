@@ -1,8 +1,8 @@
 -- Seed data for local development. Applied by `npm run db:reset`.
 --
--- PLAN.md §10: 2 admins, 5 verified NGOs across Nashik pincodes, 4 volunteers,
--- and 30 donations spread across every state, so every feature is demoable from
--- a fresh reset with no manual clicking.
+-- PLAN.md §10: 2 admins, 5 verified NGOs across Coimbatore pincodes, 4
+-- volunteers, and 30 donations spread across every state, so every feature is
+-- demoable from a fresh reset with no manual clicking.
 --
 -- Every seeded account signs in with the password:  password123
 -- The hash below is scrypt (N=2^17, r=8, p=1) as produced by
@@ -13,31 +13,32 @@ declare
   pw constant text :=
     'scrypt$131072$8$1$qovVAwh3gWP/dXZk8auPjA==$CjXAgwuGJGwiZez1RCopVZ0VEXaU+9WoVXrIEptXz4hB0CM67k+ooaq4iLXOTex7ykBA7I/YvNuPHOR4YV0YlA==';
 
-  -- Nashik, spread across real pincodes and roughly real coordinates.
+  -- Coimbatore, spread across real pincodes and roughly real coordinates.
+  -- Names are fictional but plausible for the city; "Kovai" is Coimbatore in Tamil.
   ngo_names constant text[] := array[
-    'Sahyadri Seva Sangh', 'Godavari Bal Vikas', 'Panchavati Anna Kshetra',
-    'Nashik Vidya Prasarak', 'Deolali Aadhar Trust'
+    'Kongu Nala Sangam', 'Noyyal Kalvi Maiyam', 'Kovai Anbu Illam',
+    'Peelamedu Udhavi Trust', 'Vellalore Nammavar Sangam'
   ];
-  ngo_pins constant text[] := array['422001', '422002', '422003', '422009', '422005'];
-  ngo_lat constant double precision[] := array[19.9975, 20.0110, 20.0080, 19.9600, 19.9450];
-  ngo_lng constant double precision[] := array[73.7898, 73.7800, 73.7750, 73.7400, 73.8350];
+  ngo_pins constant text[] := array['641001', '641004', '641012', '641006', '641028'];
+  ngo_lat constant double precision[] := array[11.0168, 11.0060, 11.0180, 11.0300, 11.0060];
+  ngo_lng constant double precision[] := array[76.9558, 76.9490, 76.9660, 77.0080, 77.0290];
   ngo_cats constant text[] := array[
     'clothes,books,toys', 'clothes,toys', 'clothes', 'books', 'books,toys'
   ];
 
   donor_names constant text[] := array[
-    'Asha Kulkarni', 'Rohit Deshmukh', 'Meera Joshi',
-    'Imran Shaikh', 'Sunita Pawar', 'Kartik Rane'
+    'Lakshmi Subramanian', 'Karthik Rajan', 'Divya Natarajan',
+    'Arun Selvam', 'Meena Balakrishnan', 'Vignesh Kumar'
   ];
   vol_names constant text[] := array[
-    'Nikhil Bhosale', 'Priya Wagh', 'Sameer Jadhav', 'Tanvi Gaikwad'
+    'Prakash Murugan', 'Anitha Ravi', 'Suresh Palanisamy', 'Kavitha Shankar'
   ];
 
   titles constant text[] := array[
     'Winter jackets', 'School textbooks', 'Wooden puzzle set', 'Cotton sarees',
     'Story books for 8-10 year olds', 'Board games', 'Children''s sweaters',
     'Engineering reference books', 'Soft toys', 'Kurtas, barely worn',
-    'Exam guides', 'Building blocks', 'Denim jeans', 'Marathi novels',
+    'Exam guides', 'Building blocks', 'Denim jeans', 'Tamil novels',
     'Toy cars'
   ];
 
@@ -76,7 +77,7 @@ begin
     returning id into v_user;
 
     insert into public.profiles (user_id, full_name, phone, role, pincode, lat, lng)
-    values (v_user, 'Admin ' || i::text, '900000000' || i::text, 'admin', '422001', 19.9975, 73.7898)
+    values (v_user, 'Admin ' || i::text, '900000000' || i::text, 'admin', '641001', 11.0168, 76.9558)
     returning id into v_profile;
 
     v_admin_profiles := v_admin_profiles || v_profile;
@@ -103,8 +104,8 @@ begin
       accepts_categories, contact_person, contact_phone, is_accepting
     )
     values (
-      v_profile, ngo_names[i], 'MH/2019/' || (1000 + i)::text, 'MH/2019/' || (5000 + i)::text,
-      i % 2 = 1, ngo_names[i] || ', Nashik', ngo_pins[i], ngo_lat[i], ngo_lng[i],
+      v_profile, ngo_names[i], 'TN/2019/' || (1000 + i)::text, 'TN/2019/' || (5000 + i)::text,
+      i % 2 = 1, ngo_names[i] || ', Coimbatore', ngo_pins[i], ngo_lat[i], ngo_lng[i],
       'verified', now() - (i || ' days')::interval, v_admin_profiles[1], 40 + i * 10,
       string_to_array(ngo_cats[i], ',')::public.donation_category[],
       ngo_names[i], '910000000' || i::text, true
@@ -187,7 +188,7 @@ begin
       1 + (i % 5),
       (array['like_new','good','usable'])[1 + (i % 3)]::public.donation_condition,
       '{"washed":true,"undamaged":true,"complete_pairs":true,"would_wear":true}'::jsonb,
-      'House ' || i::text || ', Nashik',
+      'House ' || i::text || ', Coimbatore',
       ngo_pins[1 + (i % 5)],
       ngo_lat[1 + (i % 5)] + 0.004,
       ngo_lng[1 + (i % 5)] + 0.004,

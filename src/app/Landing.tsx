@@ -10,15 +10,19 @@ export default function Landing() {
       </h1>
       <p className="mt-4 max-w-[38ch] text-muted-foreground">{t('app.tagline')}</p>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Button disabled>{t('action.post')}</Button>
-        <Button variant="outline" asChild>
-          <Link to="/style-guide">{t('styleguide.title')}</Link>
+      <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
+        <Button asChild size="lg">
+          <Link to="/sign-up">{t('auth.createAccount')}</Link>
+        </Button>
+        <Button asChild variant="outline" size="lg">
+          <Link to="/sign-in">{t('auth.signIn')}</Link>
         </Button>
       </div>
 
-      <p className="mt-10 font-mono text-xs text-muted-foreground">
-        M0 — foundation. Sign-in lands in M1.
+      <p className="mt-10 text-sm text-muted-foreground">
+        <Link to="/style-guide" className="underline underline-offset-4">
+          {t('styleguide.title')}
+        </Link>
       </p>
     </main>
   )

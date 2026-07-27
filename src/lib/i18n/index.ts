@@ -3,8 +3,8 @@ import en from './en.json'
 /**
  * Every user-facing string goes through `t()`, even now when English is the
  * only locale (PLAN.md §8). v1 does not ship a language switcher — this exists
- * so that adding Marathi and Hindi later is a data change, not a refactor of
- * every component.
+ * so that adding Tamil later is a data change, not a refactor of every
+ * component.
  */
 export type Locale = 'en'
 

@@ -33,7 +33,7 @@ async function seedPosted(category = 'clothes'): Promise<string> {
     `insert into public.donations
        (donor_id, title, category, quantity, condition, pickup_address, pincode, lat, lng, status)
      values ($1, 'Test item', $2::public.donation_category, 1, 'good',
-             'Test address, Nashik', '422001', 19.9975, 73.7898, 'posted')
+             'Test address, Coimbatore', '641001', 11.0168, 76.9558, 'posted')
      returning id`,
     [donor.profileId, category],
   )

@@ -121,10 +121,10 @@ export default function StyleGuide() {
             </div>
             <div>
               <span className="font-mono text-xs text-muted-foreground">
-                body · Noto Sans Devanagari fallback
+                body · Noto Sans Tamil fallback
               </span>
-              <p className="mt-1" lang="mr">
-                तुम्हाला नको असलेली वस्तू नाशिकमधील गरजू संस्थेला द्या.
+              <p className="mt-1" lang="ta">
+                உங்களுக்குத் தேவையில்லாத பொருட்களை கோவையில் தேவைப்படுபவர்களுக்கு வழங்குங்கள்.
               </p>
             </div>
             <div>
@@ -159,7 +159,7 @@ export default function StyleGuide() {
             <Card>
               <CardHeader>
                 <CardTitle>Winter jackets ×4</CardTitle>
-                <CardDescription>Gangapur Road · 422013</CardDescription>
+                <CardDescription>R.S. Puram · 641004</CardDescription>
               </CardHeader>
               <CardContent className="flex gap-2">
                 <Badge>clothes</Badge>

@@ -13,7 +13,7 @@ longer need, posts it, and a verified NGO claims it. The item then reaches the
 NGO one of two ways: the donor books a courier, or a vetted volunteer collects
 it in person.
 
-Launch city: **Nashik, Maharashtra**. Single city only in v1.
+Launch city: **Coimbatore, Tamil Nadu**. Single city only in v1.
 
 The product is named after the real thing — the painted public walls in Indian
 and Iranian cities where people hang clothes for anyone who needs them. That
@@ -228,9 +228,9 @@ Dark mode: invert to `--indigo` ground with `--plaster` ink. Marigold stays.
 - **Body:** Instrument Sans — everything else.
 - **Utility:** JetBrains Mono — AWB numbers, OTPs, donation IDs, timestamps.
 
-Both body and utility faces must be paired with **Noto Sans Devanagari** in the
-font stack from day one. Marathi and Hindi strings will land later and the
-layout must not reflow when they do. All user-facing strings go through a
+Both body and utility faces must be paired with **Noto Sans Tamil** in the
+font stack from day one. Tamil strings will land later and the layout must not
+reflow when they do. All user-facing strings go through a
 `t()` helper backed by a flat `en.json` — even in v1 where English is the only
 locale.
 
@@ -373,7 +373,7 @@ fire-and-forget relative to the transaction.
   document leaks.
 - **Do not add a dependency** that isn't in §3 without asking. Especially not a
   component library, an icon set beyond `lucide-react`, or a date library.
-- **Seed data:** `seed.sql` creates 2 admins, 5 verified NGOs across Nashik
+- **Seed data:** `seed.sql` creates 2 admins, 5 verified NGOs across Coimbatore
   pincodes, 4 volunteers, and 30 donations spread across every state. Every
   feature must be demoable from a fresh `supabase db reset`.
 - **When something is ambiguous**, pick the option that is simpler to delete

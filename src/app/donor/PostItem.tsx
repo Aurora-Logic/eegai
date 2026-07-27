@@ -283,7 +283,7 @@ export default function PostItem() {
               id="address"
               value={draft.pickupAddress}
               onChange={(e) => patch({ pickupAddress: e.target.value })}
-              placeholder="Flat 3, Gangapur Road"
+              placeholder="Flat 3, R.S. Puram"
             />
           </div>
           <div className="space-y-1.5">
@@ -293,7 +293,7 @@ export default function PostItem() {
               inputMode="numeric"
               value={draft.pincode}
               onChange={(e) => patch({ pincode: e.target.value })}
-              placeholder="422013"
+              placeholder="641004"
             />
           </div>
         </section>

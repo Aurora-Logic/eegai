@@ -68,11 +68,11 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        // Noto Sans Devanagari is in every stack from day one so that Marathi
-        // and Hindi strings land without reflowing the layout (PLAN.md §8).
-        display: ['"Bricolage Grotesque"', '"Noto Sans Devanagari"', 'system-ui', 'sans-serif'],
-        sans: ['"Instrument Sans"', '"Noto Sans Devanagari"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Noto Sans Devanagari"', 'ui-monospace', 'monospace'],
+        // Noto Sans Tamil is in every stack from day one so that Tamil strings
+        // land without reflowing the layout (PLAN.md §8).
+        display: ['"Bricolage Grotesque"', '"Noto Sans Tamil"', 'system-ui', 'sans-serif'],
+        sans: ['"Instrument Sans"', '"Noto Sans Tamil"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Noto Sans Tamil"', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         // Display steps only. The 20px floor from PLAN.md §8 is the smallest

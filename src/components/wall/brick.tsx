@@ -94,7 +94,7 @@ export function Brick({
 
         <p className="font-mono text-xs text-muted-foreground">
           {donation.quantity > 1 ? `×${donation.quantity} · ` : ''}
-          {donation.pincode ?? 'Nashik'}
+          {donation.pincode ?? 'Coimbatore'}
         </p>
 
         {showStatus ? (

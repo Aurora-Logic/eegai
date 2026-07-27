@@ -3,7 +3,7 @@
  * Enforces the JS budget from PLAN.md §8: total JS under 250KB gzipped.
  *
  * Run after `npm run build`. Sums the gzipped size of every emitted .js asset —
- * the number a donor on 4G in Nashik actually waits for.
+ * the number a donor on 4G in Coimbatore actually waits for.
  */
 import { gzipSync } from 'node:zlib'
 import { readdirSync, readFileSync, statSync } from 'node:fs'

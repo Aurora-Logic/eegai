@@ -122,8 +122,8 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
-    /* Devanagari sits on a lower baseline than Latin. Extra leading here keeps
-     * mixed en/mr/hi lines from colliding once those strings land. */
+    /* Tamil has taller ascenders and descenders than Latin. Extra leading here
+     * keeps mixed en/ta lines from colliding once those strings land. */
     line-height: 1.55;
     text-rendering: optimizeLegibility;
   }

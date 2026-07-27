@@ -1,6 +1,6 @@
 # Wall of Kindness
 
-A donation platform for physical goods, launching in Nashik, Maharashtra. A
+A donation platform for physical goods, launching in Coimbatore, Tamil Nadu. A
 donor photographs an item they no longer need, posts it, and a verified NGO
 claims it. The item reaches the NGO by courier or by a vetted volunteer.
 

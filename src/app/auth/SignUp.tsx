@@ -14,7 +14,7 @@ import { registerSchema, type RegisterInput } from '@/lib/validation/auth'
 const ROLE_CHOICES = [
   { value: 'donor', label: 'I want to give things', hint: 'Post items you no longer need.' },
   { value: 'ngo', label: "We're an organisation", hint: 'Claim items for the people you serve.' },
-  { value: 'volunteer', label: 'I can collect and deliver', hint: 'Move items across Nashik.' },
+  { value: 'volunteer', label: 'I can collect and deliver', hint: 'Move items across Coimbatore.' },
 ] as const
 
 export default function SignUp() {
