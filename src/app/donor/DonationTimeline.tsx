@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { formatDate, formatDateTime } from '@/lib/dates'
 import { ArrowLeft, Check, Download, Heart } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
@@ -148,7 +148,7 @@ export default function DonationTimeline() {
                     ) : null}
                     <p className="text-sm text-muted-foreground">
                       — {data.acknowledgement.ngo_name},{' '}
-                      {format(new Date(data.acknowledgement.created_at), 'd MMM yyyy')}
+                      {formatDate(data.acknowledgement.created_at)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       This photo was sent to you alone. Nobody else can open it.
@@ -242,7 +242,7 @@ export default function DonationTimeline() {
                         <p className="text-sm text-muted-foreground">{stage.hint}</p>
                         {at ? (
                           <p className="font-mono text-xs text-muted-foreground">
-                            {format(new Date(at), 'd MMM yyyy, HH:mm')}
+                            {formatDateTime(at)}
                           </p>
                         ) : null}
                       </div>

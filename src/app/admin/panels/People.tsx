@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelative } from '@/lib/dates'
 import { Ban, RotateCcw } from 'lucide-react'
 import { CreateAccountDialog } from './CreateAccountDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
@@ -89,9 +89,7 @@ export function People() {
             >
               <Field label="Area">{person.pincode ?? '—'}</Field>
               <Field label="Last seen">
-                {person.last_login_at
-                  ? `${formatDistanceToNow(new Date(person.last_login_at))} ago`
-                  : 'never'}
+                {person.last_login_at ? formatRelative(person.last_login_at) : 'never'}
               </Field>
             </RecordCard>
           ))}

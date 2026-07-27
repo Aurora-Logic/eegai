@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { formatDayMonth } from '@/lib/dates'
 import { CheckCircle2, MapPin, PackageCheck } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -55,7 +55,7 @@ function nextDays(count = 7) {
   return Array.from({ length: count }, (_, i) => {
     const day = new Date(today)
     day.setDate(today.getDate() + i)
-    return { value: day.toISOString().slice(0, 10), label: format(day, 'EEE d MMM') }
+    return { value: day.toISOString().slice(0, 10), label: formatDayMonth(day) }
   })
 }
 
@@ -155,7 +155,7 @@ export default function VolunteerHome() {
                     ) : null}
                     {pickup.slot_date ? (
                       <p className="pt-1 font-mono text-xs text-muted-foreground">
-                        {format(new Date(pickup.slot_date), 'EEE d MMM')} · {pickup.slot}
+                        {formatDayMonth(pickup.slot_date)} · {pickup.slot}
                       </p>
                     ) : null}
                   </dl>

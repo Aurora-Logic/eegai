@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { formatDateTime, formatStamp } from '@/lib/dates'
 import { ArrowLeft } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -177,7 +177,7 @@ export default function DonationTrail() {
                           ) : null}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(event.created_at), 'd MMM yyyy, HH:mm')}
+                          {formatDateTime(event.created_at)}
                           {event.actor_name
                             ? ` · ${event.actor_name} (${event.actor_role})`
                             : ' · system'}
@@ -206,8 +206,8 @@ export default function DonationTrail() {
                 {data.raw.map((row) => (
                   <li key={row.id} className="hairline rounded-sm p-3">
                     <p className="font-mono text-xs">
-                      {format(new Date(row.created_at), 'yyyy-MM-dd HH:mm:ss')} · {row.entity}.
-                      {row.action} · {row.actor_name ?? 'system'}
+                      {formatStamp(row.created_at)} · {row.entity}.{row.action} ·{' '}
+                      {row.actor_name ?? 'system'}
                     </p>
                     <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-muted-foreground">
                       {JSON.stringify({ before: row.before, after: row.after }, null, 2)}
