@@ -32,6 +32,8 @@ const VolunteerHome = lazy(() => import('./app/volunteer/VolunteerHome'))
 const AdminHome = lazy(() => import('./app/admin/AdminHome'))
 const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
 const StyleGuide = lazy(() => import('./app/StyleGuide'))
+const Privacy = lazy(() => import('./app/legal/Privacy'))
+const Terms = lazy(() => import('./app/legal/Terms'))
 const NotFound = lazy(() => import('./app/NotFound'))
 
 /** Sends a signed-in visitor to their own shell; everyone else to the landing page. */
@@ -121,6 +123,11 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Public, and reachable signed out — someone deciding whether to
+              register must be able to read these first. */}
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
 
           {/* Throwaway. Delete once the wall is built — PLAN.md §9 M0. */}
           <Route path="/style-guide" element={<StyleGuide />} />

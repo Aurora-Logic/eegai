@@ -41,7 +41,7 @@ export function LanguageSwitcher() {
         {LOCALES.map((option) => (
           <DropdownMenuItem
             key={option}
-            onSelect={() => setLocale(option)}
+            onSelect={() => void setLocale(option)}
             aria-current={option === locale}
             className="min-h-11 gap-2"
           >

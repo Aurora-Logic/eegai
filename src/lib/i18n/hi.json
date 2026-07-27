@@ -99,5 +99,22 @@
   "error.boundaryTitle": "इस स्क्रीन पर कुछ टूट गया।",
   "error.boundaryBody": "आपका डाला हुआ कुछ नहीं गया। दोबारा लोड करने पर शायद चल जाएगा।",
   "error.goHome": "होम जाएँ",
-  "error.reference": "संदर्भ"
+  "error.reference": "संदर्भ",
+  "landing.heroLede": "जो अब आपके काम का नहीं, वह कोयंबटूर में किसी ज़रूरतमंद को दें।",
+  "landing.gatesTitle": "कुछ भी डालने से पहले हम पूछते हैं",
+  "landing.gatesBody": "पोस्ट करने से पहले हालत को लेकर कुछ सीधे सवाल। जो पहुँचेगा उसे संस्था को ही छाँटना है, और फटी कमीज़ फेंकने में उन्हें उससे ज़्यादा लगता है जितनी वह थी।",
+  "landing.forTitle": "तीन रास्ते",
+  "landing.forDonor": "आपके पास देने को सामान है",
+  "landing.forDonorBody": "एक मिनट में फ़ोन से डालें। देखें वह कहाँ पहुँचा।",
+  "landing.forNgo": "आप एक संस्था हैं",
+  "landing.forNgoBody": "जो श्रेणियाँ आप लेते हैं, उनमें पास का सामान देखें और लें।",
+  "landing.forVolunteer": "आप सामान पहुँचा सकते हैं",
+  "landing.forVolunteerBody": "पास के घर से लें और सौंप दें। दो कोड, बोलकर बताए जाते हैं।",
+  "landing.trustVerified": "हर संस्था जाँची जाती है",
+  "landing.trustOtp": "दोनों तरफ़ बोला जाने वाला कोड",
+  "landing.trustTrail": "हर कदम दर्ज होता है",
+  "landing.closing": "कोई पैसा नहीं चलता। कुछ बेचा नहीं जाता। किसी की रैंकिंग नहीं होती।",
+  "legal.privacy": "निजता",
+  "legal.terms": "शर्तें",
+  "legal.contact": "संपर्क"
 }

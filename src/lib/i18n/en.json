@@ -99,5 +99,22 @@
   "error.boundaryTitle": "Something broke on this screen.",
   "error.boundaryBody": "Nothing you posted is lost. Reload and it will most likely work.",
   "error.goHome": "Go home",
-  "error.reference": "Reference"
+  "error.reference": "Reference",
+  "landing.heroLede": "Give what you no longer need to someone in Coimbatore who does.",
+  "landing.gatesTitle": "We ask before anything goes up",
+  "landing.gatesBody": "A few honest questions about condition, answered before you post. An organisation has to sort whatever arrives, and a torn shirt costs them more to throw away than it was worth to send.",
+  "landing.forTitle": "Three ways in",
+  "landing.forDonor": "You have things to give",
+  "landing.forDonorBody": "Post it from your phone in a minute. Watch where it goes.",
+  "landing.forNgo": "You're an organisation",
+  "landing.forNgoBody": "See what is posted nearby in the categories you accept, and claim it.",
+  "landing.forVolunteer": "You can carry things",
+  "landing.forVolunteerBody": "Collect from a door near you and hand it over. Two codes, spoken aloud.",
+  "landing.trustVerified": "Every organisation is verified",
+  "landing.trustOtp": "A spoken code at both ends",
+  "landing.trustTrail": "Every step is recorded",
+  "landing.closing": "No money changes hands. Nothing is sold. Nobody is ranked.",
+  "legal.privacy": "Privacy",
+  "legal.terms": "Terms",
+  "legal.contact": "Contact"
 }

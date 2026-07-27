@@ -61,7 +61,9 @@ describe('en.json', () => {
 describe('translations', () => {
   const dictionaries = { ta, hi } as const
 
-  afterEach(() => setLocale('en'))
+  afterEach(async () => {
+    await setLocale('en')
+  })
 
   it.each(Object.keys(dictionaries) as (keyof typeof dictionaries)[])(
     '%s covers every English key, and adds none of its own',
@@ -104,17 +106,26 @@ describe('translations', () => {
     }
   })
 
-  it('switches what t() returns, and back again', () => {
+  it('switches what t() returns, and back again', async () => {
     expect(t('action.claim')).toBe('Claim this')
 
-    setLocale('ta')
+    // Awaited, because Tamil and Hindi are their own chunks now — setLocale
+    // fetches the dictionary before switching so the tree never renders against
+    // one that has not arrived.
+    await setLocale('ta')
     expect(getLocale()).toBe('ta')
     expect(t('action.claim')).toBe(ta['action.claim'])
 
-    setLocale('hi')
+    await setLocale('hi')
     expect(t('action.claim')).toBe(hi['action.claim'])
 
-    setLocale('en')
+    await setLocale('en')
+    expect(t('action.claim')).toBe('Claim this')
+  })
+
+  it('falls back to English for a key before its dictionary has loaded', () => {
+    // The state on first paint when a saved locale is still downloading: real
+    // words rather than a dotted key.
     expect(t('action.claim')).toBe('Claim this')
   })
 

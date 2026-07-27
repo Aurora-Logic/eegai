@@ -1,6 +1,4 @@
 import en from './en.json'
-import ta from './ta.json'
-import hi from './hi.json'
 
 /**
  * Every user-facing string goes through `t()` (PLAN.md §8).
@@ -11,9 +9,14 @@ import hi from './hi.json'
  * test enforces — a missing Tamil string would otherwise surface as a raw dotted
  * key in front of a donor.
  *
- * The dictionaries are imported statically rather than lazily. Together they are
- * a few KB of JSON against a 250KB budget, and splitting them would buy a flash
- * of English on every language switch.
+ * English is bundled; Tamil and Hindi are fetched on demand. All three were
+ * static until the budget got to 4KB of headroom — every visitor was
+ * downloading two dictionaries they would probably never read. They are their
+ * own chunks now, loaded when a locale is first selected and cached after.
+ *
+ * The cost is that `setLocale` is asynchronous and the very first paint after a
+ * reload is English for one tick while the saved locale loads. That is a
+ * flicker; shipping two unused dictionaries to a Moto G on 4G is a bill.
  */
 export const LOCALES = ['en', 'ta', 'hi'] as const
 export type Locale = (typeof LOCALES)[number]
@@ -29,7 +32,43 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   hi: 'हिन्दी',
 }
 
-const dictionaries: Record<Locale, Record<string, string>> = { en, ta, hi }
+const dictionaries: Partial<Record<Locale, Record<string, string>>> = { en }
+
+/** Vite turns each of these into its own chunk, fetched at most once. */
+const loaders: Record<Exclude<Locale, 'en'>, () => Promise<{ default: Record<string, string> }>> = {
+  ta: () => import('./ta.json'),
+  hi: () => import('./hi.json'),
+}
+
+const inFlight = new Map<Locale, Promise<void>>()
+
+/**
+ * Fetches a dictionary if it is not already here.
+ *
+ * Concurrent callers share one promise — a language switcher tapped twice must
+ * not start two downloads of the same file.
+ */
+export function loadLocale(locale: Locale): Promise<void> {
+  if (dictionaries[locale]) return Promise.resolve()
+
+  const existing = inFlight.get(locale)
+  if (existing) return existing
+
+  const promise = loaders[locale as Exclude<Locale, 'en'>]()
+    .then((module) => {
+      dictionaries[locale] = module.default
+    })
+    .catch((error) => {
+      // A failed download must not strand the app: t() falls back through
+      // English, so the worst case is an untranslated screen rather than a
+      // broken one.
+      console.error(`[i18n] could not load ${locale}`, error)
+    })
+    .finally(() => inFlight.delete(locale))
+
+  inFlight.set(locale, promise)
+  return promise
+}
 
 export type StringKey = keyof typeof en
 
@@ -86,8 +125,12 @@ export function getLocale(): Locale {
   return activeLocale
 }
 
-export function setLocale(locale: Locale): void {
+export async function setLocale(locale: Locale): Promise<void> {
   if (locale === activeLocale) return
+
+  // Loaded *before* the switch, so the tree never renders against a dictionary
+  // that is not there yet.
+  await loadLocale(locale)
   activeLocale = locale
 
   try {
@@ -105,6 +148,14 @@ export function setLocale(locale: Locale): void {
 
 if (typeof document !== 'undefined') {
   document.documentElement.lang = activeLocale
+
+  // The saved locale is known synchronously but its dictionary is not. Fetch it
+  // and notify, which repaints the tree once it lands.
+  if (activeLocale !== 'en') {
+    void loadLocale(activeLocale).then(() => {
+      for (const listener of listeners) listener()
+    })
+  }
 }
 
 /**
@@ -117,7 +168,7 @@ if (typeof document !== 'undefined') {
  * white screen is not.
  */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
-  const template = dictionaries[activeLocale][key] ?? dictionaries.en[key]
+  const template = dictionaries[activeLocale]?.[key] ?? en[key as keyof typeof en]
 
   if (template === undefined) {
     if (import.meta.env.DEV) {
