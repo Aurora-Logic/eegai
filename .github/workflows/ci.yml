@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # The quality floor is 250KB gzipped total JS (PLAN.md §8). Failing here is
+      # the point — a regression should block the PR, not show up in Lighthouse
+      # after the pilot has started.
+      - name: JS budget
+        run: node scripts/check-bundle-size.mjs
+
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Proves the M0 acceptance criterion — the schema rebuilds from migrations
+      # with zero manual steps. Only the database is started; studio, realtime
+      # and the rest are dead weight for a schema check.
+      - name: Start local Postgres
+        run: supabase start -x studio,realtime,storage-api,imgproxy,inbucket,logflare,vector,edge-runtime
+
+      - name: Rebuild schema from migrations
+        run: supabase db reset
+
+      - name: Fail if generated types are stale
+        run: |
+          supabase gen types typescript --local > /tmp/types.ts
+          if ! diff -q /tmp/types.ts src/lib/types.ts >/dev/null; then
+            echo "src/lib/types.ts is out of date. Run: npm run db:types"
+            diff -u src/lib/types.ts /tmp/types.ts || true
+            exit 1
+          fi
