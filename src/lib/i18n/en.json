@@ -55,7 +55,7 @@
   "ngo.tabClaims": "Your claims",
   "volunteer.title": "Pickups",
   "volunteer.subtitle": "Collections waiting near you.",
-  "volunteer.empty": "Nothing to collect yet. This opens up in M4.",
+  "volunteer.empty": "Nothing to collect near you right now.",
   "admin.title": "Admin",
   "admin.subtitle": "Verification, moderation, disputes and the numbers.",
   "toast.claimed": "Claimed.",

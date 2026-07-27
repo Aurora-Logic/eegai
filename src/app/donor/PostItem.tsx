@@ -356,38 +356,57 @@ export default function PostItem() {
         </section>
       )}
 
-      <div className="mt-8 flex items-center justify-between gap-3">
-        <Button
-          variant="ghost"
-          onClick={() => (step === 0 ? navigate('/donor') : setStep(step - 1))}
-        >
-          {step === 0 ? t('action.cancel') : t('action.back')}
-        </Button>
+      {/* Sticky on a phone: the wizard's steps are long enough to scroll, and the
+          way forward should not be somewhere below the fold. Static from sm up,
+          where the whole step fits on screen anyway.
 
-        <div className="flex gap-2">
-          {step === 0 && draft.photoPaths.length > 0 ? (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                localStorage.removeItem(DRAFT_KEY)
-                setDraft(EMPTY)
-                setStep(0)
-              }}
-            >
-              <Trash2 aria-hidden /> Start over
-            </Button>
-          ) : null}
+          "Start over" sits on its own row rather than beside the primary action.
+          At 360px, three controls in a line with a label as long as "Put it on
+          the wall" either wrap mid-word or shrink below a thumb's width — and
+          the destructive one should not be adjacent to the one people mean. */}
+      <div className="sticky bottom-0 -mx-4 mt-8 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            className="min-h-11 shrink-0"
+            onClick={() => (step === 0 ? navigate('/donor') : setStep(step - 1))}
+          >
+            {step === 0 ? t('action.cancel') : t('action.back')}
+          </Button>
 
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} disabled={!canAdvance[step]}>
+            <Button
+              className="min-h-11 flex-1 sm:min-w-32 sm:flex-none"
+              onClick={() => setStep(step + 1)}
+              disabled={!canAdvance[step]}
+            >
               {t('action.next')}
             </Button>
           ) : (
-            <Button onClick={() => submit.mutate()} disabled={!parsed.success || submit.isPending}>
+            <Button
+              className="min-h-11 flex-1 sm:flex-none"
+              onClick={() => submit.mutate()}
+              disabled={!parsed.success || submit.isPending}
+            >
               {submit.isPending ? 'Posting…' : t('post.submit')}
             </Button>
           )}
         </div>
+
+        {step === 0 && draft.photoPaths.length > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 min-h-11 text-muted-foreground"
+            onClick={() => {
+              localStorage.removeItem(DRAFT_KEY)
+              setDraft(EMPTY)
+              setStep(0)
+            }}
+          >
+            <Trash2 aria-hidden /> Start over
+          </Button>
+        ) : null}
       </div>
 
       {step === 2 && failedGates.length > 0 ? (

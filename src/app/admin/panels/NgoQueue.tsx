@@ -106,9 +106,9 @@ export function NgoQueue() {
             <TableHeader>
               <TableRow>
                 <TableHead>Organisation</TableHead>
-                <TableHead>Registration</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead>Papers</TableHead>
+                <TableHead className="hidden md:table-cell">Registration</TableHead>
+                <TableHead className="hidden md:table-cell">Categories</TableHead>
+                <TableHead className="hidden md:table-cell">Papers</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Decision</TableHead>
               </TableRow>
@@ -124,8 +124,25 @@ export function NgoQueue() {
                     <span className="block font-mono text-xs text-muted-foreground">
                       {ngo.contact_phone ?? '—'} · {ngo.claims} claims
                     </span>
+
+                    {/* Three columns are hidden below md so the decision buttons
+                        are reachable without a horizontal scroll. Nothing is
+                        lost — the facts that mattered fold in here instead. */}
+                    <span className="mt-1 flex flex-wrap items-center gap-1 md:hidden">
+                      {ngo.accepts_categories.map((c) => (
+                        <Badge key={c}>{c}</Badge>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => setViewingDocs(ngo)}
+                      >
+                        <FileText aria-hidden /> {ngo.document_count}
+                      </Button>
+                    </span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="hidden font-mono text-xs md:table-cell">
                     <span className="block">{ngo.registration_number ?? '—'}</span>
                     <span className="block text-muted-foreground">
                       DARPAN {ngo.darpan_id ?? '—'}
@@ -136,7 +153,7 @@ export function NgoQueue() {
                       </Badge>
                     ) : null}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <span className="flex flex-wrap gap-1">
                       {ngo.accepts_categories.map((c) => (
                         <Badge key={c}>{c}</Badge>
@@ -146,7 +163,7 @@ export function NgoQueue() {
                       cap {ngo.monthly_capacity}/mo
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Button variant="outline" size="sm" onClick={() => setViewingDocs(ngo)}>
                       <FileText aria-hidden /> {ngo.document_count}
                     </Button>

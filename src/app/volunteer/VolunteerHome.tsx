@@ -294,10 +294,10 @@ function AcceptDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" className="min-h-11" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={accept.isPending} onClick={() => accept.mutate()}>
+          <Button className="min-h-11" disabled={accept.isPending} onClick={() => accept.mutate()}>
             {accept.isPending ? 'Taking…' : 'Take it'}
           </Button>
         </DialogFooter>
@@ -365,10 +365,14 @@ function OtpDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" className="min-h-11" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={code.length !== 4 || verify.isPending} onClick={() => verify.mutate()}>
+          <Button
+            className="min-h-11"
+            disabled={code.length !== 4 || verify.isPending}
+            onClick={() => verify.mutate()}
+          >
             {verify.isPending ? 'Checking…' : 'Confirm'}
           </Button>
         </DialogFooter>

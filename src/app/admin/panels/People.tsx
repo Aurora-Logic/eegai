@@ -69,10 +69,10 @@ export function People() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
+                <TableHead className="hidden md:table-cell">Phone</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>Last seen</TableHead>
+                <TableHead className="hidden md:table-cell">Area</TableHead>
+                <TableHead className="hidden md:table-cell">Last seen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,14 +86,18 @@ export function People() {
                       </Badge>
                     ) : null}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{person.phone ?? '—'}</TableCell>
+                  <TableCell className="hidden font-mono text-xs md:table-cell">
+                    {person.phone ?? '—'}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={person.role === 'admin' ? 'destructive' : 'tag'}>
                       {person.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{person.pincode ?? '—'}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="hidden font-mono text-xs md:table-cell">
+                    {person.pincode ?? '—'}
+                  </TableCell>
+                  <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                     {person.last_login_at
                       ? `${formatDistanceToNow(new Date(person.last_login_at))} ago`
                       : 'never'}

@@ -80,8 +80,8 @@ export function VolunteerQueue() {
             <TableHeader>
               <TableRow>
                 <TableHead>Volunteer</TableHead>
-                <TableHead>Identity</TableHead>
-                <TableHead>Availability</TableHead>
+                <TableHead className="hidden md:table-cell">Identity</TableHead>
+                <TableHead className="hidden md:table-cell">Availability</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Decision</TableHead>
               </TableRow>
@@ -95,7 +95,7 @@ export function VolunteerQueue() {
                       {v.phone ?? '—'} · {v.pincode ?? '—'} · {v.pickups} pickups
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="hidden text-sm md:table-cell">
                     {/* Never rendered as an image here. The paths are admin-only
                         at the database level and an ID card does not belong on a
                         screen someone might be sharing. */}
@@ -104,7 +104,7 @@ export function VolunteerQueue() {
                       Selfie: {v.selfie_path ? 'uploaded' : 'missing'}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="hidden text-sm md:table-cell">
                     <span className="block">{v.service_radius_km} km radius</span>
                     <span className="block text-muted-foreground">
                       {Object.entries(v.available_slots ?? {})

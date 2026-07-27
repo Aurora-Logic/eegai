@@ -106,8 +106,8 @@ export function Moderation() {
               <TableRow>
                 <TableHead className="w-16">Photo</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Donor</TableHead>
-                <TableHead>Claimed by</TableHead>
+                <TableHead className="hidden md:table-cell">Donor</TableHead>
+                <TableHead className="hidden md:table-cell">Claimed by</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Trail</TableHead>
               </TableRow>
@@ -139,13 +139,15 @@ export function Moderation() {
                       </span>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="hidden text-sm md:table-cell">
                     <span className="block">{row.donor_name}</span>
                     <span className="block font-mono text-xs text-muted-foreground">
                       {row.donor_phone ?? '—'} · {row.pincode ?? '—'}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{row.ngo_name ?? '—'}</TableCell>
+                  <TableCell className="hidden text-sm md:table-cell">
+                    {row.ngo_name ?? '—'}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[row.status] ?? 'muted'}>
                       {row.status.replace('_', ' ')}
