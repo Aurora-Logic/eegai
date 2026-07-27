@@ -28,7 +28,7 @@
       "@/*": ["./src/*"]
     },
 
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "vite-plugin-pwa/react"]
   },
   "include": ["src"],
   "exclude": ["e2e"]

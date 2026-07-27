@@ -18,6 +18,14 @@
   "error.offline": "You're offline. The post is saved here and will go up when you reconnect.",
   "error.generic": "That didn't go through. Check your connection and send it again.",
 
+  "pwa.updateReady": "A new version is ready.",
+  "pwa.reload": "Reload",
+  "pwa.later": "Later",
+  "pwa.installOffer": "Add the wall to your home screen.",
+  "pwa.install": "Add",
+  "pwa.noThanks": "No thanks",
+  "pwa.offline": "You're offline. You can still look at what you've already opened.",
+
   "theme.toggle": "Switch theme",
   "theme.light": "Light",
   "theme.dark": "Dark",
