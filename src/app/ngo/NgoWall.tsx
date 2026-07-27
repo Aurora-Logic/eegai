@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/shared/app-shell'
+import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
 import { Brick, type BrickDonation } from '@/components/wall/brick'
 import { Wall, WallEmpty } from '@/components/wall/wall'
@@ -79,6 +80,9 @@ export default function NgoWall() {
         </div>
       }
     >
+      {/* The NGO's deliver code lives here too — same RLS-scoped source. */}
+      <HandoverCodes />
+
       {notice ? (
         <p role="status" className="hairline mb-4 rounded-sm bg-card p-3 text-sm">
           {notice}

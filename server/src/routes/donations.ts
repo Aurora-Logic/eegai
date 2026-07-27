@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { transition, IllegalTransitionError } from '../../../src/lib/state-machine.ts'
 import type { DonationStatus } from '../../../src/lib/validation/donation.ts'
-import { withActor } from '../lib/db.ts'
+import { withActor, withSystemActor } from '../lib/db.ts'
 import { actorOf, requireAuth, requireRole, type AppEnv } from '../middleware/auth.ts'
 
 export const donationRoutes = new Hono<AppEnv>()
@@ -238,4 +238,51 @@ donationRoutes.post('/:id/transition', requireAuth, async (c) => {
     }
     throw error
   }
+})
+
+/**
+ * How the item will travel. Either party to a claimed donation may choose.
+ *
+ * Picking 'volunteer' opens a pickup for collection; the row is created with
+ * system authority because RLS deliberately grants no INSERT on pickups to
+ * donors or NGOs — otherwise either could conjure pickups for items that are
+ * not theirs.
+ */
+donationRoutes.post('/:id/delivery', requireAuth, async (c) => {
+  const actor = actorOf(c)
+  const id = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const method = body?.method === 'volunteer' || body?.method === 'courier' ? body.method : null
+
+  if (!method) return c.json({ error: 'Choose a courier or a volunteer.' }, 400)
+
+  // Visibility is the permission check: RLS only returns this row to the donor
+  // or the claiming NGO.
+  const allowed = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select id, status from public.donations where id = $1 and status = 'claimed'`,
+      [id],
+    )
+    return rows[0] ?? null
+  })
+
+  if (!allowed) {
+    return c.json({ error: 'That item is not waiting for collection.' }, 404)
+  }
+
+  await withSystemActor(async (tx) => {
+    await tx.query(
+      'update public.donations set delivery_method = $1::public.delivery_method where id = $2',
+      [method, id],
+    )
+    if (method === 'volunteer') {
+      await tx.query(
+        `insert into public.pickups (donation_id) values ($1)
+         on conflict (donation_id) do nothing`,
+        [id],
+      )
+    }
+  })
+
+  return c.json({ ok: true, method })
 })

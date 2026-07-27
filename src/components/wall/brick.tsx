@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ImageOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ export interface BrickDonation {
   quantity: number
   pincode: string | null
   status: DonationStatus
+  delivery_method?: 'courier' | 'volunteer' | null
   photos: { path: string; sortOrder: number }[]
 }
 
@@ -47,12 +48,15 @@ export function Brick({
   isClaiming,
   lifting,
   showStatus,
+  footer,
 }: {
   donation: BrickDonation
   onClaim?: (id: string) => void
   isClaiming?: boolean
   lifting?: boolean
   showStatus?: boolean
+  /** Role-specific actions rendered under the tile — delivery choice, etc. */
+  footer?: ReactNode
 }) {
   const [imageFailed, setImageFailed] = useState(false)
   const photo = donation.photos[0]
@@ -102,6 +106,8 @@ export function Brick({
             {donation.status.replace('_', ' ')}
           </Badge>
         ) : null}
+
+        {footer}
 
         {onClaim ? (
           <Button

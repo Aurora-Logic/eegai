@@ -9,6 +9,7 @@ import { log } from './lib/logger.ts'
 import { authRoutes } from './routes/auth.ts'
 import { adminRoutes } from './routes/admin.ts'
 import { donationRoutes } from './routes/donations.ts'
+import { pickupRoutes } from './routes/pickups.ts'
 import { uploadRoutes } from './routes/uploads.ts'
 
 const app = new Hono<AppEnv>()
@@ -36,6 +37,7 @@ app.get('/api/health', async (c) => {
 app.route('/api/auth', authRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/donations', donationRoutes)
+app.route('/api/pickups', pickupRoutes)
 app.route('/api/uploads', uploadRoutes)
 app.route('/api/files', uploadRoutes)
 

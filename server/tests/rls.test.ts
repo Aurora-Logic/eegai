@@ -47,14 +47,47 @@ describe('anonymous access', () => {
 })
 
 describe('profiles', () => {
-  it('lets a donor read only their own profile', async () => {
+  it('lets a donor read their own profile and their counterparties, nothing else', async () => {
+    // Migration 011 deliberately widened this: an NGO that claimed your item
+    // can be read, because you need to know who has your things — and vice
+    // versa. The rule is "counterparty on a donation that links us", not "any
+    // profile", so the assertion checks the exact set rather than a count.
     const rows = await asActor({ userId: donorA.userId, role: 'donor' }, async (tx) => {
-      const { rows } = await tx.query('select id, user_id from public.profiles')
+      const { rows } = await tx.query('select id, user_id, role from public.profiles')
       return rows
     })
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0].user_id).toBe(donorA.userId)
+    expect(rows.length).toBeGreaterThanOrEqual(1)
+    expect(rows.some((r) => r.user_id === donorA.userId)).toBe(true)
+
+    // Everything else visible must be an NGO that claimed one of their items.
+    const { rows: allowed } = await adminPool.query(
+      `select n.profile_id
+       from public.donations d
+       join public.ngos n on n.id = d.claimed_by_ngo_id
+       where d.donor_id = $1`,
+      [donorA.profileId],
+    )
+    const allowedIds = new Set<string>([
+      donorA.profileId,
+      ...allowed.map((r: { profile_id: string }) => r.profile_id),
+    ])
+
+    for (const row of rows) {
+      expect(allowedIds.has(row.id), `unexpected profile visible: ${row.id} (${row.role})`).toBe(
+        true,
+      )
+    }
+  })
+
+  it('still hides an unrelated donor completely', async () => {
+    const rows = await asActor({ userId: donorA.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query('select id from public.profiles where id = $1', [
+        donorB.profileId,
+      ])
+      return rows
+    })
+    expect(rows).toHaveLength(0)
   })
 
   it('denies a direct read of another user profile', async () => {

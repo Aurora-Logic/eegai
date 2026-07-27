@@ -133,3 +133,40 @@ duplicate post.
 
 The error boundary added in the same session caught the first one and showed a
 reference id, which is precisely what it was built for.
+
+## M4 uncovered three RLS bugs that had been sitting there since M0
+
+**The volunteer read rule from §6 was never implemented.** `pickups_volunteer_open`
+tested `exists (... join public.donations d ...)` — but volunteers had no SELECT
+policy on `donations` at all, so that inner query returned nothing and the
+`exists()` was always false. No volunteer could ever see an open pickup. The
+policy _read_ as though it worked, which is the dangerous kind of wrong.
+
+**Fixing it naively caused infinite recursion.** A policy on `donations` that
+reads `donations` raises "infinite recursion detected in policy". `SECURITY
+DEFINER` is not enough — policies are still expanded inside the function body.
+Two things were needed: `set row_security = off` on every helper, and passing
+lat/lng into the policy function rather than re-reading the row the policy
+already has.
+
+**`SELECT ... FOR UPDATE` is checked against UPDATE policies, not SELECT ones.**
+The accept path locked with `for update` and volunteers only had SELECT, so the
+lock matched nothing and the volunteer was told "another volunteer took this
+one" — for an item nobody had touched. A misleading message for what was really
+a permission failure.
+
+Lesson worth keeping: **a policy that references another RLS-protected table is
+only as permissive as that table's policies.** Every one of these failed closed
+and silently, which is the right direction to fail but very hard to notice
+without an end-to-end test that actually walks the chain.
+
+## Test races, twice
+
+`count()` does not auto-wait in Playwright. `claim.spec` counted bricks straight
+after asserting the page heading, and the heading renders before the wall query
+resolves. It passed for months and only broke when an extra query on the same
+screen made it lose the race. Any assertion on a count needs a
+`toBeVisible()` on the first element first.
+
+The admin verification tests also had to be marked `describe.serial` — run in
+parallel they raced for the same rows in the pending queue.

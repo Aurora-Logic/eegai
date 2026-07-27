@@ -22,6 +22,9 @@ test('an NGO signs in, sees the wall, and claims a brick', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'The wall' })).toBeVisible()
 
   const bricks = page.locator('article')
+  // count() does not auto-wait. The shell renders its heading before the wall
+  // query resolves, so without this the count is a race the test can lose.
+  await expect(bricks.first()).toBeVisible()
   const before = await bricks.count()
   expect(before).toBeGreaterThan(0)
 
