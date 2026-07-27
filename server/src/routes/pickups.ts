@@ -107,7 +107,16 @@ pickupRoutes.post('/:donationId/accept', requireRole('volunteer'), async (c) => 
          for update skip locked`,
         [donationId],
       )
-      if (!locked[0]) return { error: 'taken' as const }
+
+      // Nothing came back, and there are two very different reasons for that:
+      // another volunteer genuinely won the race, or this pickup is outside our
+      // service radius and pickups_volunteer_open never showed it to us at all.
+      //
+      // They were reported identically, so a volunteer 200m past their own
+      // radius was told "another volunteer took this one" about an item nobody
+      // had touched. NOTES.md records the same misleading-message trap from M4;
+      // this is that lesson applied at the row level rather than the policy one.
+      if (!locked[0]) return { error: 'unavailable' as const }
 
       await tx.query(
         `update public.pickups
@@ -137,8 +146,30 @@ pickupRoutes.post('/:donationId/accept', requireRole('volunteer'), async (c) => 
       if (result.error === 'not-verified') {
         return c.json({ error: 'Your account is not verified yet.' }, 403)
       }
-      if (result.error === 'taken') {
-        return c.json({ error: 'Another volunteer took this one.', code: 'taken' }, 409)
+      if (result.error === 'unavailable') {
+        // Read the row with system authority to tell the two cases apart. This
+        // is only ever reached on the failure path, so it costs nothing normally.
+        const assigned = await withSystemActor(async (tx) => {
+          const { rows } = await tx.query(
+            'select volunteer_id from public.pickups where donation_id = $1',
+            [donationId],
+          )
+          return rows[0] ? rows[0].volunteer_id !== null : null
+        })
+
+        if (assigned === null) {
+          return c.json({ error: 'That pickup no longer exists.' }, 404)
+        }
+        if (assigned) {
+          return c.json({ error: 'Another volunteer took this one.', code: 'taken' }, 409)
+        }
+        return c.json(
+          {
+            error: 'That pickup is outside the area you cover. Widen your radius to take it.',
+            code: 'out-of-range',
+          },
+          403,
+        )
       }
       return c.json({ error: 'That pickup no longer exists.' }, 404)
     }

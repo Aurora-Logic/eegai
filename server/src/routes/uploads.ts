@@ -106,12 +106,16 @@ uploadRoutes.get('/*', requireAuth, async (c) => {
 
   try {
     const data = await readFile(join(env.STORAGE_DIR, safe))
-    const type =
-      extname(safe) === '.png'
-        ? 'image/png'
-        : extname(safe) === '.webp'
-          ? 'image/webp'
-          : 'image/jpeg'
+    // Verification documents are PDFs. Serving one as image/jpeg makes the
+    // browser download a file it then refuses to open.
+    const TYPES: Record<string, string> = {
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+    }
+    const type = TYPES[extname(safe).toLowerCase()] ?? 'application/octet-stream'
 
     return c.body(new Uint8Array(data), 200, {
       'Content-Type': type,

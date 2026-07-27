@@ -47,6 +47,13 @@ authRoutes.post('/dev-login', async (c) => {
     return c.json({ error: 'Pick donor, ngo, volunteer or admin.' }, 400)
   }
 
+  // Which one of that role. Defaults to the first, which is what the UI button
+  // wants; the flow check needs to be a *specific* person, because seeded
+  // volunteers have different service radii and only some can see a given
+  // pickup. Picking by position is exactly the trap NOTES.md records from the
+  // RLS fixtures — so tooling gets a way to choose deliberately.
+  const index = Number.isInteger(body?.index) && body.index >= 0 ? body.index : 0
+
   // withSystemActor, not withActor(null). The API role has no BYPASSRLS, so with
   // no session GUC set every profiles policy evaluates against a null user and
   // the select returns nothing — the endpoint then reports "no seeded account"
@@ -58,8 +65,8 @@ authRoutes.post('/dev-login', async (c) => {
        from public.profiles p
        where p.role = $1::public.user_role
        order by p.created_at, p.full_name
-       limit 1`,
-      [role],
+       limit 1 offset $2`,
+      [role, index],
     )
     const found = rows[0]
     if (!found) return null
@@ -71,7 +78,7 @@ authRoutes.post('/dev-login', async (c) => {
   })
 
   if (!session) {
-    return c.json({ error: `No seeded ${role} account. Run npm run db:reset.` }, 404)
+    return c.json({ error: `No seeded ${role} at position ${index}. Run npm run db:reset.` }, 404)
   }
 
   const token = await signSession(session)

@@ -147,6 +147,9 @@ async function reset(database = DB_NAME) {
   // keeps `reset` a single command that leaves a fully demoable app.
   const { execFileSync } = await import('node:child_process')
   execFileSync(process.execPath, ['scripts/seed-images.mjs'], { stdio: 'inherit' })
+  // Via tsx because the writer is the same TypeScript one the receipt uses —
+  // one PDF implementation, not two.
+  execFileSync('npx', ['tsx', 'scripts/seed-docs.ts'], { stdio: 'inherit' })
 }
 
 function ident(name) {

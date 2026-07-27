@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, ShieldCheck } from 'lucide-react'
+import { ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
+import { api, photoUrl } from '@/lib/api'
 import { VerifyDialog, type VerifyAction } from './VerifyDialog'
 import { STATUS_VARIANT } from './status'
 
@@ -193,7 +193,10 @@ export function NgoQueue() {
           ) : (
             <ul className="space-y-2">
               {docs.data?.documents.map((doc) => (
-                <li key={doc.id} className="hairline flex items-center gap-3 rounded-sm p-3">
+                <li
+                  key={doc.id}
+                  className="hairline flex flex-wrap items-center gap-3 rounded-sm p-3"
+                >
                   <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium">
@@ -206,6 +209,22 @@ export function NgoQueue() {
                   <Badge variant={doc.reviewed ? 'success' : 'muted'}>
                     {doc.reviewed ? 'reviewed' : 'new'}
                   </Badge>
+
+                  {/* A paper you cannot read is not evidence. Opens in a new tab
+                      rather than downloading, because an admin is checking a
+                      registration number against a form on the same screen, not
+                      collecting files. The route is authenticated and admin-only
+                      at the database level. */}
+                  <Button asChild variant="outline" size="sm" className="min-h-11 shrink-0">
+                    <a
+                      href={photoUrl(doc.storage_path)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open ${doc.doc_type.replace(/_/g, ' ')} in a new tab`}
+                    >
+                      <ExternalLink aria-hidden /> Open
+                    </a>
+                  </Button>
                 </li>
               ))}
             </ul>

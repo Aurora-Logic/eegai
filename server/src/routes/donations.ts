@@ -320,10 +320,8 @@ donationRoutes.get('/:id/timeline', requireAuth, async (c) => {
       // condition_checklist is not in DONATION_COLUMNS because the wall does not
       // need it. It belongs here: it is exactly what an NGO wants before
       // claiming — the donor's own yes/no answers about what they are sending.
-      `select ${DONATION_COLUMNS}, ${PHOTO_AGG}, d.condition_checklist,
-              n.name as ngo_name, n.address as ngo_address, n.has_80g
+      `select ${DONATION_COLUMNS}, ${PHOTO_AGG}, d.condition_checklist
        from public.donations d
-       left join public.ngos n on n.id = d.claimed_by_ngo_id
        where d.id = $1`,
       [id],
     )
@@ -345,11 +343,14 @@ donationRoutes.get('/:id/timeline', requireAuth, async (c) => {
       )
       return rows
     }),
+    // No join to ngos here. `ngos_self_read` lets an organisation read only its
+    // own row, so an inner join silently dropped the whole acknowledgement for
+    // the one person it is meant for. The NGO's name is resolved below with
+    // system authority, after visibility has already been established.
     withActor(actor, async (tx) => {
       const { rows } = await tx.query(
-        `select a.photo_path, a.note, a.created_at, n.name as ngo_name
+        `select a.photo_path, a.note, a.created_at, a.ngo_id
          from public.acknowledgements a
-         join public.ngos n on n.id = a.ngo_id
          where a.donation_id = $1`,
         [id],
       )
@@ -369,7 +370,42 @@ donationRoutes.get('/:id/timeline', requireAuth, async (c) => {
     }),
   ])
 
-  return c.json({ donation: visible, events, acknowledgement, pickup })
+  // Same two-step as the events above: the caller has already proved they can
+  // see this donation, so the organisation's public-facing details are resolved
+  // with system authority rather than by widening ngos RLS for every donor.
+  const ngoIds = [visible.claimed_by_ngo_id, acknowledgement?.ngo_id].filter(Boolean)
+  const ngoNames = new Map<string, { name: string; address: string | null; has_80g: boolean }>()
+
+  if (ngoIds.length > 0) {
+    await withSystemActor(async (tx) => {
+      const { rows } = await tx.query(
+        'select id, name, address, has_80g from public.ngos where id = any($1::uuid[])',
+        [ngoIds],
+      )
+      for (const row of rows) {
+        ngoNames.set(row.id, { name: row.name, address: row.address, has_80g: row.has_80g })
+      }
+    })
+  }
+
+  const claimedBy = visible.claimed_by_ngo_id ? ngoNames.get(visible.claimed_by_ngo_id) : undefined
+
+  return c.json({
+    donation: {
+      ...visible,
+      ngo_name: claimedBy?.name ?? null,
+      ngo_address: claimedBy?.address ?? null,
+      has_80g: claimedBy?.has_80g ?? null,
+    },
+    events,
+    acknowledgement: acknowledgement
+      ? {
+          ...acknowledgement,
+          ngo_name: ngoNames.get(acknowledgement.ngo_id)?.name ?? 'The organisation',
+        }
+      : null,
+    pickup,
+  })
 })
 
 /**
@@ -392,14 +428,15 @@ donationRoutes.get('/:id/receipt.pdf', requireAuth, async (c) => {
 
   const data = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
+      // No ngos join, for the same reason as the timeline: a donor cannot read
+      // an organisation's row, so this silently produced "Received by
+      // Unrecorded" on the receipt of the one person entitled to it.
       `select d.id, d.title, d.category, d.condition, d.quantity, d.status,
-              d.posted_at, d.pincode,
+              d.posted_at, d.pincode, d.claimed_by_ngo_id,
               dp.full_name as donor_name,
-              n.name as ngo_name, n.address as ngo_address, n.has_80g,
               a.note as ngo_note, a.created_at as acknowledged_at
        from public.donations d
        join public.profiles dp on dp.id = d.donor_id
-       left join public.ngos n on n.id = d.claimed_by_ngo_id
        left join public.acknowledgements a on a.donation_id = d.id
        where d.id = $1`,
       [id],
@@ -415,6 +452,17 @@ donationRoutes.get('/:id/receipt.pdf', requireAuth, async (c) => {
       409,
     )
   }
+
+  // Resolved with system authority once visibility is already proven.
+  const ngo = data.claimed_by_ngo_id
+    ? await withSystemActor(async (tx) => {
+        const { rows } = await tx.query(
+          'select name, address, has_80g from public.ngos where id = $1',
+          [data.claimed_by_ngo_id],
+        )
+        return rows[0] ?? null
+      })
+    : null
 
   // Short, human-quotable, and derived rather than stored — there is no counter
   // to get out of step with, and it maps straight back to the donation id.
@@ -456,9 +504,9 @@ donationRoutes.get('/:id/receipt.pdf', requireAuth, async (c) => {
     },
 
     { kind: 'text', text: 'Received by', font: 'bold', size: 11, gapAfter: 2 },
-    { kind: 'text', text: String(data.ngo_name ?? 'Unrecorded'), gapAfter: 2 },
-    ...(data.ngo_address
-      ? [{ kind: 'text' as const, text: String(data.ngo_address), size: 10, gapAfter: 16 }]
+    { kind: 'text', text: String(ngo?.name ?? 'Unrecorded'), gapAfter: 2 },
+    ...(ngo?.address
+      ? [{ kind: 'text' as const, text: String(ngo.address), size: 10, gapAfter: 16 }]
       : [{ kind: 'space' as const, height: 10 }]),
 
     { kind: 'text', text: 'When', font: 'bold', size: 11, gapAfter: 2 },
@@ -502,7 +550,7 @@ donationRoutes.get('/:id/receipt.pdf', requireAuth, async (c) => {
     },
     {
       kind: 'text',
-      text: data.has_80g
+      text: ngo?.has_80g
         ? 'The receiving organisation holds 80G registration. Ask them directly for a tax receipt.'
         : 'The receiving organisation has not recorded an 80G registration with us.',
       size: 9,

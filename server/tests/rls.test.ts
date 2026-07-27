@@ -234,6 +234,73 @@ describe('documents and OTPs', () => {
     expect(rows.every((r) => r.storage_path !== 'private/secret.pdf')).toBe(true)
   })
 
+  /**
+   * PLAN.md §M6: "The acknowledgement photo is visible to that donor only."
+   *
+   * The original policy delegated that to donations visibility, which was
+   * correct until 011 gave volunteers a SELECT policy on donations so they could
+   * see pickups — at which point the volunteer who collected an item could read
+   * the photograph of where it ended up. Nobody edited the acknowledgements
+   * policy to break it; it widened on its own.
+   *
+   * This test names the readers, so the next change to donations visibility
+   * cannot quietly widen this again.
+   */
+  it('keeps an acknowledgement photo from the volunteer who delivered it', async () => {
+    const { rows: donation } = await adminPool.query(
+      `select d.id, d.donor_id, d.claimed_by_ngo_id
+       from public.donations d
+       join public.profiles p on p.id = d.donor_id
+       where p.user_id = $1 and d.claimed_by_ngo_id is not null
+       limit 1`,
+      [donorA.userId],
+    )
+    if (!donation[0]) throw new Error('fixture: donorA has no claimed donation')
+
+    // Put the volunteer on this donation's pickup, so they are genuinely a
+    // party to it rather than a stranger — a stranger proves nothing here.
+    const { rows: volunteerRow } = await adminPool.query(
+      `select v.id from public.volunteers v
+       join public.profiles p on p.id = v.profile_id
+       where p.user_id = $1`,
+      [volunteer.userId],
+    )
+    await adminPool.query(
+      `insert into public.pickups (donation_id, volunteer_id) values ($1, $2)
+       on conflict (donation_id) do update set volunteer_id = excluded.volunteer_id`,
+      [donation[0].id, volunteerRow[0].id],
+    )
+
+    await adminPool.query(
+      `insert into public.acknowledgements (donation_id, ngo_id, photo_path, note)
+       values ($1, $2, 'acknowledgements/x/private.jpg', 'went to the centre')
+       on conflict (donation_id) do update set photo_path = excluded.photo_path`,
+      [donation[0].id, donation[0].claimed_by_ngo_id],
+    )
+
+    const asVolunteer = await asActor(
+      { userId: volunteer.userId, role: 'volunteer' },
+      async (tx) => {
+        const { rows } = await tx.query(
+          'select photo_path from public.acknowledgements where donation_id = $1',
+          [donation[0].id],
+        )
+        return rows
+      },
+    )
+    expect(asVolunteer).toEqual([])
+
+    // ...and the donor it belongs to still gets it.
+    const asDonor = await asActor({ userId: donorA.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query(
+        'select photo_path from public.acknowledgements where donation_id = $1',
+        [donation[0].id],
+      )
+      return rows
+    })
+    expect(asDonor).toHaveLength(1)
+  })
+
   it('makes OTP columns unreadable to the API role entirely', async () => {
     // A column-level grant, not a policy — so this is a hard privilege error,
     // not an empty result. No route handler bug can leak an OTP.
