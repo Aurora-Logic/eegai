@@ -39,9 +39,15 @@ test('a donor posts an item through the whole wizard', async ({ page }) => {
   await expect(page.getByText('Cover')).toBeVisible()
   await page.getByRole('button', { name: 'Next' }).click()
 
-  // Step 2 — what it is.
+  // Step 2 — what it is. Category and condition are shadcn Selects.
   await page.getByLabel('What is it?').fill('Winter jackets')
-  await page.getByRole('button', { name: 'clothes', exact: true }).click()
+
+  await page.getByLabel('Category').click()
+  await page.getByRole('option', { name: 'Clothes' }).click()
+
+  await page.getByLabel('Condition').click()
+  await page.getByRole('option', { name: 'Like new' }).click()
+
   await page.getByRole('button', { name: 'Next' }).click()
 
   // Step 3 — the gates. All four must be yes.
@@ -51,9 +57,11 @@ test('a donor posts an item through the whole wizard', async ({ page }) => {
   for (let i = 0; i < gateCount; i++) await yesButtons.nth(i).click()
   await page.getByRole('button', { name: 'Next' }).click()
 
-  // Step 4 — pickup.
+  // Step 4 — pickup. The area is a searchable combobox, not a typed pincode.
   await page.getByLabel('Pickup address').fill('12 Race Course Road')
-  await page.getByLabel('Pincode').fill('641018')
+  await page.getByRole('combobox', { name: /Which part of Coimbatore/ }).click()
+  await page.getByPlaceholder('Search by area or pincode').fill('Race')
+  await page.getByRole('option', { name: /Race Course/ }).click()
   await page.getByRole('button', { name: 'Next' }).click()
 
   // Step 5 — review and post.

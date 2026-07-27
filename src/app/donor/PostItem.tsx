@@ -8,8 +8,18 @@ import { PhotoGrid } from '@/components/shared/photo-grid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dropzone } from '@/components/ui/dropzone'
+import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
 import { api, ApiError } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -32,6 +42,8 @@ interface Draft {
   conditionChecklist: Record<string, boolean>
   pickupAddress: string
   pincode: string
+  lat?: number
+  lng?: number
   photoPaths: string[]
 }
 
@@ -171,38 +183,51 @@ export default function PostItem() {
             />
           </div>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">{t('post.category')}</legend>
-            <div className="flex gap-2">
-              {(['clothes', 'books', 'toys'] as const).map((c) => (
-                <Button
-                  key={c}
-                  type="button"
-                  variant={draft.category === c ? 'default' : 'outline'}
-                  // Changing category invalidates answers to the old gates.
-                  onClick={() => patch({ category: c, conditionChecklist: {} })}
-                >
-                  {c}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
+          <div className="space-y-1.5">
+            <Label htmlFor="description">{t('post.description')}</Label>
+            <Textarea
+              id="description"
+              rows={3}
+              value={draft.description}
+              onChange={(e) => patch({ description: e.target.value })}
+              placeholder="Anything an NGO should know before claiming it."
+            />
+          </div>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">{t('post.condition')}</legend>
-            <div className="flex gap-2">
-              {(['like_new', 'good', 'usable'] as const).map((c) => (
-                <Button
-                  key={c}
-                  type="button"
-                  variant={draft.condition === c ? 'default' : 'outline'}
-                  onClick={() => patch({ condition: c })}
-                >
-                  {c.replace('_', ' ')}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
+          <div className="space-y-1.5">
+            <Label htmlFor="category">{t('post.category')}</Label>
+            <Select
+              value={draft.category}
+              // Changing category invalidates the answers to the old gates.
+              onValueChange={(v) => patch({ category: v as Category, conditionChecklist: {} })}
+            >
+              <SelectTrigger id="category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="clothes">Clothes</SelectItem>
+                <SelectItem value="books">Books</SelectItem>
+                <SelectItem value="toys">Toys</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="condition">{t('post.condition')}</Label>
+            <Select
+              value={draft.condition}
+              onValueChange={(v) => patch({ condition: v as Condition })}
+            >
+              <SelectTrigger id="condition">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="like_new">Like new</SelectItem>
+                <SelectItem value="good">Good</SelectItem>
+                <SelectItem value="usable">Usable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="quantity">{t('post.quantity')}</Label>
@@ -276,14 +301,25 @@ export default function PostItem() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pincode">{t('post.pincode')}</Label>
-            <Input
+            <Label htmlFor="pincode">{t('post.area')}</Label>
+            <Combobox
               id="pincode"
-              inputMode="numeric"
-              value={draft.pincode}
-              onChange={(e) => patch({ pincode: e.target.value })}
-              placeholder="641004"
+              options={areaOptions()}
+              value={draft.pincode || undefined}
+              // Picking an area also fixes the coordinates, which is what the
+              // radius maths runs on. A typed pincode gave us neither.
+              onChange={(pincode) => {
+                const area = AREA_BY_PINCODE.get(pincode)
+                patch({
+                  pincode,
+                  ...(area ? { lat: area.lat, lng: area.lng } : {}),
+                })
+              }}
+              placeholder={t('post.areaPlaceholder')}
+              searchPlaceholder={t('post.areaSearch')}
+              emptyText={t('post.areaEmpty')}
             />
+            <p className="text-sm text-muted-foreground">{t('post.areaHint')}</p>
           </div>
         </section>
       )}
