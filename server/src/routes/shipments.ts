@@ -204,8 +204,29 @@ shipmentRoutes.get('/:awb/label', requireAuth, async (c) => {
 })
 
 /**
- * Applies one tracking result: writes the provider status, and moves the donation
- * if — and only if — the courier state maps onto a state machine edge.
+ * The states a courier walks a donation through, in order.
+ *
+ * Explicit rather than a search through TRANSITIONS. A generic path-finder would
+ * happily route an item to `received` via `cancelled` if that were ever shorter;
+ * this can only ever go forwards along the one path a parcel actually takes.
+ */
+const COURIER_SPINE: DonationStatus[] = ['scheduled', 'in_transit', 'received']
+
+/**
+ * Applies one tracking result: writes the provider status, and walks the donation
+ * forward to wherever the courier says it has got to.
+ *
+ * It *walks* rather than jumps because polling is not guaranteed to observe every
+ * stage. A restart, a provider hiccup or simply a delivery faster than the five
+ * minute poll can mean the first update we see is `delivered`, and `scheduled ->
+ * received` is not an edge — so a single-step version left the item stranded at
+ * `scheduled` forever with the parcel already delivered. Found by ageing a mock
+ * AWB and watching exactly that happen.
+ *
+ * Every intermediate step still goes through `transition()` and the database
+ * trigger, so the machine validates each edge rather than being bypassed. The
+ * intermediate writes are a bonus: the donor timeline gets a real "on its way"
+ * row instead of the item teleporting from scheduled to arrived.
  *
  * An `exception` maps to null and therefore moves nothing. That is the whole
  * point: a failed delivery becomes a visible stuck shipment for a human to chase
@@ -230,15 +251,35 @@ async function applyTracking(donationId: string, awbNumber: string): Promise<Shi
     const from = rows[0]?.status as DonationStatus | undefined
     if (!from || from === target) return
 
+    const fromIndex = COURIER_SPINE.indexOf(from)
+    const targetIndex = COURIER_SPINE.indexOf(target)
+
+    // Off the spine entirely — cancelled, already acknowledged, or a volunteer
+    // pickup that a courier has no business moving. Leave it alone and say so.
+    if (fromIndex === -1 || targetIndex === -1) {
+      log.warn('courier status is off the delivery path', {
+        donation_id: donationId,
+        from,
+        to: target,
+      })
+      return
+    }
+
+    // Never walk backwards. A provider that re-reports an earlier scan must not
+    // drag a received item back into transit.
+    if (targetIndex <= fromIndex) return
+
     try {
-      // The courier acts with the platform's authority here, the same way the
-      // volunteer's deliver OTP carries the NGO's — possession of a delivery
-      // scan is the evidence, and the machine stays unchanged.
-      const next = transition(from, target, 'admin')
-      await tx.query(
-        'update public.donations set status = $1::public.donation_status where id = $2',
-        [next, donationId],
-      )
+      for (let step = fromIndex; step < targetIndex; step++) {
+        // The courier acts with the platform's authority here, the same way the
+        // volunteer's deliver OTP carries the NGO's — possession of a delivery
+        // scan is the evidence, and the machine stays unchanged.
+        const next = transition(COURIER_SPINE[step]!, COURIER_SPINE[step + 1]!, 'admin')
+        await tx.query(
+          'update public.donations set status = $1::public.donation_status where id = $2',
+          [next, donationId],
+        )
+      }
     } catch (error) {
       // A courier reporting an edge we do not have is information, not a crash.
       if (error instanceof IllegalTransitionError) {

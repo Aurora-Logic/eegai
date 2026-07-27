@@ -39,6 +39,27 @@ describe('courier status mapping', () => {
    * can produce has to be a real edge out of `scheduled`, or the courier will
    * report progress the state machine then refuses and the item silently stalls.
    */
+  /**
+   * The stall this caught in manual testing: a mock AWB aged past the delivery
+   * threshold reports `delivered` on the very first poll, and `scheduled ->
+   * received` is not an edge. A tracker that applied one step left the item at
+   * `scheduled` forever with the parcel already delivered.
+   *
+   * This asserts the property that makes walking necessary — that the courier's
+   * end state is NOT reachable in one hop from where booking leaves an item — so
+   * it keeps failing if someone replaces the walk with a single transition.
+   */
+  it('cannot reach delivered in one hop from where booking leaves an item', () => {
+    const target = donationStatusFor('delivered')
+    const oneHop = TRANSITIONS.scheduled.map((t) => t.to)
+
+    expect(target).toBe('received')
+    expect(oneHop).not.toContain('received')
+    // ...but it is reachable via in_transit, which is the path the walk takes.
+    expect(oneHop).toContain('in_transit')
+    expect(TRANSITIONS.in_transit.map((t) => t.to)).toContain('received')
+  })
+
   it('only ever targets states the machine can actually reach', () => {
     const reachable = new Set([
       ...TRANSITIONS.scheduled.map((t) => t.to),

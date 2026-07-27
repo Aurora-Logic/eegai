@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { deleteCookie, setCookie } from 'hono/cookie'
 import { loginSchema, registerSchema } from '../../../src/lib/validation/auth.ts'
-import { withActor } from '../lib/db.ts'
+import { withActor, withSystemActor } from '../lib/db.ts'
 import { hashPassword, verifyPassword } from '../lib/password.ts'
 import { SESSION_COOKIE, signSession } from '../lib/jwt.ts'
 import { actorOf, requireAuth, type AppEnv } from '../middleware/auth.ts'
@@ -47,7 +47,12 @@ authRoutes.post('/dev-login', async (c) => {
     return c.json({ error: 'Pick donor, ngo, volunteer or admin.' }, 400)
   }
 
-  const session = await withActor(null, async (tx) => {
+  // withSystemActor, not withActor(null). The API role has no BYPASSRLS, so with
+  // no session GUC set every profiles policy evaluates against a null user and
+  // the select returns nothing — the endpoint then reports "no seeded account"
+  // for a database that is full of them. Picking who to become is inherently a
+  // pre-authentication act, so it needs the elevated path.
+  const session = await withSystemActor(async (tx) => {
     const { rows } = await tx.query(
       `select p.user_id, p.full_name, p.role
        from public.profiles p
