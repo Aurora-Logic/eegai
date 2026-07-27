@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
@@ -105,6 +106,16 @@ export default function NgoWall() {
               donation={donation}
               showStatus={tab === 'claimed'}
               lifting={lifting.has(donation.id)}
+              footer={
+                tab === 'claimed' && donation.status === 'received' ? (
+                  // The one action that matters on this tab. It only appears once
+                  // the goods are actually here, so an NGO cannot acknowledge an
+                  // item that is still in a volunteer's bag.
+                  <Button asChild size="sm" className="min-h-11 w-full">
+                    <Link to={`/ngo/items/${donation.id}`}>Confirm what arrived</Link>
+                  </Button>
+                ) : null
+              }
               {...(tab === 'wall'
                 ? {
                     onClaim: (id: string) => claim.mutate(id),

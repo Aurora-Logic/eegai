@@ -27,8 +27,16 @@ export function AppShell({
     <div className="plaster-ground min-h-dvh">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <Link to="/" className="font-display text-display-sm">
-            {t('app.name')}
+          {/* The name in both scripts, always together. Tamil is the language of
+              the city this launches in, and showing it only on the landing page
+              would make it decoration rather than the name. The Tamil sits on
+              the same baseline at a slightly larger size because Noto Sans Tamil
+              runs optically smaller than Bricolage at equal point size. */}
+          <Link to="/" className="flex items-baseline gap-2">
+            <span className="font-display text-display-sm">{t('app.name')}</span>
+            <span aria-hidden className="text-lg leading-none text-muted-foreground">
+              {t('app.nameScript')}
+            </span>
           </Link>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={toggle} aria-label={t('theme.toggle')}>
@@ -46,18 +54,24 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-display-md">{title}</h1>
-            {subtitle ? <p className="mt-1 text-muted-foreground">{subtitle}</p> : null}
+      {/* pb-24 leaves room for the dev switcher and any sticky action bar to sit
+          above the last row of content rather than on top of it. */}
+      <main className="mx-auto max-w-5xl px-4 py-6 pb-24">
+        {/* Stacked on a phone with actions full width underneath the heading;
+            side by side from `sm` up, where there is room for both. */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-balance font-display text-display-md">{title}</h1>
+            {subtitle ? <p className="mt-1 text-pretty text-muted-foreground">{subtitle}</p> : null}
             {user ? (
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 {user.fullName} · {user.role}
               </p>
             ) : null}
           </div>
-          {actions}
+          {actions ? (
+            <div className="shrink-0 [&_a]:min-h-11 [&_button]:min-h-11">{actions}</div>
+          ) : null}
         </div>
 
         {children}
