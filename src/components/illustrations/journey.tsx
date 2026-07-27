@@ -150,6 +150,65 @@ export function ArrivedScene({ className }: Props) {
 }
 
 /**
+ * An empty state that reads as *space waiting to be filled* rather than as
+ * absence.
+ *
+ * A bare hook with the dashed outline of something that could hang on it. The
+ * dashes are the whole idea: a hook alone says "nothing here", a hook with the
+ * ghost of a garment on it says "this is where yours goes", and the copy beside
+ * it is an invitation rather than an apology (PLAN.md §8 copy rules).
+ */
+export function EmptyWallScene({ className }: Props) {
+  return (
+    <svg
+      viewBox="0 0 240 150"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <Courses rows={4} width={240} height={150} />
+
+      {/* the rail */}
+      <line
+        x1="24"
+        y1="38"
+        x2="216"
+        y2="38"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeOpacity="0.5"
+      />
+
+      {/* one real hook, empty */}
+      <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeOpacity="0.6">
+        <path d="M120 38 v12" />
+        <path d="M120 50 q0 -8 7 -8 t7 8" />
+      </g>
+
+      {/* and the ghost of what could hang on it */}
+      <path
+        d="M100 68 L86 80 L93 91 L100 86 L100 132 q0 4 4 4 L136 136 q4 0 4 -4 L140 86 L147 91 L154 80 L140 68 q-20 10 -40 0 Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeOpacity="0.35"
+        strokeDasharray="5 6"
+      />
+
+      <path
+        d="M16 140 L224 140"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeOpacity="0.45"
+      />
+    </svg>
+  )
+}
+
+/**
  * The handover: one hand saying a number, the other listening.
  *
  * Sits above the codes card. The drawing carries the rule the copy also states —

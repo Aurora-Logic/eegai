@@ -317,7 +317,10 @@ donationRoutes.get('/:id/timeline', requireAuth, async (c) => {
 
   const visible = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
-      `select ${DONATION_COLUMNS}, ${PHOTO_AGG},
+      // condition_checklist is not in DONATION_COLUMNS because the wall does not
+      // need it. It belongs here: it is exactly what an NGO wants before
+      // claiming — the donor's own yes/no answers about what they are sending.
+      `select ${DONATION_COLUMNS}, ${PHOTO_AGG}, d.condition_checklist,
               n.name as ngo_name, n.address as ngo_address, n.has_80g
        from public.donations d
        left join public.ngos n on n.id = d.claimed_by_ngo_id

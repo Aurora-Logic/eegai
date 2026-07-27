@@ -97,7 +97,18 @@ export default function NgoWall() {
           {t('error.generic')}
         </p>
       ) : donations.length === 0 ? (
-        <WallEmpty message={tab === 'wall' ? t('empty.wall') : t('empty.claims')} />
+        <WallEmpty
+          message={tab === 'wall' ? t('empty.wall') : t('empty.claims')}
+          {...(tab === 'claimed'
+            ? {
+                action: (
+                  <Button className="min-h-11" onClick={() => setTab('wall')}>
+                    {t('ngo.tabWall')}
+                  </Button>
+                ),
+              }
+            : {})}
+        />
       ) : (
         <Wall>
           {donations.map((donation) => (
@@ -106,6 +117,7 @@ export default function NgoWall() {
               donation={donation}
               showStatus={tab === 'claimed'}
               lifting={lifting.has(donation.id)}
+              to={`/ngo/items/${donation.id}`}
               footer={
                 tab === 'claimed' && donation.status === 'received' ? (
                   // The one action that matters on this tab. It only appears once

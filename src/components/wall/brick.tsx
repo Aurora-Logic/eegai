@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { ImageOff } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ImageOff, Images } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { photoUrl } from '@/lib/api'
@@ -49,6 +50,7 @@ export function Brick({
   lifting,
   showStatus,
   footer,
+  to,
 }: {
   donation: BrickDonation
   onClaim?: (id: string) => void
@@ -57,14 +59,17 @@ export function Brick({
   showStatus?: boolean
   /** Role-specific actions rendered under the tile — delivery choice, etc. */
   footer?: ReactNode
+  /** Where the tile leads. Omitted, the brick is not a link. */
+  to?: string | undefined
 }) {
   const [imageFailed, setImageFailed] = useState(false)
   const photo = donation.photos[0]
+  const extra = donation.photos.length - 1
 
   return (
     <article
       className={cn(
-        'hairline mb-4 break-inside-avoid overflow-hidden rounded-sm bg-card',
+        'hairline relative mb-4 break-inside-avoid overflow-hidden rounded-sm bg-card',
         lifting && 'animate-brick-lift motion-reduce:animate-brick-fade',
       )}
     >
@@ -91,10 +96,32 @@ export function Brick({
           <Badge>{donation.category}</Badge>
           <Badge>{CONDITION_LABEL[donation.condition]}</Badge>
         </div>
+
+        {/* Says there is more to see before anyone taps, so the extra photos are
+            discoverable rather than hidden behind a guess. */}
+        {extra > 0 ? (
+          <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-sm bg-background/90 px-2 py-0.5 font-mono text-xs">
+            <Images className="size-3.5" aria-hidden />+{extra}
+          </span>
+        ) : null}
       </div>
 
       <div className="space-y-2 p-3">
-        <h3 className="font-display text-display-sm leading-tight">{donation.title}</h3>
+        <h3 className="font-display text-display-sm leading-tight">
+          {to ? (
+            /* The whole tile is the target via the stretched pseudo-element, so
+               the tap area is the brick rather than the few words of the title —
+               but the accessible name stays the title alone. */
+            <Link
+              to={to}
+              className="after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:underline focus-visible:outline-none"
+            >
+              {donation.title}
+            </Link>
+          ) : (
+            donation.title
+          )}
+        </h3>
 
         <p className="font-mono text-xs text-muted-foreground">
           {donation.quantity > 1 ? `×${donation.quantity} · ` : ''}
@@ -107,11 +134,12 @@ export function Brick({
           </Badge>
         ) : null}
 
-        {footer}
+        {/* Above the stretched link, or the tile would swallow these taps. */}
+        {footer ? <div className="relative z-10">{footer}</div> : null}
 
         {onClaim ? (
           <Button
-            className="w-full"
+            className="relative z-10 min-h-11 w-full"
             onClick={() => onClaim(donation.id)}
             disabled={isClaiming}
             aria-label={`${t('action.claim')} — ${donation.title}`}

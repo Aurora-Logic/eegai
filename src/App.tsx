@@ -26,7 +26,7 @@ const DonorHome = lazy(() => import('./app/donor/DonorHome'))
 const PostItem = lazy(() => import('./app/donor/PostItem'))
 const DonationTimeline = lazy(() => import('./app/donor/DonationTimeline'))
 const NgoWall = lazy(() => import('./app/ngo/NgoWall'))
-const NgoReceipt = lazy(() => import('./app/ngo/NgoReceipt'))
+const NgoItem = lazy(() => import('./app/ngo/NgoItem'))
 const VolunteerHome = lazy(() => import('./app/volunteer/VolunteerHome'))
 const AdminHome = lazy(() => import('./app/admin/AdminHome'))
 const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
@@ -87,7 +87,7 @@ export default function App() {
             path="/ngo/items/:id"
             element={
               <ProtectedRoute allow={['ngo']}>
-                <NgoReceipt />
+                <NgoItem />
               </ProtectedRoute>
             }
           />

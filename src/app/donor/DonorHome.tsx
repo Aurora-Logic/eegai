@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
@@ -69,7 +68,14 @@ export default function DonorHome() {
           {t('error.generic')}
         </p>
       ) : donations.length === 0 ? (
-        <WallEmpty message={t('empty.donor')} />
+        <WallEmpty
+          message={t('empty.donor')}
+          action={
+            <Button asChild className="min-h-11">
+              <Link to="/donor/post">{t('action.post')}</Link>
+            </Button>
+          }
+        />
       ) : (
         <Wall>
           {donations.map((donation) => (
@@ -77,6 +83,7 @@ export default function DonorHome() {
               key={donation.id}
               donation={donation}
               showStatus
+              to={`/donor/items/${donation.id}`}
               footer={
                 <div className="space-y-2">
                   {donation.status === 'claimed' && !donation.delivery_method ? (
@@ -106,18 +113,6 @@ export default function DonorHome() {
                       </div>
                     </>
                   ) : null}
-
-                  {/* Every item gets a way through to its own story, not just
-                      the finished ones — "where is it" is the question a donor
-                      has most often, and it is unanswerable from a status word. */}
-                  <Button asChild variant="ghost" size="sm" className="min-h-11 w-full">
-                    <Link to={`/donor/items/${donation.id}`}>
-                      {donation.status === 'acknowledged'
-                        ? 'See where it got to'
-                        : 'Track this item'}
-                      <ArrowRight aria-hidden />
-                    </Link>
-                  </Button>
                 </div>
               }
             />

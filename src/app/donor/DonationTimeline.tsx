@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowLeft, Check, Download, Heart } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { PhotoGallery } from '@/components/shared/photo-gallery'
 import { ArrivedScene } from '@/components/illustrations/journey'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -172,13 +173,9 @@ export default function DonationTimeline() {
             ) : null}
 
             <section className="hairline space-y-3 rounded-sm bg-card p-4">
-              {donation.photos?.[0] ? (
-                <img
-                  src={photoUrl(donation.photos[0].path)}
-                  alt={donation.title}
-                  className="block w-full rounded-sm"
-                />
-              ) : null}
+              {/* Every photo they posted, not just the cover — this is the one
+                  place a donor goes back to look at what they gave away. */}
+              <PhotoGallery photos={donation.photos ?? []} alt={donation.title} />
               <h2 className="font-display text-display-sm leading-tight">{donation.title}</h2>
               <p className="flex flex-wrap gap-1">
                 <Badge>{donation.category}</Badge>
