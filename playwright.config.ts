@@ -38,7 +38,9 @@ export default defineConfig({
     // testing whatever else happens to be listening there.
     command: `npm run dev -- --host 127.0.0.1 --port ${E2E_PORT} --strictPort`,
     url: E2E_URL,
-    reuseExistingServer: false,
+    // Locally, reuse a stack the developer already has running. In CI there is
+    // never one to reuse, and reusing would mask a broken start command.
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 })

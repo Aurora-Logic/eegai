@@ -66,6 +66,16 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  server: {
+    // Proxying keeps the browser on one origin, so the session cookie is
+    // first-party and needs no CORS dance or SameSite=None.
+    proxy: {
+      '/api': {
+        target: `http://127.0.0.1:${process.env.API_PORT ?? 8787}`,
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     // The quality floor in PLAN.md §8 is 250KB gzipped total JS. Warn well
     // before we get there so a regression is visible in CI output.
