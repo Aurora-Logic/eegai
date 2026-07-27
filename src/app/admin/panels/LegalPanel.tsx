@@ -49,12 +49,20 @@ export function LegalPanel() {
   const doc = data?.document
 
   // Reset the draft whenever a different document loads, so switching tabs does
-  // not carry half-typed edits from one document into the other.
+  // not carry half-typed edits from one document into the other. `saved` is
+  // deliberately not cleared here: publishing refetches the document, which
+  // re-runs this effect, and clearing it then would wipe the "Published as
+  // version N" confirmation the moment it appeared. It clears on the actions
+  // that genuinely stale it — switching documents or editing again.
   useEffect(() => {
     if (doc) setDraft({ title: doc.title, body: doc.body })
     setError(null)
-    setSaved(null)
   }, [doc?.slug, doc?.version, doc])
+
+  function edit(patch: { title: string; body: string }) {
+    setDraft(patch)
+    setSaved(null)
+  }
 
   const publish = useMutation({
     mutationFn: () => api.put<{ version: number }>(`/admin/legal/${slug}`, draft),
@@ -79,7 +87,10 @@ export function LegalPanel() {
               size="sm"
               variant={slug === option ? 'default' : 'outline'}
               className="min-h-11 capitalize"
-              onClick={() => setSlug(option)}
+              onClick={() => {
+                setSlug(option)
+                setSaved(null)
+              }}
             >
               {option}
             </Button>
@@ -112,7 +123,7 @@ export function LegalPanel() {
             <Input
               id="legal-title"
               value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              onChange={(e) => edit({ ...draft, title: e.target.value })}
             />
           </div>
 
@@ -123,7 +134,7 @@ export function LegalPanel() {
               value={draft.body}
               rows={24}
               className="font-mono text-sm leading-relaxed"
-              onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+              onChange={(e) => edit({ ...draft, body: e.target.value })}
             />
             <p className="text-xs text-muted-foreground">
               <code>## </code> starts a section, <code>- </code> a list item, a blank line separates

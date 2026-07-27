@@ -307,7 +307,10 @@ export default function NgoItem() {
                             />
                             <button
                               type="button"
-                              onClick={() => setPhotoPath(null)}
+                              onClick={() => {
+                                void api.delete(`/uploads/${photoPath}`).catch(() => undefined)
+                                setPhotoPath(null)
+                              }}
                               className="absolute right-2 top-2 rounded-sm bg-background/90 p-2 hover:bg-background"
                               aria-label="Remove this photo"
                             >

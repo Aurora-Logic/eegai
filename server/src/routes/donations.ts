@@ -286,7 +286,20 @@ donationRoutes.post('/:id/delivery', requireAuth, async (c) => {
     return c.json({ error: 'That item is not waiting for collection.' }, 404)
   }
 
-  await withSystemActor(async (tx) => {
+  // Re-check under lock before writing. Between the visibility check above and
+  // this transaction, the other party (or a second tap) may have chosen a
+  // method or a courier booking may have moved the item — without this, a
+  // volunteer-then-courier sequence left an orphaned open pickup that
+  // volunteers could still accept for an item a courier was already carrying.
+  const outcome = await withSystemActor(async (tx) => {
+    const { rows } = await tx.query(
+      'select status, delivery_method from public.donations where id = $1 for update',
+      [id],
+    )
+    const row = rows[0]
+    if (!row || row.status !== 'claimed') return 'gone' as const
+    if (row.delivery_method) return 'chosen' as const
+
     await tx.query(
       'update public.donations set delivery_method = $1::public.delivery_method where id = $2',
       [method, id],
@@ -298,7 +311,15 @@ donationRoutes.post('/:id/delivery', requireAuth, async (c) => {
         [id],
       )
     }
+    return 'ok' as const
   })
+
+  if (outcome === 'gone') {
+    return c.json({ error: 'That item is not waiting for collection.' }, 404)
+  }
+  if (outcome === 'chosen') {
+    return c.json({ error: 'A delivery method has already been chosen for this item.' }, 409)
+  }
 
   return c.json({ ok: true, method })
 })

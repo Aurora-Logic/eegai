@@ -106,6 +106,8 @@ export const api = {
       method: 'PATCH',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }),
+  /** Removal — an upload someone changed their mind about, before it is owned. */
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
   /**
    * `fields` carries the upload kind. Acknowledgement photos are stored under a
    * different prefix and read back through an RLS check, so the server has to be

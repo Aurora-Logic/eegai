@@ -46,11 +46,28 @@ const LABEL: Record<string, { line: string; kind: string }> = {
 export function HandoverCodes({ donationId }: { donationId?: string } = {}) {
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['notifications', 'mine'],
     queryFn: () => api.get<{ notifications: Notification[] }>('/pickups/notifications'),
     refetchInterval: 30_000,
   })
+
+  // A failed fetch must not just erase the section — someone standing at a
+  // handover with a volunteer waiting needs to know the code exists and did not
+  // load, not wonder where it went.
+  if (isError) {
+    return (
+      <section className="hairline mb-6 flex items-center justify-between gap-3 rounded-sm bg-card p-4">
+        <p className="text-sm text-muted-foreground">
+          <KeyRound className="mr-1 inline size-4 align-[-2px] text-primary" aria-hidden />
+          Your handover codes could not be loaded.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => void refetch()}>
+          Try again
+        </Button>
+      </section>
+    )
+  }
 
   // Filtered to one item when rendered on that item's own screen. Asking "where
   // is my code" and being sent back to a list is the failure this fixes: the

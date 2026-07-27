@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDate, formatDateTime } from '@/lib/dates'
@@ -158,14 +159,7 @@ export default function DonationTimeline() {
               ) : null}
 
               {donation.status === 'acknowledged' ? (
-                <Button asChild variant="outline" className="min-h-11 w-full">
-                  {/* A plain anchor, not fetch — the browser's own download
-                    handling is what puts the file somewhere a person can find
-                    it again on Android. */}
-                  <a href={`/api/donations/${donation.id}/receipt.pdf`} download>
-                    <Download aria-hidden /> Download the record (PDF)
-                  </a>
-                </Button>
+                <ReceiptDownload donationId={donation.id} />
               ) : null}
 
               {donation.status === 'rejected' && donation.rejected_reason ? (
@@ -267,5 +261,56 @@ export default function DonationTimeline() {
         </>
       )}
     </AppShell>
+  )
+}
+
+/**
+ * The receipt used to be a plain anchor. That meant a failed request — an
+ * expired session, a race on status — handed the browser a JSON error body as
+ * the "download" and told the person nothing. Fetching it first keeps failures
+ * visible; the object URL still goes through the browser's own download
+ * handling, which is what puts the file somewhere findable again on Android.
+ */
+function ReceiptDownload({ donationId }: { donationId: string }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function download() {
+    setBusy(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/donations/${donationId}/receipt.pdf`)
+      if (!response.ok) throw new Error(`receipt ${response.status}`)
+      const url = URL.createObjectURL(await response.blob())
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = 'donation-receipt.pdf'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('The receipt could not be downloaded. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        className="min-h-11 w-full"
+        disabled={busy}
+        onClick={() => void download()}
+      >
+        <Download aria-hidden /> {busy ? 'Preparing…' : 'Download the record (PDF)'}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }

@@ -63,7 +63,7 @@ adminRoutes.get('/ngos', async (c) => {
               n.accepts_categories::text[] as accepts_categories,
               n.is_accepting,
               n.contact_person, n.contact_phone,
-              n.is_accepting, n.created_at,
+              n.created_at,
               p.full_name as profile_name, p.phone as profile_phone,
               (select count(*) from public.ngo_documents dd where dd.ngo_id = n.id)::int as document_count,
               (select count(*) from public.ngo_documents dd where dd.ngo_id = n.id and not dd.reviewed)::int as unreviewed_count,
@@ -633,10 +633,26 @@ const legalPatchSchema = z.object({
 adminRoutes.put('/legal/:slug', async (c) => {
   const actor = actorOf(c)
   const slug = c.req.param('slug')
+
+  // Checked before touching the database — app.publish_legal_document raises
+  // on an unknown slug, which would surface as a 500 instead of this 404.
+  if (slug !== 'privacy' && slug !== 'terms') {
+    return c.json({ error: 'No such document.' }, 404)
+  }
+
   const parsed = legalPatchSchema.safeParse(await c.req.json().catch(() => null))
 
   if (!parsed.success) {
-    return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
+    // Name the field, not just "check the form" — a blanked body and a
+    // one-character title fail for different reasons and the admin should be
+    // told which.
+    const { fieldErrors } = parsed.error.flatten()
+    const detail = fieldErrors.title?.[0]
+      ? `Title: ${fieldErrors.title[0]}`
+      : fieldErrors.body?.[0]
+        ? `Body: ${fieldErrors.body[0]}`
+        : 'Check the form.'
+    return c.json({ error: detail, issues: parsed.error.flatten() }, 400)
   }
 
   const version = await withActor(actor, async (tx) => {

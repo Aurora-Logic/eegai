@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDayMonth } from '@/lib/dates'
+import { formatDayMonth, istDateStamp } from '@/lib/dates'
 import { CheckCircle2, MapPin, PackageCheck } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -49,13 +49,13 @@ interface Pickup {
   photos?: { path: string }[]
 }
 
-/** Next seven days, so a slot can never be chosen in the past. */
+/** Next seven days in IST, so a slot can never be chosen in the past. */
 function nextDays(count = 7) {
   const today = new Date()
   return Array.from({ length: count }, (_, i) => {
     const day = new Date(today)
     day.setDate(today.getDate() + i)
-    return { value: day.toISOString().slice(0, 10), label: formatDayMonth(day) }
+    return { value: istDateStamp(day), label: formatDayMonth(day) }
   })
 }
 
@@ -91,6 +91,13 @@ export default function VolunteerHome() {
         <TabsContent value={tab}>
           {list.isLoading ? (
             <Skeleton className="h-48 w-full" />
+          ) : list.isError ? (
+            <div className="hairline rounded-sm bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground">{t('error.generic')}</p>
+              <Button variant="ghost" className="mt-3" onClick={() => void list.refetch()}>
+                {t('action.retry')}
+              </Button>
+            </div>
           ) : pickups.length === 0 ? (
             <WallEmpty
               message={

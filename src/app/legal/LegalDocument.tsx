@@ -109,7 +109,7 @@ export default function LegalDocument() {
   // one lazy chunk without App.tsx knowing anything about document slugs.
   const slug = useLocation().pathname.replace(/^\//, '') || 'privacy'
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['legal', slug],
     queryFn: () => api.get<{ document: LegalDoc }>(`/legal/${slug}`),
   })
@@ -133,9 +133,14 @@ export default function LegalDocument() {
         {isLoading ? (
           <Skeleton className="h-96 w-full" />
         ) : isError || !doc ? (
-          <p role="alert" className="text-destructive">
-            That document could not be loaded.
-          </p>
+          <div className="space-y-3">
+            <p role="alert" className="text-destructive">
+              That document could not be loaded.
+            </p>
+            <Button variant="outline" className="min-h-11" onClick={() => void refetch()}>
+              {t('action.retry')}
+            </Button>
+          </div>
         ) : (
           <>
             <h1 className="font-display text-display-lg">{doc.title}</h1>

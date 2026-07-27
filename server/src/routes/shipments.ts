@@ -30,9 +30,25 @@ shipmentRoutes.post('/:donationId/book', requireAuth, async (c) => {
       ? Math.min(body.weightGrams, 50_000)
       : DEFAULT_WEIGHT_GRAMS
 
-  const parties = await withActor(actor, async (tx) => {
+  // Two steps, deliberately. Visibility is proved under the caller's own RLS —
+  // only a party to the donation can see the claimed row at all. The party
+  // details are then read with system authority, because the donor's RLS does
+  // not extend to the NGO's row (nor the NGO's to the donor's profile): joined
+  // under the caller, the counterparty came back null and every donor's courier
+  // booking failed with "no organisation has claimed that item yet".
+  const visible = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
-      `select d.id, d.status, d.title, d.pickup_address, d.pincode,
+      `select id from public.donations where id = $1 and status = 'claimed'`,
+      [donationId],
+    )
+    return rows.length > 0
+  })
+
+  const parties = !visible
+    ? null
+    : await withSystemActor(async (tx) => {
+        const { rows } = await tx.query(
+          `select d.id, d.status, d.delivery_method, d.title, d.pickup_address, d.pincode,
               dp.full_name as donor_name, dp.phone as donor_phone,
               n.name as ngo_name, n.address as ngo_address, n.pincode as ngo_pincode,
               n.contact_phone as ngo_phone
@@ -40,16 +56,22 @@ shipmentRoutes.post('/:donationId/book', requireAuth, async (c) => {
        join public.profiles dp on dp.id = d.donor_id
        left join public.ngos n on n.id = d.claimed_by_ngo_id
        where d.id = $1 and d.status = 'claimed'`,
-      [donationId],
-    )
-    return rows[0] ?? null
-  })
+          [donationId],
+        )
+        return rows[0] ?? null
+      })
 
   if (!parties) {
     return c.json({ error: 'That item is not waiting for collection.' }, 404)
   }
   if (!parties.ngo_name) {
     return c.json({ error: 'No organisation has claimed that item yet.' }, 409)
+  }
+  // A volunteer pickup is already open for this item. Booking a courier on top
+  // would strand that pickup as a live row volunteers can still accept while a
+  // courier is also on the way — one item, two people arriving for it.
+  if (parties.delivery_method === 'volunteer') {
+    return c.json({ error: 'A volunteer is already collecting this item.' }, 409)
   }
 
   const provider = courier()
@@ -84,7 +106,15 @@ shipmentRoutes.post('/:donationId/book', requireAuth, async (c) => {
   }
 
   try {
-    await withSystemActor(async (tx) => {
+    // The same volunteer check again, this time under the row lock — the
+    // methods race in the window while the provider call above was in flight.
+    const conflicted = await withSystemActor(async (tx) => {
+      const { rows } = await tx.query(
+        'select status, delivery_method from public.donations where id = $1 for update',
+        [donationId],
+      )
+      if (rows[0]?.delivery_method === 'volunteer') return true
+
       await tx.query(
         `insert into public.shipments
            (donation_id, provider, awb_number, label_url, fee_paise, paid_by, status)
@@ -106,10 +136,6 @@ shipmentRoutes.post('/:donationId/book', requireAuth, async (c) => {
         ],
       )
 
-      const { rows } = await tx.query(
-        'select status from public.donations where id = $1 for update',
-        [donationId],
-      )
       const next = transition(rows[0].status as DonationStatus, 'scheduled', 'admin')
       await tx.query(
         `update public.donations
@@ -117,7 +143,16 @@ shipmentRoutes.post('/:donationId/book', requireAuth, async (c) => {
          where id = $2`,
         [next, donationId],
       )
+      return false
     })
+
+    if (conflicted) {
+      log.warn('courier booked but a volunteer got there first', {
+        donation_id: donationId,
+        awb: booking.awbNumber,
+      })
+      return c.json({ error: 'A volunteer is already collecting this item.' }, 409)
+    }
   } catch (error) {
     if (error instanceof IllegalTransitionError) {
       return c.json({ error: error.message }, 409)

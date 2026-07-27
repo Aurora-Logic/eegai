@@ -54,6 +54,10 @@ const Dropzone = React.forwardRef<HTMLInputElement, DropzoneProps>(
     const generatedId = React.useId()
     const inputId = id ?? generatedId
     const [dragging, setDragging] = React.useState(false)
+    // A dropped file the `accept` filter throws away must say so. An iPhone
+    // photo arriving as HEIC and simply vanishing reads as "the button is
+    // broken", not "wrong format".
+    const [rejected, setRejected] = React.useState(0)
     // Drag events fire per child element; a counter avoids the highlight
     // flickering as the pointer crosses the icon and the text.
     const dragDepth = React.useRef(0)
@@ -77,6 +81,7 @@ const Dropzone = React.forwardRef<HTMLInputElement, DropzoneProps>(
       (list: FileList | null) => {
         if (!list?.length) return
         const files = Array.from(list).filter(accepts)
+        setRejected(list.length - files.length)
         if (files.length) onFiles(maxFiles ? files.slice(0, maxFiles) : files)
       },
       [accepts, maxFiles, onFiles],
@@ -135,6 +140,12 @@ const Dropzone = React.forwardRef<HTMLInputElement, DropzoneProps>(
           <span className="text-sm font-medium">{label}</span>
           {hint ? <span className="text-sm text-muted-foreground">{hint}</span> : null}
         </label>
+        {rejected > 0 ? (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {rejected === 1 ? 'One file' : `${rejected} files`} couldn't be added — that file type
+            isn't supported here.
+          </p>
+        ) : null}
       </div>
     )
   },

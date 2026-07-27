@@ -60,7 +60,7 @@ export function CreateAccountDialog() {
   })
   const [created, setCreated] = useState<Created | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   const create = useMutation({
     mutationFn: () =>
@@ -83,7 +83,7 @@ export function CreateAccountDialog() {
     setOpen(false)
     setCreated(null)
     setError(null)
-    setCopied(false)
+    setCopied('idle')
     setDraft({ fullName: '', phone: '', pincode: '', role: 'ngo' })
   }
 
@@ -112,16 +112,30 @@ export function CreateAccountDialog() {
               <p className="font-mono text-xl tracking-wide">{created.temporaryPassword}</p>
             </div>
 
+            {/* Only claim "Copied" once the clipboard write actually resolved.
+                This password exists nowhere else — telling an admin it was
+                copied when the write failed (plain HTTP, a denied permission)
+                loses the account. */}
             <Button
               variant="outline"
               className="min-h-11"
-              onClick={() => {
-                void navigator.clipboard?.writeText(created.temporaryPassword)
-                setCopied(true)
+              onClick={async () => {
+                try {
+                  if (!navigator.clipboard) throw new Error('clipboard unavailable')
+                  await navigator.clipboard.writeText(created.temporaryPassword)
+                  setCopied('copied')
+                } catch {
+                  setCopied('failed')
+                }
               }}
             >
-              <Copy aria-hidden /> {copied ? 'Copied' : 'Copy password'}
+              <Copy aria-hidden /> {copied === 'copied' ? 'Copied' : 'Copy password'}
             </Button>
+            {copied === 'failed' ? (
+              <p role="alert" className="text-sm text-destructive">
+                Copying is blocked here. Select the password above and copy it by hand.
+              </p>
+            ) : null}
 
             <p className="text-sm text-muted-foreground">
               They sign in with <span className="font-mono">{draft.phone}</span> and can change it

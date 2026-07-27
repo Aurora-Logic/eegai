@@ -17,23 +17,13 @@ import { t } from '@/lib/i18n'
 import { registerSchema, type RegisterInput } from '@/lib/validation/auth'
 
 const ROLE_CHOICES = [
-  {
-    value: 'donor',
-    icon: HandHeart,
-    label: 'I want to give things',
-    hint: 'Post items you no longer need.',
-  },
-  {
-    value: 'ngo',
-    icon: Boxes,
-    label: "We're an organisation",
-    hint: 'Claim items for the people you serve.',
-  },
+  { value: 'donor', icon: HandHeart, label: 'auth.roleDonor', hint: 'auth.roleDonorHint' },
+  { value: 'ngo', icon: Boxes, label: 'auth.roleNgo', hint: 'auth.roleNgoHint' },
   {
     value: 'volunteer',
     icon: Truck,
-    label: 'I can collect and deliver',
-    hint: 'Move items across Coimbatore.',
+    label: 'auth.roleVolunteer',
+    hint: 'auth.roleVolunteerHint',
   },
 ] as const
 
@@ -116,9 +106,9 @@ export default function SignUp() {
                       />
                       <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
                       <span className="min-w-0">
-                        <span className="block text-sm font-medium">{choice.label}</span>
+                        <span className="block text-sm font-medium">{t(choice.label)}</span>
                         <span className="block text-sm font-normal text-muted-foreground">
-                          {choice.hint}
+                          {t(choice.hint)}
                         </span>
                       </span>
                     </Label>

@@ -169,15 +169,24 @@ function ActiveToggle({ person }: { person: Person }) {
     )
   }
 
-  // Restoring is not destructive, so it needs no confirmation.
+  // Restoring is not destructive, so it needs no confirmation — but a failure
+  // still has to say so, or the button quietly stops mid-"Restoring…" and the
+  // operator walks away believing the account is back.
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={setActive.isPending}
-      onClick={() => setActive.mutate(true)}
-    >
-      <RotateCcw aria-hidden /> {setActive.isPending ? 'Restoring…' : 'Restore'}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={setActive.isPending}
+        onClick={() => setActive.mutate(true)}
+      >
+        <RotateCcw aria-hidden /> {setActive.isPending ? 'Restoring…' : 'Restore'}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }

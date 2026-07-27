@@ -6,10 +6,10 @@ import { WallScene } from '@/components/illustrations'
 import { t } from '@/lib/i18n'
 import type { StringKey } from '@/lib/i18n'
 
-const STEPS = [
-  { n: '1', title: 'Photograph it', body: 'One minute, up to five photos, from your phone.' },
-  { n: '2', title: 'An organisation claims it', body: 'Verified, nearby, first claim wins.' },
-  { n: '3', title: 'It gets collected', body: 'A vetted volunteer at your door, or a courier.' },
+const STEPS: { n: string; title: StringKey; body: StringKey }[] = [
+  { n: '1', title: 'landing.step1Title', body: 'landing.step1Body' },
+  { n: '2', title: 'landing.step2Title', body: 'landing.step2Body' },
+  { n: '3', title: 'landing.step3Title', body: 'landing.step3Body' },
 ]
 
 /** Who the product is for, in the order people arrive. */
@@ -81,8 +81,8 @@ export default function Landing() {
             {STEPS.map((step) => (
               <li key={step.n} className="hairline rounded-sm bg-card p-5">
                 <span className="font-display text-display-md text-primary">{step.n}</span>
-                <h3 className="mt-1 font-display text-display-sm">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
+                <h3 className="mt-1 font-display text-display-sm">{t(step.title)}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t(step.body)}</p>
               </li>
             ))}
           </ol>

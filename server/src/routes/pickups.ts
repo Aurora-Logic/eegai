@@ -91,6 +91,34 @@ pickupRoutes.post('/:donationId/accept', requireRole('volunteer'), async (c) => 
     return c.json({ error: 'Choose a day and a morning or evening slot.' }, 400)
   }
 
+  // The pilot runs in Coimbatore, so "today" is the IST calendar date — not the
+  // server's timezone, and not UTC, which is still yesterday until 05:30 IST.
+  const todayIst = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date())
+  // Parse as UTC noon so the round-trip check catches impossible dates —
+  // '2026-02-31' silently becomes March 3rd, which is how it would otherwise
+  // reach the ::date cast below and turn into a 500.
+  const parsedDate = new Date(`${slotDate}T12:00:00Z`)
+  const isRealDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(slotDate) &&
+    !Number.isNaN(parsedDate.getTime()) &&
+    parsedDate.toISOString().slice(0, 10) === slotDate
+  if (!isRealDate) {
+    return c.json({ error: 'Choose a day and a morning or evening slot.' }, 400)
+  }
+  if (slotDate < todayIst) {
+    return c.json({ error: 'That slot is in the past. Pick a day from today onwards.' }, 400)
+  }
+  // The client offers seven days; thirty is the backstop against a crafted
+  // request parking a pickup in some distant year.
+  if (parsedDate.getTime() - Date.parse(`${todayIst}T12:00:00Z`) > 30 * 86_400_000) {
+    return c.json({ error: 'Pick a day within the next month.' }, 400)
+  }
+
   try {
     const result = await withActor(actor, async (tx) => {
       const { rows: me } = await tx.query(

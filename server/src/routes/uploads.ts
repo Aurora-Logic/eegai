@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { Hono, type Context } from 'hono'
-import { withActor } from '../lib/db.ts'
+import { withActor, withSystemActor } from '../lib/db.ts'
 import { env } from '../lib/env.ts'
 import { actorOf, requireAuth, type AppEnv } from '../middleware/auth.ts'
 
@@ -26,6 +26,15 @@ const ALLOWED = new Map([
  * so the read path can tell them apart without a database lookup on every hit.
  */
 const KINDS = new Set(['donation', 'acknowledgement'])
+
+/** Malformed percent-encoding ('%zz') must be a 404, not an unhandled 500. */
+function decodePath(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return null
+  }
+}
 
 async function profileIdOf(c: Context<AppEnv>): Promise<string | null> {
   const actor = actorOf(c)
@@ -79,6 +88,61 @@ uploadRoutes.post('/', requireAuth, async (c) => {
 })
 
 /**
+ * Removes an upload that never became part of anything — a photo taken out of
+ * the post-item draft, or a draft discarded with "start over". Without this,
+ * every removed photo sat in storage forever.
+ *
+ * Only unattached files can go: a path referenced by donation_photos or
+ * acknowledgements is refused, so nothing that is part of an item's record can
+ * be deleted through this route, ever. Donation paths are unguessable UUIDs
+ * known only to the uploader before they attach; acknowledgement paths are
+ * additionally namespaced by uploader and checked against it.
+ */
+uploadRoutes.delete('/*', requireAuth, async (c) => {
+  const requested = decodePath(c.req.path.replace(/^\/api\/(?:files|uploads)\//, ''))
+  if (requested === null) return c.json({ error: 'Not found.' }, 404)
+
+  const safe = normalize(requested)
+  if (safe.startsWith('..') || safe.startsWith('/') || safe.includes('\0')) {
+    return c.json({ error: 'Not found.' }, 404)
+  }
+  if (!safe.startsWith('donations/') && !safe.startsWith('acknowledgements/')) {
+    return c.json({ error: 'Not found.' }, 404)
+  }
+
+  if (safe.startsWith('acknowledgements/')) {
+    const profileId = await profileIdOf(c)
+    if (!profileId || safe.split('/')[1] !== profileId) {
+      return c.json({ error: 'Not found.' }, 404)
+    }
+  }
+
+  // System authority, deliberately: the check must see every reference, not
+  // just the rows the caller's RLS happens to show them — a photo attached to
+  // someone else's item must still count as attached.
+  const attached = await withSystemActor(async (tx) => {
+    const { rows } = await tx.query(
+      `select 1 from public.donation_photos where storage_path = $1
+       union all
+       select 1 from public.acknowledgements where photo_path = $1
+       limit 1`,
+      [safe],
+    )
+    return rows.length > 0
+  })
+  if (attached) {
+    return c.json({ error: 'That photo belongs to a posted item and cannot be removed.' }, 409)
+  }
+
+  try {
+    await unlink(join(env.STORAGE_DIR, safe))
+  } catch {
+    // Already gone is the outcome the caller wanted.
+  }
+  return c.body(null, 204)
+})
+
+/**
  * Serves an uploaded photo.
  *
  * Donation photos stay coarsely authorised — any signed-in user who knows the
@@ -91,7 +155,8 @@ uploadRoutes.post('/', requireAuth, async (c) => {
  * the exact path. This is the tightening NOTES.md flagged as an M6 task.
  */
 uploadRoutes.get('/*', requireAuth, async (c) => {
-  const requested = decodeURIComponent(c.req.path.replace(/^\/api\/files\//, ''))
+  const requested = decodePath(c.req.path.replace(/^\/api\/files\//, ''))
+  if (requested === null) return c.json({ error: 'Not found.' }, 404)
 
   // Reject traversal before touching the filesystem.
   const safe = normalize(requested)

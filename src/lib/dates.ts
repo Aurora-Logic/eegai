@@ -70,6 +70,23 @@ export function formatStamp(value: string | Date): string {
   return stamp.format(new Date(value))
 }
 
+const isoDay = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: IST,
+})
+
+/**
+ * "2026-07-27" — the calendar date in IST, for machine-readable values like a
+ * pickup slot. `toISOString()` would give the UTC date, which is yesterday for
+ * anyone in India before 05:30, so a slot picked at breakfast would land in
+ * the past.
+ */
+export function istDateStamp(value: string | Date = new Date()): string {
+  return isoDay.format(new Date(value))
+}
+
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [

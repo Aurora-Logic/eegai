@@ -23,8 +23,12 @@ export default function DonorHome() {
   const chooseDelivery = useMutation({
     mutationFn: ({ id, method }: { id: string; method: 'volunteer' | 'courier' }) =>
       api.post(`/donations/${id}/delivery`, { method }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['donations'] }),
-    onError: () => setNotice('That did not go through. Try again.'),
+    onSuccess: async () => {
+      setNotice('Done — a volunteer nearby can now offer to collect it.')
+      await queryClient.invalidateQueries({ queryKey: ['donations'] })
+    },
+    onError: (error) =>
+      setNotice(error instanceof ApiError ? error.message : 'That did not go through. Try again.'),
   })
 
   // Courier books an AWB straight away (M5). Which provider is behind this is a
@@ -40,6 +44,16 @@ export default function DonorHome() {
         error instanceof ApiError ? error.message : 'The courier could not be booked. Try again.',
       ),
   })
+
+  // One choice may be in flight at a time — the two buttons are alternatives
+  // for the same item, so while either request runs, both are disabled
+  // everywhere. Only the item actually being worked on changes its label.
+  const deliveryBusy = chooseDelivery.isPending || bookCourier.isPending
+  const busyId = chooseDelivery.isPending
+    ? chooseDelivery.variables?.id
+    : bookCourier.isPending
+      ? bookCourier.variables
+      : null
 
   const donations = data?.donations ?? []
 
@@ -94,21 +108,23 @@ export default function DonorHome() {
                         <Button
                           size="sm"
                           className="min-h-11 flex-1 min-[380px]:min-h-9"
-                          disabled={chooseDelivery.isPending}
+                          disabled={deliveryBusy}
                           onClick={() =>
                             chooseDelivery.mutate({ id: donation.id, method: 'volunteer' })
                           }
                         >
-                          A volunteer
+                          {chooseDelivery.isPending && busyId === donation.id
+                            ? 'Asking…'
+                            : 'A volunteer'}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="min-h-11 flex-1 min-[380px]:min-h-9"
-                          disabled={bookCourier.isPending}
+                          disabled={deliveryBusy}
                           onClick={() => bookCourier.mutate(donation.id)}
                         >
-                          Courier
+                          {bookCourier.isPending && busyId === donation.id ? 'Booking…' : 'Courier'}
                         </Button>
                       </div>
                     </>

@@ -116,5 +116,17 @@
   "landing.closing": "No money changes hands. Nothing is sold. Nobody is ranked.",
   "legal.privacy": "Privacy",
   "legal.terms": "Terms",
-  "legal.contact": "Contact"
+  "legal.contact": "Contact",
+  "landing.step1Title": "Photograph it",
+  "landing.step1Body": "One minute, up to five photos, from your phone.",
+  "landing.step2Title": "An organisation claims it",
+  "landing.step2Body": "Verified, nearby, first claim wins.",
+  "landing.step3Title": "It gets collected",
+  "landing.step3Body": "A vetted volunteer at your door, or a courier.",
+  "auth.roleDonor": "I want to give things",
+  "auth.roleDonorHint": "Post items you no longer need.",
+  "auth.roleNgo": "We're an organisation",
+  "auth.roleNgoHint": "Claim items for the people you serve.",
+  "auth.roleVolunteer": "I can collect and deliver",
+  "auth.roleVolunteerHint": "Move items across Coimbatore."
 }

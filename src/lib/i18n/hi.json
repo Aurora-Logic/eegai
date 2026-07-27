@@ -116,5 +116,17 @@
   "landing.closing": "कोई पैसा नहीं चलता। कुछ बेचा नहीं जाता। किसी की रैंकिंग नहीं होती।",
   "legal.privacy": "निजता",
   "legal.terms": "शर्तें",
-  "legal.contact": "संपर्क"
+  "legal.contact": "संपर्क",
+  "landing.step1Title": "उसकी तस्वीर लें",
+  "landing.step1Body": "एक मिनट, पाँच तक तस्वीरें, आपके फ़ोन से।",
+  "landing.step2Title": "कोई संस्था उसे माँग लेती है",
+  "landing.step2Body": "सत्यापित, पास की, पहली माँग जीतती है।",
+  "landing.step3Title": "उसे ले जाया जाता है",
+  "landing.step3Body": "आपके दरवाज़े पर जाँचा-परखा स्वयंसेवक, या कूरियर।",
+  "auth.roleDonor": "मुझे चीज़ें देनी हैं",
+  "auth.roleDonorHint": "जो चीज़ें अब काम की नहीं, उन्हें पोस्ट करें।",
+  "auth.roleNgo": "हम एक संस्था हैं",
+  "auth.roleNgoHint": "जिन लोगों की आप सेवा करते हैं, उनके लिए चीज़ें माँगें।",
+  "auth.roleVolunteer": "मैं ला और पहुँचा सकता हूँ",
+  "auth.roleVolunteerHint": "कोयंबटूर भर में चीज़ें पहुँचाएँ।"
 }

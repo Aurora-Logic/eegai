@@ -153,7 +153,13 @@ export default function PostItem() {
           <PhotoGrid
             paths={draft.photoPaths}
             onReorder={(photoPaths) => patch({ photoPaths })}
-            onRemove={(path) => patch({ photoPaths: draft.photoPaths.filter((p) => p !== path) })}
+            onRemove={(path) => {
+              patch({ photoPaths: draft.photoPaths.filter((p) => p !== path) })
+              // Fire-and-forget: the draft no longer references it either way,
+              // and a failed delete only means the janitorial call gets retried
+              // never — an orphan file, which is where we started, not worse.
+              void api.delete(`/uploads/${path}`).catch(() => undefined)
+            }}
           />
 
           {draft.photoPaths.length < 5 && (
@@ -399,6 +405,9 @@ export default function PostItem() {
             size="sm"
             className="mt-1 min-h-11 text-muted-foreground"
             onClick={() => {
+              for (const path of draft.photoPaths) {
+                void api.delete(`/uploads/${path}`).catch(() => undefined)
+              }
               localStorage.removeItem(DRAFT_KEY)
               setDraft(EMPTY)
               setStep(0)
