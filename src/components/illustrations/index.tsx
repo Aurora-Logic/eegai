@@ -81,7 +81,7 @@ export function WallScene({ className }: Props) {
           this settles to a still drawing for anyone who asked for that — which
           is what keeps it inside PLAN.md §8's "one piece of motion" rule rather
           than in breach of it. */}
-      <g className="origin-[92px_58px] animate-sway motion-reduce:animate-none">
+      <g className="origin-[92px_58px] animate-hang motion-reduce:animate-none">
         <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M92 58 v10" strokeOpacity="0.6" />
           <path d="M92 68 q0 -7 6 -7 t6 7" strokeOpacity="0.6" />
@@ -103,8 +103,8 @@ export function WallScene({ className }: Props) {
 
       {/* ---- Hook 2: a tote of books ---- */}
       <g
-        className="origin-[200px_58px] animate-sway motion-reduce:animate-none"
-        style={{ animationDelay: '-2s' }}
+        className="origin-[200px_58px] animate-hang motion-reduce:animate-none"
+        style={{ animationDelay: '-5s' }}
       >
         <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
           <path d="M200 58 v10" strokeOpacity="0.6" />
@@ -150,8 +150,8 @@ export function WallScene({ className }: Props) {
 
       {/* ---- Hook 3: a small bear ---- */}
       <g
-        className="origin-[308px_58px] animate-sway motion-reduce:animate-none"
-        style={{ animationDelay: '-4s' }}
+        className="origin-[308px_58px] animate-hang motion-reduce:animate-none"
+        style={{ animationDelay: '-10s' }}
       >
         <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
           <path d="M308 58 v10" strokeOpacity="0.6" />

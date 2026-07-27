@@ -118,18 +118,32 @@ export default {
           '0%': { opacity: '1' },
           '100%': { opacity: '0' },
         },
-        // The landing hero only. Things hanging on a wall move a little; a
-        // perfectly still drawing of hung cloth reads as a diagram. Two degrees
-        // and a slow cycle, which is loitering rather than animation.
-        sway: {
-          '0%, 100%': { transform: 'rotate(-1.6deg)' },
-          '50%': { transform: 'rotate(1.6deg)' },
+        // The landing hero. Not decoration — it acts out the whole product on a
+        // loop: something is hung on the wall, it hangs there a while, an
+        // organisation takes it, the hook is empty again.
+        //
+        // One keyframe rather than three chained animations, because the three
+        // items run the same cycle at different offsets and a single timeline is
+        // far easier to reason about than three that must stay in step.
+        hang: {
+          // arriving — dropped onto the hook and settling
+          '0%': { transform: 'translateY(-14px) rotate(-7deg)', opacity: '0' },
+          '6%': { transform: 'translateY(0) rotate(4deg)', opacity: '1' },
+          '10%': { transform: 'translateY(0) rotate(-2.5deg)', opacity: '1' },
+          // hanging — the long middle, breathing
+          '14%, 58%': { transform: 'translateY(0) rotate(1.8deg)', opacity: '1' },
+          '36%': { transform: 'translateY(0) rotate(-1.8deg)', opacity: '1' },
+          // claimed — lifts off the wall, the one motion §8 already allows
+          '66%': { transform: 'translateY(-10px) rotate(0deg)', opacity: '1' },
+          '74%': { transform: 'translateY(-40px) rotate(3deg)', opacity: '0' },
+          // the hook stays empty for a beat, then it begins again
+          '100%': { transform: 'translateY(-14px) rotate(-7deg)', opacity: '0' },
         },
       },
       animation: {
         'brick-lift': 'brick-lift var(--lift-duration) var(--lift-ease) forwards',
         'brick-fade': 'brick-fade 150ms linear forwards',
-        sway: 'sway 6s ease-in-out infinite',
+        hang: 'hang 15s ease-in-out infinite',
       },
     },
   },

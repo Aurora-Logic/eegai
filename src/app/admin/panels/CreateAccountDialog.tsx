@@ -129,7 +129,7 @@ export function CreateAccountDialog() {
             </p>
 
             <DialogFooter>
-              <Button className="min-h-11" onClick={reset}>
+              <Button className="min-h-11 w-full sm:w-auto" onClick={reset}>
                 Done
               </Button>
             </DialogFooter>
@@ -146,7 +146,10 @@ export function CreateAccountDialog() {
             {/* The scene follows the radio. Same reasoning as the old sign-up
                 form: this is the only choice here that changes what the account
                 can do, and a radio group states it very quietly. */}
-            <RoleScene role={draft.role} className="mx-auto w-full max-w-[240px] text-foreground" />
+            <RoleScene
+              role={draft.role}
+              className="mx-auto hidden w-full max-w-[200px] text-foreground sm:block"
+            />
 
             <fieldset>
               <legend className="mb-2 text-sm font-medium">What kind of account?</legend>
@@ -214,11 +217,11 @@ export function CreateAccountDialog() {
             ) : null}
 
             <DialogFooter>
-              <Button variant="ghost" className="min-h-11" onClick={reset}>
+              <Button variant="ghost" className="min-h-11 w-full sm:w-auto" onClick={reset}>
                 Cancel
               </Button>
               <Button
-                className="min-h-11"
+                className="min-h-11 w-full sm:w-auto"
                 disabled={!valid || create.isPending}
                 onClick={() => create.mutate()}
               >
