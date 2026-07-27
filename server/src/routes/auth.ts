@@ -17,6 +17,63 @@ const cookieOptions = {
   maxAge: env.SESSION_TTL_HOURS * 3600,
 } as const
 
+/**
+ * Sign in as a seeded account of a given role, with no password.
+ *
+ * Testing this product means being four people in sequence — a donor posts, an
+ * NGO claims, a volunteer collects and reads an OTP, the NGO acknowledges. Doing
+ * that through the login form four times per pass is most of the cost of testing
+ * a change, so this collapses it to one tap.
+ *
+ * Two separate things stop this reaching production:
+ * 1. It 404s unless NODE_ENV is 'development' — not merely "not production", so
+ *    a missing or misspelled env var fails closed rather than open.
+ * 2. The button that calls it is behind `import.meta.env.DEV`, so it is dead-code
+ *    eliminated from a production bundle and never shipped at all.
+ *
+ * Layer 1 is the one that actually matters — layer 2 only hides the door, it does
+ * not lock it. Be aware this hands out a session for the oldest account of the
+ * chosen role, which in a seeded dev database is a seed user. Point it at a
+ * database with real accounts in it and it will hand out a real one.
+ */
+authRoutes.post('/dev-login', async (c) => {
+  if (env.NODE_ENV !== 'development') {
+    return c.json({ error: 'No such endpoint.' }, 404)
+  }
+
+  const body = await c.req.json().catch(() => null)
+  const role = body?.role
+  if (!['donor', 'ngo', 'volunteer', 'admin'].includes(role)) {
+    return c.json({ error: 'Pick donor, ngo, volunteer or admin.' }, 400)
+  }
+
+  const session = await withActor(null, async (tx) => {
+    const { rows } = await tx.query(
+      `select p.user_id, p.full_name, p.role
+       from public.profiles p
+       where p.role = $1::public.user_role
+       order by p.created_at, p.full_name
+       limit 1`,
+      [role],
+    )
+    const found = rows[0]
+    if (!found) return null
+    return {
+      userId: found.user_id as string,
+      role: found.role as string,
+      fullName: found.full_name as string,
+    }
+  })
+
+  if (!session) {
+    return c.json({ error: `No seeded ${role} account. Run npm run db:reset.` }, 404)
+  }
+
+  const token = await signSession(session)
+  setCookie(c, SESSION_COOKIE, token, cookieOptions)
+  return c.json({ user: session })
+})
+
 authRoutes.post('/register', async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = registerSchema.safeParse(body)
