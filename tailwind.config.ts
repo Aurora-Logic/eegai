@@ -125,6 +125,33 @@ export default {
         // One keyframe rather than three chained animations, because the three
         // items run the same cycle at different offsets and a single timeline is
         // far easier to reason about than three that must stay in step.
+        // The hero: a parcel crossing from one pair of hands to another. The
+        // whole product in one gesture, so it is the only thing that moves.
+        pass: {
+          // held by the volunteer
+          '0%, 12%': { transform: 'translate(0, 0) rotate(-3deg)', opacity: '1' },
+          // lifted across, with a little arc rather than a straight slide
+          '34%': { transform: 'translate(24px, -14px) rotate(3deg)', opacity: '1' },
+          // settled into the child's hands — level with the hands, not the face,
+          // which is where a straight 58px slide had been putting it
+          '52%, 78%': { transform: 'translate(46px, 20px) rotate(0deg)', opacity: '1' },
+          // and carried in, so the hands are empty for the next one
+          '92%, 100%': { transform: 'translate(46px, 20px) rotate(0deg)', opacity: '0' },
+        },
+        // The child's arms lift as the parcel arrives.
+        reach: {
+          '0%, 20%': { transform: 'rotate(0deg)' },
+          '46%, 80%': { transform: 'rotate(-7deg)' },
+          '100%': { transform: 'rotate(0deg)' },
+        },
+        // The centre's doorway warms as the auto arrives, and fades once it has
+        // gone in. It is the point of the whole loop, so it is the only thing on
+        // the page that changes colour.
+        welcome: {
+          '0%, 30%': { opacity: '0.18' },
+          '56%': { opacity: '0.7' },
+          '100%': { opacity: '0.18' },
+        },
         hang: {
           // arriving — dropped onto the hook and settling
           '0%': { transform: 'translateY(-14px) rotate(-7deg)', opacity: '0' },
@@ -144,6 +171,9 @@ export default {
         'brick-lift': 'brick-lift var(--lift-duration) var(--lift-ease) forwards',
         'brick-fade': 'brick-fade 150ms linear forwards',
         hang: 'hang 15s ease-in-out infinite',
+        pass: 'pass 6s ease-in-out infinite',
+        reach: 'reach 6s ease-in-out infinite',
+        welcome: 'welcome 6s ease-in-out infinite',
       },
     },
   },

@@ -45,9 +45,23 @@ function BrickCourses({ rows = 6, width = 400, height = 260 }) {
 }
 
 /**
- * The landing hero: three things hanging on the wall, waiting to be taken.
- * One per category — clothes, books, toys — which is the whole product in a
- * picture.
+ * The landing hero: someone's things crossing Coimbatore on an auto.
+ *
+ * The previous version was three items hanging on hooks. It was on-metaphor and
+ * it was a still life — a wall of objects with nobody in it, which is a strange
+ * way to open a product that is entirely about people handing things to each
+ * other.
+ *
+ * This is the journey instead, on a loop: a house on the left, a centre with its
+ * shutter up on the right, and an auto carrying a bundle between them. The
+ * doorway warms as it arrives. An auto rather than a van because that is what
+ * actually moves things across this city, and because it has more character than
+ * anything else on four wheels.
+ *
+ * All of the motion is CSS on inline SVG — no video, no request, no bytes beyond
+ * the markup, and it inverts with the theme. globals.css zeroes animation
+ * duration under prefers-reduced-motion, so it settles into a still scene that
+ * still reads correctly: the auto simply sits mid-journey.
  */
 export function WallScene({ className }: Props) {
   return (
@@ -58,136 +72,174 @@ export function WallScene({ className }: Props) {
       aria-hidden="true"
       focusable="false"
     >
-      <BrickCourses />
+      <BrickCourses rows={5} width={400} height={150} />
 
-      {/* The rail the hooks sit on */}
-      <line
-        x1="24"
-        y1="58"
-        x2="376"
-        y2="58"
+      {/* ---- the donor's house, left ---- */}
+      <path
+        d="M28 208 L28 128 L74 100 L120 128 L120 208"
+        fill="hsl(var(--indigo))"
+        fillOpacity="0.06"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18 132 L74 96 L130 132"
+        stroke="currentColor"
+        strokeWidth="2.6"
         strokeLinecap="round"
-        strokeOpacity="0.55"
+        strokeLinejoin="round"
+      />
+      {/* a water tank on the roof, which every house here has */}
+      <rect
+        x="92"
+        y="86"
+        width="18"
+        height="14"
+        rx="2"
+        fill="hsl(var(--kraft))"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M96 86 v-6 M106 86 v-6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      {/* door and window */}
+      <path
+        d="M60 208 L60 164 q14 -10 28 0 L88 208"
+        fill="hsl(var(--marigold))"
+        fillOpacity="0.2"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <rect x="36" y="146" width="18" height="16" rx="1.5" stroke="currentColor" strokeWidth="2" />
+
+      {/* ---- the receiving centre, right ---- */}
+      <path
+        d="M266 208 L266 118 L378 118 L378 208"
+        fill="hsl(var(--indigo))"
+        fillOpacity="0.06"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="278"
+        y="100"
+        width="88"
+        height="18"
+        rx="2"
+        fill="hsl(var(--moss))"
+        fillOpacity="0.55"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      <g stroke="hsl(var(--plaster))" strokeWidth="2.2" strokeLinecap="round" strokeOpacity="0.85">
+        <path d="M290 109 L312 109" />
+        <path d="M320 109 L352 109" />
+      </g>
+      {/* the doorway that warms when the auto arrives */}
+      <path
+        d="M304 208 L304 150 q18 -12 36 0 L340 208"
+        fill="hsl(var(--marigold))"
+        className="animate-welcome motion-reduce:animate-none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
       />
 
-      {/* ---- Hook 1: a kurta on a hanger ----
-          Each item is wrapped in a group that pivots at its own hook, so the
-          sway looks like weight hanging rather than a picture wobbling. The
-          three are offset so they do not move in lockstep.
-
-          globals.css zeroes animation duration under prefers-reduced-motion, so
-          this settles to a still drawing for anyone who asked for that — which
-          is what keeps it inside PLAN.md §8's "one piece of motion" rule rather
-          than in breach of it. */}
-      <g className="origin-[92px_58px] animate-hang motion-reduce:animate-none">
-        <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M92 58 v10" strokeOpacity="0.6" />
-          <path d="M92 68 q0 -7 6 -7 t6 7" strokeOpacity="0.6" />
-          <path d="M74 92 L92 74 L110 92" strokeOpacity="0.6" />
-        </g>
-        <path
-          d="M74 92 L58 106 L66 118 L74 112 L74 176 q0 5 5 5 L105 181 q5 0 5 -5 L110 112 L118 118 L126 106 L110 92 q-18 11 -36 0 Z"
-          fill="hsl(var(--marigold))"
-          fillOpacity="0.85"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinejoin="round"
-        />
-        {/* placket + a couple of buttons */}
-        <path d="M92 100 v78" stroke="currentColor" strokeWidth="1.6" strokeOpacity="0.5" />
-        <circle cx="92" cy="120" r="2" fill="currentColor" fillOpacity="0.5" />
-        <circle cx="92" cy="146" r="2" fill="currentColor" fillOpacity="0.5" />
-      </g>
-
-      {/* ---- Hook 2: a tote of books ---- */}
-      <g
-        className="origin-[200px_58px] animate-hang motion-reduce:animate-none"
-        style={{ animationDelay: '-5s' }}
-      >
-        <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-          <path d="M200 58 v10" strokeOpacity="0.6" />
-          <path d="M200 68 q0 -7 6 -7 t6 7" strokeOpacity="0.6" />
-        </g>
-        <path
-          d="M182 96 q0 -22 18 -22 t18 22"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M170 96 L230 96 L224 172 q-0.6 6 -6.6 6 L182.6 178 q-6 0 -6.6 -6 Z"
-          fill="hsl(var(--kraft))"
-          fillOpacity="0.9"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinejoin="round"
-        />
-        {/* book spines peeking out */}
-        <rect
-          x="186"
-          y="82"
-          width="12"
-          height="20"
-          rx="1.5"
-          fill="hsl(var(--moss))"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <rect
-          x="200"
-          y="76"
-          width="12"
-          height="26"
-          rx="1.5"
-          fill="hsl(var(--vermilion))"
-          fillOpacity="0.9"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-      </g>
-
-      {/* ---- Hook 3: a small bear ---- */}
-      <g
-        className="origin-[308px_58px] animate-hang motion-reduce:animate-none"
-        style={{ animationDelay: '-10s' }}
-      >
-        <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-          <path d="M308 58 v10" strokeOpacity="0.6" />
-          <path d="M308 68 q0 -7 6 -7 t6 7" strokeOpacity="0.6" />
-          <path d="M308 78 v14" strokeOpacity="0.6" />
-        </g>
-        <g fill="hsl(var(--moss))" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
-          <circle cx="293" cy="96" r="7.5" />
-          <circle cx="323" cy="96" r="7.5" />
-          <circle cx="308" cy="112" r="20" />
-          <path d="M288 134 q20 12 40 0 L332 168 q0 8 -8 8 L292 176 q-8 0 -8 -8 Z" />
-          <path d="M286 140 L272 158" strokeLinecap="round" />
-          <path d="M330 140 L344 158" strokeLinecap="round" />
-        </g>
-        <circle cx="302" cy="110" r="2.2" fill="hsl(var(--plaster))" />
-        <circle cx="314" cy="110" r="2.2" fill="hsl(var(--plaster))" />
-        <path
-          d="M303 119 q5 4 10 0"
-          stroke="hsl(var(--plaster))"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </g>
-
-      {/* ---- Ground ---- */}
+      {/* ---- ground ---- */}
       <path
-        d="M16 214 L384 214"
+        d="M8 208 L392 208"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeOpacity="0.5"
       />
-      <g fill="currentColor" fillOpacity="0.09">
-        <ellipse cx="92" cy="220" rx="30" ry="4" />
-        <ellipse cx="200" cy="220" rx="28" ry="4" />
-        <ellipse cx="308" cy="220" rx="30" ry="4" />
+      <g stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.2">
+        <path d="M150 220 L186 220" />
+        <path d="M206 220 L242 220" />
+        <path d="M262 220 L298 220" />
+      </g>
+
+      {/* ---- the handover, which is the whole product in one gesture ----
+          Centred and large, because it is the only thing on this page worth
+          looking at. The parcel is the only element that moves: it lifts out of
+          the volunteer's hands, arcs across, settles into the child's, and is
+          carried in — then the loop starts again with the next one.
+
+          Both faces smile. The volunteer's is the point as much as the child's;
+          a drawing where only the receiver is glad makes giving look like a
+          transaction. */}
+      <g stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        {/* the volunteer */}
+        <circle cx="150" cy="112" r="18" fill="hsl(var(--moss))" fillOpacity="0.45" />
+        <path d="M150 130 L150 176" />
+        <path d="M150 176 L138 208 M150 176 L163 208" />
+        <path d="M150 142 L186 150" />
+      </g>
+      <g fill="currentColor" fillOpacity="0.8">
+        <circle cx="144" cy="108" r="2.1" />
+        <circle cx="157" cy="108" r="2.1" />
+      </g>
+      <path
+        d="M143 118 q7 6 14 0"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeOpacity="0.8"
+      />
+
+      {/* the child, arms lifting as it arrives */}
+      <g className="origin-[248px_182px] animate-reach motion-reduce:animate-none">
+        <g stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="248" cy="140" r="15" fill="hsl(var(--kraft))" fillOpacity="0.9" />
+          <path d="M248 155 L248 186" />
+          <path d="M248 186 L238 208 M248 186 L258 208" />
+          <path d="M248 164 L226 152" />
+          <path d="M248 164 L268 150" />
+        </g>
+        <g fill="currentColor" fillOpacity="0.8">
+          <circle cx="243" cy="137" r="1.9" />
+          <circle cx="253.5" cy="137" r="1.9" />
+        </g>
+        <path
+          d="M242 145 q6 6 12 0"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeOpacity="0.8"
+        />
+      </g>
+
+      {/* the parcel itself */}
+      <g className="animate-pass motion-reduce:animate-none">
+        <path
+          d="M186 138 q17 -7 34 0 L215 166 q-12 5 -24 0 Z"
+          fill="hsl(var(--marigold))"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+        <path d="M203 135 v33" stroke="currentColor" strokeWidth="1.6" strokeOpacity="0.45" />
+        <path
+          d="M188 150 q15 5 30 0"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeOpacity="0.45"
+        />
+      </g>
+
+      {/* two birds, because an empty sky is a poster and this is a street */}
+      <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeOpacity="0.35">
+        <path d="M236 56 q6 -5 12 0" />
+        <path d="M248 56 q6 -5 12 0" />
+        <path d="M282 40 q5 -4 10 0" />
+        <path d="M292 40 q5 -4 10 0" />
       </g>
     </svg>
   )
