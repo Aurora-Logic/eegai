@@ -21,10 +21,26 @@ async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
 
-/** Reads a code off the signed-in party's own Handover codes panel. */
+/**
+ * Reads a code off the signed-in party's own Handover codes panel.
+ *
+ * Codes are masked until revealed, so that one is not sitting face-up on a
+ * screen in a crowded street. Tapping Show is therefore part of the flow a real
+ * donor performs, not a detail the test works around.
+ */
 async function readCode(page: import('@playwright/test').Page, label: RegExp) {
   const row = page.getByRole('listitem').filter({ hasText: label })
   await expect(row.first()).toBeVisible({ timeout: 10_000 })
+
+  // Masked before the tap — this is the assertion that stops a future change
+  // from quietly putting the code back on screen by default.
+  await expect(row.first()).toContainText('••••')
+
+  await row
+    .first()
+    .getByRole('button', { name: /^Show the/i })
+    .click()
+
   const text = await row.first().innerText()
   const match = text.match(/\b(\d{4})\b/)
   expect(match, `no 4-digit code in: ${text}`).not.toBeNull()

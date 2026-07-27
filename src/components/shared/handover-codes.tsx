@@ -12,14 +12,14 @@ interface Notification {
   created_at: string
 }
 
-const LABEL: Record<string, { who: string; when: string }> = {
+const LABEL: Record<string, { line: string; kind: string }> = {
   collect_otp: {
-    who: 'Read this to the volunteer',
-    when: 'when they arrive to collect it',
+    line: 'Read this to the volunteer when they collect the items.',
+    kind: 'collection',
   },
   deliver_otp: {
-    who: 'Read this to the volunteer',
-    when: 'when they hand the items over',
+    line: 'Read this to the volunteer when they deliver the items.',
+    kind: 'delivery',
   },
 }
 
@@ -83,9 +83,7 @@ export function HandoverCodes() {
           return (
             <li key={note.id} className="p-4">
               <p className="font-medium">{note.payload.title ?? 'Your item'}</p>
-              <p className="text-sm text-muted-foreground">
-                {label ? `${label.who} ${label.when}.` : 'Handover code.'}
-              </p>
+              <p className="text-sm text-muted-foreground">{label?.line ?? 'Handover code.'}</p>
 
               {/* Stacked on a phone so the code gets the full width it needs to
                   be readable at arm's length; inline once there is room. */}
@@ -104,10 +102,15 @@ export function HandoverCodes() {
                 {/* Hidden by default so the code is not sitting face-up on a
                     screen in a crowded street. One tap is not friction worth
                     saving here. */}
+                {/* "Show" alone is ambiguous the moment someone has two codes,
+                    and a screen reader would announce two identical buttons.
+                    The visible label stays one word; the accessible name says
+                    which code and for what. */}
                 <Button
                   variant="outline"
                   className="min-h-11 min-[420px]:w-32"
                   onClick={() => toggle(note.id)}
+                  aria-label={`${isRevealed ? 'Hide' : 'Show'} the ${label?.kind ?? 'handover'} code for ${note.payload.title ?? 'your item'}`}
                 >
                   {isRevealed ? (
                     <>
