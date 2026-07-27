@@ -34,11 +34,13 @@ test.describe.serial('verification decisions', () => {
     await signIn(page, ADMIN)
     await page.getByRole('tab', { name: 'Organisations' }).click()
 
-    const rows = page.getByRole('row')
-    await expect(rows.nth(1)).toBeVisible()
-    const before = await rows.count()
+    // Cards, not a table — so no header row to skip, and the role no longer
+    // changes with the viewport the way a table's did below md.
+    const cards = page.getByRole('listitem')
+    await expect(cards.first()).toBeVisible()
+    const before = await cards.count()
 
-    await rows.nth(1).getByRole('button', { name: 'Approve' }).click()
+    await cards.first().getByRole('button', { name: 'Approve' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toContainText('Approve')
     await dialog.getByRole('button', { name: 'Approve' }).click()
@@ -46,7 +48,7 @@ test.describe.serial('verification decisions', () => {
     await expect(dialog).toHaveCount(0)
     // One fewer row in the pending queue, or the queue is now empty entirely.
     await expect(async () => {
-      const after = await page.getByRole('row').count()
+      const after = await page.getByRole('listitem').count()
       expect(after).toBeLessThan(before)
     }).toPass({ timeout: 5000 })
   })
@@ -55,9 +57,9 @@ test.describe.serial('verification decisions', () => {
     await signIn(page, ADMIN)
     await page.getByRole('tab', { name: 'Organisations' }).click()
 
-    const row = page.getByRole('row').nth(1)
-    await expect(row).toBeVisible()
-    await row.getByRole('button', { name: 'Reject' }).click()
+    const card = page.getByRole('listitem').first()
+    await expect(card).toBeVisible()
+    await card.getByRole('button', { name: 'Reject' }).click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('button', { name: 'Reject' })).toBeDisabled()
@@ -71,7 +73,7 @@ test('the dispute view shows a full trail with request ids', async ({ page }) =>
   await signIn(page, ADMIN)
   await page.getByRole('tab', { name: 'Items' }).click()
 
-  await page.getByRole('row').nth(1).getByRole('link', { name: 'Open' }).click()
+  await page.getByRole('listitem').first().getByRole('link', { name: 'Open' }).click()
 
   await expect(page.getByRole('heading', { name: 'Item trail' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Timeline' })).toBeVisible()

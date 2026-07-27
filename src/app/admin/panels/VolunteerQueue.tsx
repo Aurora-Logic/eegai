@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ShieldCheck } from 'lucide-react'
+import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,14 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { api } from '@/lib/api'
 import { VerifyDialog, type VerifyAction } from './VerifyDialog'
 import { STATUS_VARIANT } from './status'
@@ -75,79 +68,61 @@ export function VolunteerQueue() {
           Nothing waiting here.
         </p>
       ) : (
-        <div className="hairline overflow-x-auto rounded-sm bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Volunteer</TableHead>
-                <TableHead className="hidden md:table-cell">Identity</TableHead>
-                <TableHead className="hidden md:table-cell">Availability</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Decision</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {volunteers.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell>
-                    <span className="block font-medium">{v.full_name}</span>
-                    <span className="block font-mono text-xs text-muted-foreground">
-                      {v.phone ?? '—'} · {v.pincode ?? '—'} · {v.pickups} pickups
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">
-                    {/* Never rendered as an image here. The paths are admin-only
-                        at the database level and an ID card does not belong on a
-                        screen someone might be sharing. */}
-                    <span className="block">ID: {v.id_doc_path ? 'uploaded' : 'missing'}</span>
-                    <span className="block text-muted-foreground">
-                      Selfie: {v.selfie_path ? 'uploaded' : 'missing'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">
-                    <span className="block">{v.service_radius_km} km radius</span>
-                    <span className="block text-muted-foreground">
-                      {Object.entries(v.available_slots ?? {})
-                        .map(([day, slots]) => `${day} ${slots.join('/')}`)
-                        .join(', ') || '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[v.verification_status] ?? 'muted'}>
-                      {v.verification_status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="flex justify-end gap-2">
-                      {v.verification_status !== 'verified' ? (
-                        <Button size="sm" onClick={() => setVerifying({ v, action: 'verified' })}>
-                          <ShieldCheck aria-hidden /> Approve
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setVerifying({ v, action: 'suspended' })}
-                        >
-                          Suspend
-                        </Button>
-                      )}
-                      {v.verification_status === 'pending' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setVerifying({ v, action: 'rejected' })}
-                        >
-                          Reject
-                        </Button>
-                      ) : null}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <RecordList>
+          {volunteers.map((v) => (
+            <RecordCard
+              key={v.id}
+              title={v.full_name}
+              subtitle={`${v.phone ?? '—'} · ${v.pincode ?? '—'}`}
+              badges={
+                <Badge variant={STATUS_VARIANT[v.verification_status] ?? 'muted'}>
+                  {v.verification_status}
+                </Badge>
+              }
+              actions={
+                <>
+                  {v.verification_status !== 'verified' ? (
+                    <Button size="sm" onClick={() => setVerifying({ v, action: 'verified' })}>
+                      <ShieldCheck aria-hidden /> Approve
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setVerifying({ v, action: 'suspended' })}
+                    >
+                      Suspend
+                    </Button>
+                  )}
+                  {v.verification_status === 'pending' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setVerifying({ v, action: 'rejected' })}
+                    >
+                      Reject
+                    </Button>
+                  ) : null}
+                </>
+              }
+            >
+              {/* Never rendered as an image. The paths are admin-only at the
+                  database level, and an ID card does not belong on a screen
+                  someone might be sharing. */}
+              <Field label="Documents">
+                ID {v.id_doc_path ? 'uploaded' : 'missing'} · selfie{' '}
+                {v.selfie_path ? 'uploaded' : 'missing'}
+              </Field>
+              <Field label="Covers">{v.service_radius_km} km radius</Field>
+              <Field label="Available">
+                {Object.entries(v.available_slots ?? {})
+                  .map(([day, slots]) => `${day} ${slots.join('/')}`)
+                  .join(', ') || '—'}
+              </Field>
+              <Field label="Pickups">{v.pickups}</Field>
+            </RecordCard>
+          ))}
+        </RecordList>
       )}
 
       {verifying ? (

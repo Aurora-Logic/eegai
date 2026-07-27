@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,14 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { api, photoUrl } from '@/lib/api'
 import { DONATION_STATUSES } from '@/lib/validation/donation'
 import { STATUS_VARIANT } from './status'
@@ -100,69 +93,57 @@ export function Moderation() {
           Nothing matches that.
         </p>
       ) : (
-        <div className="hairline overflow-x-auto rounded-sm bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">Photo</TableHead>
-                <TableHead>Item</TableHead>
-                <TableHead className="hidden md:table-cell">Donor</TableHead>
-                <TableHead className="hidden md:table-cell">Claimed by</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Trail</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    {row.photos[0] ? (
-                      <img
-                        src={photoUrl(row.photos[0].path)}
-                        alt=""
-                        className="hairline size-12 rounded-sm object-cover"
-                      />
-                    ) : (
-                      <span className="block size-12 rounded-sm bg-muted" />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="block font-medium">{row.title}</span>
-                    <span className="flex flex-wrap gap-1 pt-1">
-                      <Badge>{row.category}</Badge>
-                      <Badge>{row.condition.replace('_', ' ')}</Badge>
-                      {row.quantity > 1 ? <Badge variant="muted">×{row.quantity}</Badge> : null}
-                    </span>
-                    {row.rejected_reason ? (
-                      <span className="mt-1 block text-xs text-destructive">
-                        {row.rejected_reason}
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">
-                    <span className="block">{row.donor_name}</span>
-                    <span className="block font-mono text-xs text-muted-foreground">
-                      {row.donor_phone ?? '—'} · {row.pincode ?? '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">
-                    {row.ngo_name ?? '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[row.status] ?? 'muted'}>
-                      {row.status.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button asChild variant="outline" size="sm">
-                      <Link to={`/admin/items/${row.id}`}>Open</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <RecordList columns={3}>
+          {rows.map((row) => (
+            <RecordCard
+              key={row.id}
+              title={
+                <span className="flex items-center gap-2">
+                  {row.photos[0] ? (
+                    <img
+                      src={photoUrl(row.photos[0].path)}
+                      alt=""
+                      className="hairline size-10 shrink-0 rounded-sm object-cover"
+                    />
+                  ) : (
+                    <span className="block size-10 shrink-0 rounded-sm bg-muted" />
+                  )}
+                  {row.title}
+                </span>
+              }
+              badges={
+                <Badge variant={STATUS_VARIANT[row.status] ?? 'muted'}>
+                  {row.status.replace('_', ' ')}
+                </Badge>
+              }
+              actions={
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/admin/items/${row.id}`}>Open</Link>
+                </Button>
+              }
+            >
+              <Field label="What">
+                <span className="flex flex-wrap gap-1">
+                  <Badge>{row.category}</Badge>
+                  <Badge>{row.condition.replace('_', ' ')}</Badge>
+                  {row.quantity > 1 ? <Badge variant="muted">×{row.quantity}</Badge> : null}
+                </span>
+              </Field>
+              <Field label="Donor">
+                <span className="block">{row.donor_name}</span>
+                <span className="block font-mono text-xs text-muted-foreground">
+                  {row.donor_phone ?? '—'} · {row.pincode ?? '—'}
+                </span>
+              </Field>
+              <Field label="Claimed by">{row.ngo_name ?? '—'}</Field>
+              {row.rejected_reason ? (
+                <Field label="Rejected">
+                  <span className="text-destructive">{row.rejected_reason}</span>
+                </Field>
+              ) : null}
+            </RecordCard>
+          ))}
+        </RecordList>
       )}
     </section>
   )

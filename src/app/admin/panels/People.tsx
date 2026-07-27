@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -10,14 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { api } from '@/lib/api'
 
 interface Person {
@@ -64,49 +57,30 @@ export function People() {
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : (
-        <div className="hairline overflow-x-auto rounded-sm bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="hidden md:table-cell">Area</TableHead>
-                <TableHead className="hidden md:table-cell">Last seen</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((person) => (
-                <TableRow key={person.id}>
-                  <TableCell className="font-medium">
-                    {person.full_name}
-                    {!person.is_active ? (
-                      <Badge variant="destructive" className="ml-2">
-                        disabled
-                      </Badge>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="hidden font-mono text-xs md:table-cell">
-                    {person.phone ?? '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={person.role === 'admin' ? 'destructive' : 'tag'}>
-                      {person.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden font-mono text-xs md:table-cell">
-                    {person.pincode ?? '—'}
-                  </TableCell>
-                  <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                    {person.last_login_at
-                      ? `${formatDistanceToNow(new Date(person.last_login_at))} ago`
-                      : 'never'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <RecordList columns={3}>
+          {users.map((person) => (
+            <RecordCard
+              key={person.id}
+              title={person.full_name}
+              subtitle={person.phone ?? '—'}
+              badges={
+                <>
+                  <Badge variant={person.role === 'admin' ? 'destructive' : 'tag'}>
+                    {person.role}
+                  </Badge>
+                  {!person.is_active ? <Badge variant="destructive">disabled</Badge> : null}
+                </>
+              }
+            >
+              <Field label="Area">{person.pincode ?? '—'}</Field>
+              <Field label="Last seen">
+                {person.last_login_at
+                  ? `${formatDistanceToNow(new Date(person.last_login_at))} ago`
+                  : 'never'}
+              </Field>
+            </RecordCard>
+          ))}
+        </RecordList>
       )}
     </section>
   )
