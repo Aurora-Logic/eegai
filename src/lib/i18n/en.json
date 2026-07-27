@@ -1,6 +1,8 @@
 {
   "app.name": "Wall of Kindness",
   "app.tagline": "Give what you no longer need to someone in Coimbatore who does.",
+  "landing.cityNote": "Coimbatore only, for now.",
+  "landing.howTitle": "How it works",
   "action.post": "Post an item",
   "action.claim": "Claim this",
   "action.cancel": "Cancel",

@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { AlertCircle, Boxes, HandHeart, Truck } from 'lucide-react'
+import { AuthLayout } from '@/components/shared/auth-layout'
+import { GivingScene } from '@/components/illustrations'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
 import { HOME_FOR_ROLE, useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
@@ -12,9 +17,24 @@ import { t } from '@/lib/i18n'
 import { registerSchema, type RegisterInput } from '@/lib/validation/auth'
 
 const ROLE_CHOICES = [
-  { value: 'donor', label: 'I want to give things', hint: 'Post items you no longer need.' },
-  { value: 'ngo', label: "We're an organisation", hint: 'Claim items for the people you serve.' },
-  { value: 'volunteer', label: 'I can collect and deliver', hint: 'Move items across Coimbatore.' },
+  {
+    value: 'donor',
+    icon: HandHeart,
+    label: 'I want to give things',
+    hint: 'Post items you no longer need.',
+  },
+  {
+    value: 'ngo',
+    icon: Boxes,
+    label: "We're an organisation",
+    hint: 'Claim items for the people you serve.',
+  },
+  {
+    value: 'volunteer',
+    icon: Truck,
+    label: 'I can collect and deliver',
+    hint: 'Move items across Coimbatore.',
+  },
 ] as const
 
 export default function SignUp() {
@@ -25,8 +45,8 @@ export default function SignUp() {
   const {
     register,
     handleSubmit,
+    control,
     watch,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -43,102 +63,118 @@ export default function SignUp() {
       await signUp(values)
       navigate(HOME_FOR_ROLE[values.role], { replace: true })
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'That did not go through. Try again.',
-      )
+      setFormError(error instanceof ApiError ? error.message : t('error.generic'))
     }
   })
 
   return (
-    <main className="plaster-ground grid min-h-dvh place-items-center px-4 py-10">
-      <div className="w-full max-w-sm">
-        <h1 className="font-display text-display-lg">{t('auth.signUpTitle')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('auth.signUpSubtitle')}</p>
-
-        <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-          <fieldset className="space-y-2">
-            <legend className="mb-2 text-sm font-medium">{t('auth.roleQuestion')}</legend>
-            {ROLE_CHOICES.map((choice) => (
-              <label
-                key={choice.value}
-                className={cn(
-                  'hairline flex cursor-pointer flex-col gap-0.5 rounded-sm p-3 transition-colors',
-                  role === choice.value ? 'bg-primary/15' : 'bg-card hover:bg-foreground/5',
-                )}
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value={choice.value}
-                    checked={role === choice.value}
-                    onChange={() => setValue('role', choice.value)}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm font-medium">{choice.label}</span>
-                </span>
-                <span className="pl-6 text-sm text-muted-foreground">{choice.hint}</span>
-              </label>
-            ))}
-            {errors.role ? <p className="text-sm text-destructive">{errors.role.message}</p> : null}
-          </fieldset>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName">
-              {role === 'ngo' ? t('auth.orgName') : t('auth.fullName')}
-            </Label>
-            <Input id="fullName" autoComplete="name" {...register('fullName')} />
-            {errors.fullName ? (
-              <p className="text-sm text-destructive">{errors.fullName.message}</p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">{t('auth.phone')}</Label>
-            <Input
-              id="phone"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              placeholder="98XXXXXXXX"
-              {...register('phone')}
-            />
-            {errors.phone ? (
-              <p className="text-sm text-destructive">{errors.phone.message}</p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="password">{t('auth.password')}</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              {...register('password')}
-            />
-            <p className="text-sm text-muted-foreground">{t('auth.passwordHint')}</p>
-            {errors.password ? (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            ) : null}
-          </div>
-
-          {formError ? (
-            <p role="alert" className="hairline rounded-sm bg-card p-3 text-sm text-destructive">
-              {formError}
-            </p>
-          ) : null}
-
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? t('auth.creating') : t('auth.createAccount')}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-sm text-muted-foreground">
+    <AuthLayout
+      title={t('auth.signUpTitle')}
+      subtitle={t('auth.signUpSubtitle')}
+      illustration={<GivingScene className="w-full max-w-sm" />}
+      footer={
+        <>
           {t('auth.haveAccount')}{' '}
           <Link to="/sign-in" className="underline underline-offset-4">
             {t('auth.signIn')}
           </Link>
-        </p>
-      </div>
-    </main>
+        </>
+      }
+    >
+      <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium">{t('auth.roleQuestion')}</legend>
+          <Controller
+            control={control}
+            name="role"
+            render={({ field }) => (
+              <RadioGroup
+                value={field.value}
+                onValueChange={field.onChange}
+                className="gap-2"
+                aria-label={t('auth.roleQuestion')}
+              >
+                {ROLE_CHOICES.map((choice) => {
+                  const Icon = choice.icon
+                  const selected = role === choice.value
+                  return (
+                    <Label
+                      key={choice.value}
+                      htmlFor={`role-${choice.value}`}
+                      className={cn(
+                        'hairline flex cursor-pointer items-start gap-3 rounded-sm p-3 transition-colors',
+                        selected ? 'bg-primary/15' : 'bg-card hover:bg-foreground/5',
+                      )}
+                    >
+                      <RadioGroupItem
+                        value={choice.value}
+                        id={`role-${choice.value}`}
+                        className="mt-0.5"
+                      />
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">{choice.label}</span>
+                        <span className="block text-sm font-normal text-muted-foreground">
+                          {choice.hint}
+                        </span>
+                      </span>
+                    </Label>
+                  )
+                })}
+              </RadioGroup>
+            )}
+          />
+          {errors.role ? <p className="text-sm text-destructive">{errors.role.message}</p> : null}
+        </fieldset>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="fullName">
+            {role === 'ngo' ? t('auth.orgName') : t('auth.fullName')}
+          </Label>
+          <Input id="fullName" autoComplete="name" {...register('fullName')} />
+          {errors.fullName ? (
+            <p className="text-sm text-destructive">{errors.fullName.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">{t('auth.phone')}</Label>
+          <Input
+            id="phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            placeholder="98XXXXXXXX"
+            {...register('phone')}
+          />
+          {errors.phone ? <p className="text-sm text-destructive">{errors.phone.message}</p> : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password">{t('auth.password')}</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            {...register('password')}
+          />
+          <p className="text-sm text-muted-foreground">{t('auth.passwordHint')}</p>
+          {errors.password ? (
+            <p className="text-sm text-destructive">{errors.password.message}</p>
+          ) : null}
+        </div>
+
+        {formError ? (
+          <Alert variant="destructive" role="alert">
+            <AlertCircle className="size-4" aria-hidden />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? t('auth.creating') : t('auth.createAccount')}
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }
