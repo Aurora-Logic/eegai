@@ -1,7 +1,18 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import { Ban, RotateCcw } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -11,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 
 interface Person {
   id: string
@@ -71,6 +82,7 @@ export function People() {
                   {!person.is_active ? <Badge variant="destructive">disabled</Badge> : null}
                 </>
               }
+              actions={<ActiveToggle person={person} />}
             >
               <Field label="Area">{person.pincode ?? '—'}</Field>
               <Field label="Last seen">
@@ -83,5 +95,88 @@ export function People() {
         </RecordList>
       )}
     </section>
+  )
+}
+
+/**
+ * Disable or restore an account — the soft delete (PLAN.md §M7).
+ *
+ * There is no hard delete anywhere in this product. audit_log and
+ * donation_events are the dispute record for every item, and donations carry
+ * foreign keys to whoever handled them; removing a row would break those or
+ * silently rewrite history. Disabling stops the sign-in, which is what "delete
+ * this user" actually means in practice.
+ *
+ * Confirmed rather than one-tap, because it locks a real person out of an
+ * account they may be mid-donation with, and the row it sits in is a list where
+ * the wrong card is one thumb-width away.
+ */
+function ActiveToggle({ person }: { person: Person }) {
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const setActive = useMutation({
+    mutationFn: (isActive: boolean) => api.post(`/admin/users/${person.id}/active`, { isActive }),
+    onSuccess: async () => {
+      setConfirming(false)
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  if (person.is_active) {
+    return (
+      <>
+        <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+          <Ban aria-hidden /> Disable
+        </Button>
+
+        {confirming ? (
+          <AlertDialog open onOpenChange={(open) => !open && setConfirming(false)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Disable {person.full_name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  They will not be able to sign in. Nothing they have posted or claimed is removed,
+                  and the trail of every item stays intact. You can restore them at any time.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+
+              <AlertDialogFooter>
+                <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  className="min-h-11"
+                  disabled={setActive.isPending}
+                  onClick={() => setActive.mutate(false)}
+                >
+                  {setActive.isPending ? 'Disabling…' : 'Disable'}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
+      </>
+    )
+  }
+
+  // Restoring is not destructive, so it needs no confirmation.
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={setActive.isPending}
+      onClick={() => setActive.mutate(true)}
+    >
+      <RotateCcw aria-hidden /> {setActive.isPending ? 'Restoring…' : 'Restore'}
+    </Button>
   )
 }

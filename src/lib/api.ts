@@ -94,6 +94,12 @@ export const api = {
       method: 'POST',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }),
+  /** Partial update — send only what changed, never the whole record. */
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'PATCH',
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    }),
   /**
    * `fields` carries the upload kind. Acknowledgement photos are stored under a
    * different prefix and read back through an RLS check, so the server has to be

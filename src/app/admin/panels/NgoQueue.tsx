@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, FileText, ShieldCheck } from 'lucide-react'
+import { ExternalLink, FileText, Pencil, ShieldCheck } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import { EditNgoDialog, type EditableNgo } from './EditNgoDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,6 +37,7 @@ interface Ngo {
   accepts_categories: string[]
   contact_person: string | null
   contact_phone: string | null
+  is_accepting: boolean
   document_count: number
   unreviewed_count: number
   claims: number
@@ -53,6 +55,7 @@ export function NgoQueue() {
   const [status, setStatus] = useState('pending')
   const [verifying, setVerifying] = useState<{ ngo: Ngo; action: VerifyAction } | null>(null)
   const [viewingDocs, setViewingDocs] = useState<Ngo | null>(null)
+  const [editing, setEditing] = useState<EditableNgo | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'ngos', status],
@@ -115,6 +118,10 @@ export function NgoQueue() {
                     {ngo.unreviewed_count > 0 ? ` · ${ngo.unreviewed_count} unread` : ''}
                   </Button>
 
+                  <Button variant="outline" size="sm" onClick={() => setEditing(ngo)}>
+                    <Pencil aria-hidden /> Edit
+                  </Button>
+
                   {ngo.verification_status !== 'verified' ? (
                     <Button size="sm" onClick={() => setVerifying({ ngo, action: 'verified' })}>
                       <ShieldCheck aria-hidden /> Approve
@@ -164,6 +171,8 @@ export function NgoQueue() {
           ))}
         </RecordList>
       )}
+
+      {editing ? <EditNgoDialog ngo={editing} onClose={() => setEditing(null)} /> : null}
 
       {verifying ? (
         <VerifyDialog

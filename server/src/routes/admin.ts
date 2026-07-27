@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { withActor } from '../lib/db.ts'
+import { log } from '../lib/logger.ts'
 import { actorOf, requireRole, type AppEnv } from '../middleware/auth.ts'
 
 export const adminRoutes = new Hono<AppEnv>()
@@ -56,6 +58,7 @@ adminRoutes.get('/ngos', async (c) => {
               -- custom enum array OID and would hand back the raw '{a,b}'
               -- string, which looks close enough to an array to fail late.
               n.accepts_categories::text[] as accepts_categories,
+              n.is_accepting,
               n.contact_person, n.contact_phone,
               n.is_accepting, n.created_at,
               p.full_name as profile_name, p.phone as profile_phone,
@@ -137,7 +140,9 @@ adminRoutes.post('/ngos/:id/verify', async (c) => {
     return rows[0] ?? null
   })
 
-  if (!updated) return c.json({ error: 'No such organisation.' }, 404)
+  // A row came back or nothing was written — with RLS in play those are not
+  // the same as "the id was wrong", so this covers both.
+  if (!updated) return c.json({ error: 'No such organisation, or you cannot edit it.' }, 404)
   return c.json({ ngo: updated })
 })
 
@@ -203,7 +208,7 @@ adminRoutes.post('/volunteers/:id/verify', async (c) => {
     return rows[0] ?? null
   })
 
-  if (!updated) return c.json({ error: 'No such volunteer.' }, 404)
+  if (!updated) return c.json({ error: 'No such volunteer, or you cannot edit it.' }, 404)
   return c.json({ volunteer: updated })
 })
 
@@ -313,4 +318,190 @@ adminRoutes.get('/users', async (c) => {
   })
 
   return c.json({ users: rows })
+})
+
+// ---------------------------------------------------------------------------
+// Editing (PLAN.md §M7)
+//
+// Update and soft-delete only. There is deliberately no hard delete:
+// `audit_log` and `donation_events` are the dispute record for every item, and
+// donations carry foreign keys to the organisation and volunteer that handled
+// them. Removing a row would either break those references or silently rewrite
+// history — and the whole point of §2 is that history is not rewritable. A
+// disabled account cannot sign in, which is what "delete this user" actually
+// means operationally.
+// ---------------------------------------------------------------------------
+
+const CATEGORIES = ['clothes', 'books', 'toys', 'education', 'furniture', 'household']
+
+const ngoPatchSchema = z.object({
+  name: z.string().trim().min(2).max(200).optional(),
+  registrationNumber: z.string().trim().max(100).nullable().optional(),
+  darpanId: z.string().trim().max(100).nullable().optional(),
+  has80g: z.boolean().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]{5}$/, 'Enter a 6-digit pincode')
+    .nullable()
+    .optional(),
+  monthlyCapacity: z.number().int().min(0).max(10_000).optional(),
+  acceptsCategories: z
+    .array(z.enum(CATEGORIES as [string, ...string[]]))
+    .min(1)
+    .optional(),
+  contactPerson: z.string().trim().max(200).nullable().optional(),
+  contactPhone: z.string().trim().max(20).nullable().optional(),
+  isAccepting: z.boolean().optional(),
+})
+
+/** Column name per patch key, so the SET clause is built from a fixed map. */
+const NGO_COLUMNS: Record<string, string> = {
+  name: 'name',
+  registrationNumber: 'registration_number',
+  darpanId: 'darpan_id',
+  has80g: 'has_80g',
+  address: 'address',
+  pincode: 'pincode',
+  monthlyCapacity: 'monthly_capacity',
+  acceptsCategories: 'accepts_categories',
+  contactPerson: 'contact_person',
+  contactPhone: 'contact_phone',
+  isAccepting: 'is_accepting',
+}
+
+adminRoutes.patch('/ngos/:id', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const parsed = ngoPatchSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
+  }
+
+  const entries = Object.entries(parsed.data).filter(([, value]) => value !== undefined)
+  if (entries.length === 0) return c.json({ error: 'Nothing to change.' }, 400)
+
+  // Built from NGO_COLUMNS rather than from the request, so a key that is not
+  // in the map cannot reach the SQL even if the schema ever gains one.
+  const sets: string[] = []
+  const values: unknown[] = []
+  for (const [key, value] of entries) {
+    const column = NGO_COLUMNS[key]
+    if (!column) continue
+    values.push(key === 'acceptsCategories' ? value : value)
+    sets.push(
+      key === 'acceptsCategories'
+        ? `${column} = $${values.length}::public.donation_category[]`
+        : `${column} = $${values.length}`,
+    )
+  }
+  if (sets.length === 0) return c.json({ error: 'Nothing to change.' }, 400)
+
+  values.push(c.req.param('id'))
+
+  // Verification status is not editable here — it goes through /verify, which
+  // records a reason in the audit trail. Two doors to the same state is how
+  // one of them ends up without the paperwork.
+  const updated = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `update public.ngos set ${sets.join(', ')}
+       where id = $${values.length}
+       returning id, name, registration_number, darpan_id, has_80g, address, pincode,
+                 monthly_capacity, accepts_categories::text[] as accepts_categories,
+                 contact_person, contact_phone, is_accepting, verification_status`,
+      values,
+    )
+    return rows[0] ?? null
+  })
+
+  if (!updated) return c.json({ error: 'No such organisation.' }, 404)
+
+  log.info('ngo updated', { ngo_id: updated.id, fields: entries.map(([k]) => k) })
+  return c.json({ ngo: updated })
+})
+
+const volunteerPatchSchema = z.object({
+  serviceRadiusKm: z.number().int().min(1).max(50).optional(),
+})
+
+adminRoutes.patch('/volunteers/:id', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const parsed = volunteerPatchSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return c.json({ error: 'A service radius is between 1 and 50 km.' }, 400)
+  }
+  if (parsed.data.serviceRadiusKm === undefined) {
+    return c.json({ error: 'Nothing to change.' }, 400)
+  }
+
+  const updated = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `update public.volunteers set service_radius_km = $1 where id = $2
+       returning id, service_radius_km, verification_status`,
+      [parsed.data.serviceRadiusKm, c.req.param('id')],
+    )
+    return rows[0] ?? null
+  })
+
+  if (!updated) return c.json({ error: 'No such volunteer.' }, 404)
+  return c.json({ volunteer: updated })
+})
+
+/**
+ * Disable or restore an account — the soft delete.
+ *
+ * Writes both `users.is_active` (which `app.find_login` checks, so sign-in
+ * actually stops) and `profiles.is_active` (which is what every admin list
+ * displays). Setting only one of them produces an account that looks disabled
+ * and still logs in, or the reverse.
+ */
+adminRoutes.post('/users/:id/active', async (c) => {
+  const actor = actorOf(c)
+  const profileId = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const isActive = body?.isActive
+
+  if (typeof isActive !== 'boolean') {
+    return c.json({ error: 'Say whether the account should be active.' }, 400)
+  }
+
+  const target = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      'select id, user_id, role, full_name from public.profiles where id = $1',
+      [profileId],
+    )
+    return rows[0] ?? null
+  })
+
+  if (!target) return c.json({ error: 'No such person.' }, 404)
+
+  // An admin disabling themselves locks the door with the keys inside.
+  if (!isActive && target.user_id === actor.userId) {
+    return c.json({ error: 'You cannot disable your own account.' }, 409)
+  }
+
+  // Through the function, not two bare updates. `public.users` has no admin
+  // UPDATE policy, so the direct write silently matched zero rows and the
+  // account carried on signing in while this endpoint reported success. See
+  // 013_account_status.sql — and note the return value is checked, because a
+  // no-op that reports success is what made the original bug invisible.
+  const changed = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query('select app.set_account_active($1, $2) as ok', [
+      profileId,
+      isActive,
+    ])
+    return rows[0]?.ok === true
+  })
+
+  if (!changed) return c.json({ error: 'No such person.' }, 404)
+
+  log.info(isActive ? 'account restored' : 'account disabled', {
+    profile_id: profileId,
+    role: target.role,
+  })
+  return c.json({ ok: true, isActive })
 })

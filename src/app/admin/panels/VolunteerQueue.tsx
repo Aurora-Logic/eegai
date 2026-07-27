@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ShieldCheck } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { VerifyDialog, type VerifyAction } from './VerifyDialog'
 import { STATUS_VARIANT } from './status'
 
@@ -113,7 +114,12 @@ export function VolunteerQueue() {
                 ID {v.id_doc_path ? 'uploaded' : 'missing'} · selfie{' '}
                 {v.selfie_path ? 'uploaded' : 'missing'}
               </Field>
-              <Field label="Covers">{v.service_radius_km} km radius</Field>
+              <Field label="Covers">
+                {/* Editable because it is operational, not a verification
+                    decision — and because a radius a kilometre short is exactly
+                    how a pickup ends up with nobody able to see it. */}
+                <RadiusEditor volunteer={v} />
+              </Field>
               <Field label="Available">
                 {Object.entries(v.available_slots ?? {})
                   .map(([day, slots]) => `${day} ${slots.join('/')}`)
@@ -136,5 +142,67 @@ export function VolunteerQueue() {
         />
       ) : null}
     </section>
+  )
+}
+
+/**
+ * The one volunteer field an admin genuinely needs to change.
+ *
+ * Inline rather than in a dialog: it is a single number, and a modal for one
+ * integer is friction with no benefit. Saves on blur or Enter, and shows the
+ * stored value again if the save fails, so the screen never claims a change
+ * that did not happen.
+ */
+function RadiusEditor({ volunteer }: { volunteer: Volunteer }) {
+  const queryClient = useQueryClient()
+  const [value, setValue] = useState(String(volunteer.service_radius_km))
+  const [error, setError] = useState<string | null>(null)
+
+  const save = useMutation({
+    mutationFn: (km: number) =>
+      api.patch(`/admin/volunteers/${volunteer.id}`, { serviceRadiusKm: km }),
+    onSuccess: () => {
+      setError(null)
+      void queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+    onError: (e) => {
+      setValue(String(volunteer.service_radius_km))
+      setError(e instanceof ApiError ? e.message : 'That did not save.')
+    },
+  })
+
+  function commit() {
+    const km = Number(value)
+    if (!Number.isInteger(km) || km === volunteer.service_radius_km) {
+      setValue(String(volunteer.service_radius_km))
+      return
+    }
+    save.mutate(km)
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <Input
+        type="number"
+        min={1}
+        max={50}
+        value={value}
+        aria-label={`Service radius for ${volunteer.full_name}, in kilometres`}
+        disabled={save.isPending}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+        className="h-9 w-20"
+      />
+      <span className="text-muted-foreground">km</span>
+      {save.isPending ? <span className="text-xs text-muted-foreground">saving…</span> : null}
+      {error ? (
+        <span role="alert" className="text-xs text-destructive">
+          {error}
+        </span>
+      ) : null}
+    </span>
   )
 }
