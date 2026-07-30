@@ -351,9 +351,32 @@ pickupRoutes.get('/notifications', requireAuth, async (c) => {
 
   const rows = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
+      // A handover code disappears the moment its gate has been used. It was
+      // staying on screen after collection and after delivery, which is worse
+      // than untidy: a donor reading out a spent code to a second caller has no
+      // way to know it is spent, and the screen was implying it still meant
+      // something. The hash is already nulled server-side by verify_pickup_otp;
+      // this makes the UI agree with the database.
+      //
+      // Notifications that are not codes are unaffected — they are messages, and
+      // a message does not expire because a parcel moved.
       `select n.id, n.channel, n.template_key, n.payload, n.sent_at, n.created_at
        from public.notifications n
+       left join public.pickups pk
+         on pk.donation_id = nullif(n.payload ->> 'donation_id', '')::uuid
+       left join public.donations d on d.id = pk.donation_id
        where n.profile_id in (select id from public.profiles where user_id = app.current_user_id())
+         and (
+           n.payload ->> 'code' is null
+           or (
+             -- The item is still travelling, and this gate is still ahead of it.
+             d.status in ('scheduled', 'in_transit')
+             and (
+               (n.template_key = 'collect_otp' and pk.collected_at is null)
+               or (n.template_key = 'deliver_otp' and pk.delivered_at is null)
+             )
+           )
+         )
        order by n.created_at desc
        limit 50`,
     )

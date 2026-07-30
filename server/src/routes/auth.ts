@@ -94,14 +94,24 @@ authRoutes.post('/register', async (c) => {
     return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
   }
 
-  const { fullName, phone, password, role, email } = parsed.data
+  const { fullName, phone, password, role, email, address, pincode, lat, lng } = parsed.data
   const passwordHash = await hashPassword(password)
 
   try {
     const session = await withActor(null, async (tx) => {
       const { rows } = await tx.query(
-        'select * from app.register_user($1, $2, $3, $4::public.user_role, $5)',
-        [phone, passwordHash, fullName, role, email ?? null],
+        'select * from app.register_user($1, $2, $3, $4::public.user_role, $5, $6, $7, $8, $9)',
+        [
+          phone,
+          passwordHash,
+          fullName,
+          role,
+          email ?? null,
+          address || null,
+          pincode || null,
+          lat ?? null,
+          lng ?? null,
+        ],
       )
       const created = rows[0]
       return { userId: created.user_id as string, role, fullName }

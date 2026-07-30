@@ -45,13 +45,48 @@ export const roleSchema = z.enum(['donor', 'ngo', 'volunteer'], {
   errorMap: () => ({ message: 'Choose how you want to use the wall' }),
 })
 
-export const registerSchema = z.object({
-  fullName: z.string().trim().min(2, 'Enter your name').max(120),
-  phone: phoneSchema,
-  password: passwordSchema,
-  role: roleSchema,
-  email: z.string().trim().email('That email address is not valid').optional().or(z.literal('')),
-})
+export const registerSchema = z
+  .object({
+    fullName: z.string().trim().min(2, 'Enter your name').max(120),
+    phone: phoneSchema,
+    password: passwordSchema,
+    role: roleSchema,
+    email: z.string().trim().email('That email address is not valid').optional().or(z.literal('')),
+    // Where the organisation is. Optional in the shape, required by the refine
+    // below for NGOs only — a donor gives an address per item, and a volunteer
+    // sets a radius later.
+    address: z.string().trim().max(500).optional().or(z.literal('')),
+    pincode: z
+      .string()
+      .trim()
+      .regex(/^[1-9][0-9]{6}$|^[1-9][0-9]{5}$/, 'Enter a 6-digit pincode')
+      .optional()
+      .or(z.literal('')),
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
+  })
+  .superRefine((value, ctx) => {
+    // An organisation without a location does not merely have a gap in its
+    // record: the wall policy reads `n.lat is null or distance <= radius`, so a
+    // null location makes that clause true and the organisation sees every item
+    // in the city. Refuse it at the form as well as in register_user.
+    if (value.role !== 'ngo') return
+
+    if (!value.pincode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['pincode'],
+        message: 'Choose the area your organisation works from.',
+      })
+    }
+    if (!value.address || value.address.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['address'],
+        message: 'Enter the address a volunteer should deliver to.',
+      })
+    }
+  })
 
 export const loginSchema = z.object({
   phone: phoneSchema,

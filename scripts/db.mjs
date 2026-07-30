@@ -42,7 +42,9 @@ if (!hasUrl) {
   if (missingVars.length > 0) {
     console.error('\n❌ Database execution aborted: missing environment variables in .env:\n')
     for (const v of missingVars) console.error(`  - ${v}`)
-    console.error('\nPlease specify either DATABASE_URL or (PGHOST, PGDATABASE, PGUSER, PGPASSWORD) in your .env file.\n')
+    console.error(
+      '\nPlease specify either DATABASE_URL or (PGHOST, PGDATABASE, PGUSER, PGPASSWORD) in your .env file.\n',
+    )
     process.exit(1)
   }
 }

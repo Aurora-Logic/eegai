@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, Boxes, HandHeart, Truck } from 'lucide-react'
 import { AuthLayout } from '@/components/shared/auth-layout'
 import { RoleScene } from '@/components/illustrations/roles'
+import { Combobox } from '@/components/ui/combobox'
+import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +39,7 @@ export default function SignUp() {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -44,6 +47,7 @@ export default function SignUp() {
   })
 
   const role = watch('role')
+  const pincode = watch('pincode')
 
   if (user) return <Navigate to={HOME_FOR_ROLE[user.role]} replace />
 
@@ -118,6 +122,52 @@ export default function SignUp() {
             )}
           />
           {errors.role ? <p className="text-sm text-destructive">{errors.role.message}</p> : null}
+
+          {/* Only an organisation is asked for these, and it is asked because
+              two things break without them. The wall policy reads
+              `n.lat is null or distance <= radius`, so an organisation with no
+              location silently sees every item in the city; and the volunteer's
+              delivery address comes from `ngos.address`, which would be blank.
+              A donor gives an address per item, and a volunteer sets a radius. */}
+          {role === 'ngo' ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="address">Where should things be delivered?</Label>
+                <Input
+                  id="address"
+                  autoComplete="street-address"
+                  placeholder="12 Cross Cut Road, Gandhipuram"
+                  {...register('address')}
+                />
+                {errors.address ? (
+                  <p className="text-sm text-destructive">{errors.address.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="pincode">{t('post.area')}</Label>
+                <Combobox
+                  options={areaOptions()}
+                  value={pincode ?? ''}
+                  onChange={(next) => {
+                    // The pincode carries the coordinates, so both are set
+                    // together — a pincode without a location would put the
+                    // organisation back in the failing-open case.
+                    setValue('pincode', next, { shouldValidate: true })
+                    const area = AREA_BY_PINCODE.get(next)
+                    setValue('lat', area?.lat)
+                    setValue('lng', area?.lng)
+                  }}
+                  placeholder={t('post.areaPlaceholder')}
+                  searchPlaceholder={t('post.areaSearch')}
+                  emptyText={t('post.areaEmpty')}
+                />
+                {errors.pincode ? (
+                  <p className="text-sm text-destructive">{errors.pincode.message}</p>
+                ) : null}
+              </div>
+            </>
+          ) : null}
         </fieldset>
 
         <div className="space-y-1.5">

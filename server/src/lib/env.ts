@@ -21,7 +21,9 @@ const schema = z.object({
   PGPASSWORD: z.string({ required_error: 'PGPASSWORD is required' }),
   PGPORT: z.coerce.number().int().positive().default(5432),
 
-  JWT_SECRET: z.string({ required_error: 'JWT_SECRET is required' }).min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_SECRET: z
+    .string({ required_error: 'JWT_SECRET is required' })
+    .min(32, 'JWT_SECRET must be at least 32 characters'),
   SESSION_TTL_HOURS: z.coerce
     .number()
     .int()
