@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { BackLink } from '@/components/shared/back-link'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { t } from '@/lib/i18n'
 
@@ -29,8 +30,13 @@ export function AuthLayout({
               lived only in the signed-in header, which put it behind a form
               written in a language the visitor may not read — precisely the
               person it exists for. */}
-          <div className="flex items-center justify-between gap-3">
-            <Link to="/" className="flex items-baseline gap-2">
+          <div className="flex items-center gap-3">
+            {/* Sign-in, sign-up and the password page are reached from the
+                landing page and from each other, so they need a way back just
+                as much as the signed-in screens do. They sit outside AppShell,
+                which is why they had none. */}
+            <BackLink />
+            <Link to="/" className="mr-auto flex items-baseline gap-2">
               <span lang="ta" className="font-display text-display-md leading-none">
                 {t('app.nameScript')}
               </span>

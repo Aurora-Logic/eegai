@@ -36,13 +36,16 @@ export function BackLink() {
       className="-ml-2 min-h-11 shrink-0"
       aria-label={t('action.back')}
       onClick={() => {
-        // `idx` is react-router's position in its own stack. 0 means this is the
-        // first entry, so there is nowhere to go back to.
-        const state = location.state as { idx?: number } | null
-        const hasHistory =
-          typeof state?.idx === 'number' ? state.idx > 0 : window.history.length > 1
-        if (hasHistory) navigate(-1)
-        else navigate(home, { replace: true })
+        // `location.key` is 'default' only for the very first entry react-router
+        // ever rendered — a deep link, a shared URL, a cold start of the
+        // installed app. Anything else means there is somewhere of ours to go.
+        //
+        // `window.history.length > 1` looked like the same check and is not: the
+        // browser counts entries from before the app was loaded, so on a
+        // deep-linked page it said "yes, go back" and navigate(-1) walked out of
+        // the app entirely — to about:blank in a fresh tab.
+        if (location.key === 'default') navigate(home, { replace: true })
+        else navigate(-1)
       }}
     >
       <ArrowLeft aria-hidden />
