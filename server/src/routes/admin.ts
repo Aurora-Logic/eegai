@@ -764,6 +764,12 @@ adminRoutes.post('/users/:id/role', async (c) => {
           typeof body?.lng === 'number' ? body.lng : null,
         ],
       )
+      // Granting what somebody asked for should also take it off the queue. In
+      // the same transaction as the change, so the two cannot disagree: a
+      // request left open after the role moved would have an operator chasing a
+      // person who is already sorted.
+      await tx.query('select app.close_role_change_request($1)', [c.req.param('id')])
+
       return rows[0]?.message as string
     })
 
@@ -836,6 +842,51 @@ adminRoutes.post('/password-requests/:id/close', async (c) => {
   const closed = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
       `update public.password_reset_requests
+       set handled_at = now(),
+           handled_by = (select id from public.profiles where user_id = app.current_user_id())
+       where id = $1 and handled_at is null
+       returning id`,
+      [c.req.param('id')],
+    )
+    return rows.length > 0
+  })
+
+  if (!closed) return c.json({ error: 'That request is already dealt with.' }, 409)
+  return c.json({ ok: true })
+})
+
+/** People who have asked to become something else. */
+adminRoutes.get('/role-requests', async (c) => {
+  const actor = actorOf(c)
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select r.id, r.requested_role, r.reason, r.created_at,
+              p.id as profile_id, p.full_name, p.phone, p.role as current_role
+       from public.role_change_requests r
+       join public.profiles p on p.id = r.profile_id
+       where r.handled_at is null
+       order by r.created_at`,
+    )
+    return rows
+  })
+
+  return c.json({ requests: rows })
+})
+
+/**
+ * Dismiss one without changing anything.
+ *
+ * Granting a request closes it as a side effect of the role change itself, so
+ * this is only the "no" path — and the "we already spoke, they withdrew it"
+ * path, which is the same row either way.
+ */
+adminRoutes.post('/role-requests/:id/close', async (c) => {
+  const actor = actorOf(c)
+
+  const closed = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `update public.role_change_requests
        set handled_at = now(),
            handled_by = (select id from public.profiles where user_id = app.current_user_id())
        where id = $1 and handled_at is null

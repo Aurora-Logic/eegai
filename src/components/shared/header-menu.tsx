@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CircleHelp, Download, LogOut, Menu, Moon, Sun, UserRound } from 'lucide-react'
+import { CircleHelp, Download, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -16,6 +16,42 @@ import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { LOCALES, LOCALE_NAMES, setLocale, t } from '@/lib/i18n'
 import { promptInstall, useInstallKind } from '@/lib/install'
+
+/**
+ * The menu trigger: three courses of brickwork, not a hamburger.
+ *
+ * It is still three stacked bars, so nobody has to learn anything — the shape
+ * that means "menu" everywhere else is intact. What changes is that the bars are
+ * bricks, with the joints staggered the way a real running bond staggers them,
+ * which is the same wall the product is named after and the same one the
+ * illustrations draw. The one icon on a phone header is worth the two minutes.
+ *
+ * `currentColor` and 1.7 stroke to sit level with the lucide icons beside it in
+ * the wider header.
+ */
+function WallMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="3" y="4" width="18" height="5" rx="1" />
+      <rect x="3" y="9.5" width="18" height="5" rx="1" />
+      <rect x="3" y="15" width="18" height="5" rx="1" />
+      {/* The joints. Alternating between two positions is what reads as a bond
+          rather than as three boxes with a line in each. */}
+      <path d="M14 4v5" />
+      <path d="M9 9.5v5" />
+      <path d="M14 15v5" />
+    </svg>
+  )
+}
 
 /**
  * Everything the header offers, as one menu — the phone form of the icon row.
@@ -44,8 +80,13 @@ export function HeaderMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="min-h-11" aria-label={t('menu.open')}>
-            <Menu aria-hidden />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="min-h-11 [&_svg]:size-5"
+            aria-label={t('menu.open')}
+          >
+            <WallMark />
           </Button>
         </DropdownMenuTrigger>
 

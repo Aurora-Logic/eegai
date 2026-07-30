@@ -143,6 +143,10 @@ export function ProductPanel() {
               'Nothing is deleted',
               'Removing an item cancels it. Disabling an account stops sign-in. The trail survives both.',
             ],
+            [
+              'Roles are asked for, never taken',
+              'Anyone can request a different role from their own profile; an admin grants it, and admin is never askable.',
+            ],
             ['No money', 'There is no payment anywhere in the product.'],
           ].map(([title, body]) => (
             <li key={title} className="hairline rounded-sm bg-card p-3">

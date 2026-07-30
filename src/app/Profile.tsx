@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound, Save } from 'lucide-react'
+import { KeyRound, Save, UserCog } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { ApiError, api } from '@/lib/api'
 import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
 import { formatDate } from '@/lib/dates'
@@ -43,6 +51,12 @@ interface ProfileData {
     service_radius_km: number
     verification_status: string
     pickups: number
+  } | null
+  roleRequest: {
+    id: string
+    requested_role: string
+    reason: string | null
+    created_at: string
   } | null
 }
 
@@ -108,9 +122,7 @@ export default function Profile() {
   }
 
   const role = data.profile.role
-  // Donors and admins have no second card, so the password card fills the
-  // other column instead of leaving it empty.
-  const hasRoleCard = Boolean(data.ngo || data.volunteer)
+
   const set = (patch: Record<string, unknown>) => {
     setDraft({ ...draft, ...patch })
     setSaved(false)
@@ -118,14 +130,6 @@ export default function Profile() {
 
   return (
     <AppShell title="Your details" subtitle="What other people see, and how you are reached.">
-      {/* A single narrow column left the right half of a desktop empty and the
-          page read as a phone screenshot pasted onto a monitor.
-
-          Multi-column rather than a grid, for the same reason the wall uses it:
-          the cards are different heights, and a two-column grid aligns rows, so
-          a tall organisation card pushed the password card onto a second row and
-          left a hole under the first. Columns balance instead. Below lg it is
-          one column, in the order the cards matter. */}
       {/* Two explicit stacks, not a grid and not CSS columns.
 
           A grid aligns rows, so the tall organisation card pushed the password
@@ -134,9 +138,12 @@ export default function Profile() {
           alone in the first column.
 
           Deciding the arrangement here is honest about what is actually going
-          on: there are two long cards and one short one, and which column the
-          short one belongs in depends on whether this role has a second card at
-          all. Below lg it is one column in reading order. */}
+          on. The cards have known, unequal weights: the role card is the tallest
+          thing on the page, the password card the shortest. Putting the role
+          card with the basics and the password card with the request keeps the
+          two columns within about a card's height of each other for every role,
+          and an admin — who has neither — is left with one on each side rather
+          than an empty half. Below lg it is one column in reading order. */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-6">
           <section className="hairline space-y-4 rounded-sm bg-card p-4">
@@ -175,10 +182,6 @@ export default function Profile() {
               </p>
             </div>
           </section>
-          {hasRoleCard ? <ChangePassword /> : null}
-        </div>
-
-        <div className="space-y-6">
           {data.ngo ? (
             <section className="hairline space-y-4 rounded-sm bg-card p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -315,8 +318,11 @@ export default function Profile() {
               </p>
             </section>
           ) : null}
+        </div>
 
-          {hasRoleCard ? null : <ChangePassword />}
+        <div className="space-y-6">
+          <ChangePassword />
+          {role === 'admin' ? null : <RoleRequest role={role} open={data.roleRequest} />}
         </div>
       </div>
 
@@ -426,4 +432,142 @@ function ChangePassword() {
       </Button>
     </section>
   )
+}
+
+const ASKABLE = [
+  { value: 'donor', label: 'A donor, giving things away' },
+  { value: 'ngo', label: 'An organisation, receiving them' },
+  { value: 'volunteer', label: 'A volunteer, carrying them' },
+] as const
+
+/**
+ * Ask to become something else.
+ *
+ * Until now this was admin-only, which meant it could only start with a phone
+ * call nobody makes: a donor who has since registered a trust, or someone who
+ * signed up to collect and actually meant to give, had no way to say so.
+ *
+ * It is a request and not a switch, and the wording says so in both states.
+ * Approval runs through the same admin path as before, with the same guards —
+ * an organisation mid-delivery cannot be demoted, and a new organisation still
+ * needs an address before it can claim anything.
+ *
+ * Admin is not in the list, and the database refuses it too. A role that could
+ * be asked for would make every other guard decorative.
+ */
+function RoleRequest({ role, open }: { role: string; open: ProfileData['roleRequest'] }) {
+  const queryClient = useQueryClient()
+  const [wanted, setWanted] = useState('')
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['profile'] })
+
+  const ask = useMutation({
+    mutationFn: () => api.post('/profile/role-request', { role: wanted, reason }),
+    onSuccess: async () => {
+      setError(null)
+      setReason('')
+      setWanted('')
+      await refresh()
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  const withdraw = useMutation({
+    mutationFn: () => api.delete('/profile/role-request'),
+    onSuccess: async () => {
+      setError(null)
+      await refresh()
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  if (open) {
+    return (
+      <section className="hairline space-y-3 rounded-sm bg-card p-4">
+        <h2 className="flex items-center gap-2 font-display text-display-sm">
+          <UserCog className="size-4 text-primary" aria-hidden />
+          You asked to become {LABEL[open.requested_role] ?? open.requested_role}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Asked {formatDate(open.created_at)}. Somebody will look at it and call you. Nothing
+          changes in the meantime — carry on as {LABEL[role] ?? role}.
+        </p>
+        {open.reason ? <p className="text-sm">“{open.reason}”</p> : null}
+
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        <Button variant="outline" disabled={withdraw.isPending} onClick={() => withdraw.mutate()}>
+          {withdraw.isPending ? 'Withdrawing…' : 'Never mind, withdraw it'}
+        </Button>
+      </section>
+    )
+  }
+
+  return (
+    <section className="hairline space-y-4 rounded-sm bg-card p-4">
+      <h2 className="flex items-center gap-2 font-display text-display-sm">
+        <UserCog className="size-4 text-primary" aria-hidden />
+        Be something else here
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        You are {LABEL[role] ?? role}. If that is wrong, or it has changed, ask — somebody reads
+        these and rings you back. Everything you have already done stays yours.
+      </p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="p-wanted">What you would like to be</Label>
+        <Select value={wanted} onValueChange={setWanted}>
+          <SelectTrigger id="p-wanted">
+            <SelectValue placeholder="Choose one" />
+          </SelectTrigger>
+          <SelectContent>
+            {ASKABLE.filter((option) => option.value !== role).map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="p-reason">Why (optional)</Label>
+        <Textarea
+          id="p-reason"
+          rows={2}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="We are a registered trust in Ganapathy."
+        />
+        {/* The one thing that actually speeds this up. An operator with a
+            sentence to read decides; an operator with a bare row phones. */}
+        <p className="text-xs text-muted-foreground">
+          A line here is usually the difference between a call back today and one next week.
+        </p>
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      <Button disabled={!wanted || ask.isPending} onClick={() => ask.mutate()}>
+        {ask.isPending ? 'Sending…' : 'Send the request'}
+      </Button>
+    </section>
+  )
+}
+
+const LABEL: Record<string, string> = {
+  donor: 'a donor',
+  ngo: 'an organisation',
+  volunteer: 'a volunteer',
+  admin: 'an administrator',
 }
