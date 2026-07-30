@@ -38,7 +38,7 @@ export default function ForgotPassword() {
       subtitle={t('auth.forgotBody')}
       illustration={<ReturningScene className="w-full max-w-sm" />}
       footer={
-        <Link to="/sign-in" className="underline underline-offset-4">
+        <Link to="/sign-in" className="inline-block py-2 underline underline-offset-4">
           {t('auth.signIn')}
         </Link>
       }

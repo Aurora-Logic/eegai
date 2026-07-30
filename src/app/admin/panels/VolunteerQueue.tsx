@@ -206,7 +206,7 @@ function RadiusEditor({ volunteer }: { volunteer: Volunteer }) {
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
         }}
-        className="h-9 w-20"
+        className="w-20"
       />
       <span className="text-muted-foreground">km</span>
       {save.isPending ? <span className="text-xs text-muted-foreground">saving…</span> : null}

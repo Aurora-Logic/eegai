@@ -240,7 +240,10 @@ export default function Profile() {
                           // explanation; the pause switch is what that is for.
                           if (next.length > 0) set({ acceptsCategories: next })
                         }}
-                        className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        // The badge is 25px tall; the button around it carries
+                        // the tap target so these stay thumbable without the
+                        // pills themselves growing into buttons.
+                        className="inline-flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
                         <Badge variant={on ? 'tag' : 'outline'} className={cn(!on && 'opacity-60')}>
                           {t(`category.${category}` as StringKey)}
@@ -251,7 +254,8 @@ export default function Profile() {
                 </div>
               </div>
 
-              <label className="flex items-center justify-between gap-3 py-1">
+              {/* The whole row is the target, not the 20px switch inside it. */}
+              <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 py-1">
                 <span className="text-sm">
                   Currently accepting
                   <span className="block text-xs text-muted-foreground">

@@ -120,10 +120,10 @@ export default function Landing() {
             <span lang="ta">{t('app.nameScript')}</span> · {t('landing.cityNote')}
           </span>
           <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link to="/privacy" className="underline underline-offset-4">
+            <Link to="/privacy" className="inline-block py-2 underline underline-offset-4">
               {t('legal.privacy')}
             </Link>
-            <Link to="/terms" className="underline underline-offset-4">
+            <Link to="/terms" className="inline-block py-2 underline underline-offset-4">
               {t('legal.terms')}
             </Link>
           </nav>

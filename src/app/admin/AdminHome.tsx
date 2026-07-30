@@ -40,7 +40,7 @@ export default function AdminHome() {
             gesture people already know. */}
         <TabsList className="mb-6 flex h-auto w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map((item) => (
-            <TabsTrigger key={item.value} value={item.value} className="min-h-9 shrink-0">
+            <TabsTrigger key={item.value} value={item.value} className="shrink-0">
               {item.label}
             </TabsTrigger>
           ))}

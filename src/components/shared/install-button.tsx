@@ -39,54 +39,65 @@ export function InstallButton() {
         <Download aria-hidden />
       </Button>
 
-      {/* iOS has no programmatic install, so the button can only point at
-          Safari's own menu. Saying so plainly beats a button that appears to
-          do nothing. */}
-      {showIosSheet ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('pwa.installTitle')}
-          onClick={() => setShowIosSheet(false)}
-        >
-          <div
-            className="hairline w-full max-w-md rounded-sm bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-medium">{t('pwa.installTitle')}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{t('pwa.installBody')}</p>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="min-h-11 shrink-0"
-                aria-label={t('pwa.gotIt')}
-                onClick={() => setShowIosSheet(false)}
-              >
-                <X aria-hidden />
-              </Button>
-            </div>
-
-            <ol className="mt-3 space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <Step n={1} />
-                <span className="inline-flex flex-wrap items-center gap-1">
-                  {t('pwa.iosStep1')}
-                  <Share className="size-4 shrink-0 text-primary" aria-hidden />
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Step n={2} />
-                <span>{t('pwa.iosStep2')}</span>
-              </li>
-            </ol>
-          </div>
-        </div>
-      ) : null}
+      <IosInstallSheet open={showIosSheet} onClose={() => setShowIosSheet(false)} />
     </>
+  )
+}
+
+/**
+ * iOS has no programmatic install, so the button can only point at Safari's own
+ * menu. Saying so plainly beats a button that appears to do nothing.
+ *
+ * Exported because the header menu needs it too: a dropdown item unmounts the
+ * moment it is chosen, so the sheet has to be owned by something that outlives
+ * the menu.
+ */
+export function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('pwa.installTitle')}
+      onClick={onClose}
+    >
+      <div
+        className="hairline w-full max-w-md rounded-sm bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-medium">{t('pwa.installTitle')}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t('pwa.installBody')}</p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="min-h-11 shrink-0"
+            aria-label={t('pwa.gotIt')}
+            onClick={onClose}
+          >
+            <X aria-hidden />
+          </Button>
+        </div>
+
+        <ol className="mt-3 space-y-2 text-sm">
+          <li className="flex items-center gap-2">
+            <Step n={1} />
+            <span className="inline-flex flex-wrap items-center gap-1">
+              {t('pwa.iosStep1')}
+              <Share className="size-4 shrink-0 text-primary" aria-hidden />
+            </span>
+          </li>
+          <li className="flex items-center gap-2">
+            <Step n={2} />
+            <span>{t('pwa.iosStep2')}</span>
+          </li>
+        </ol>
+      </div>
+    </div>
   )
 }
 

@@ -3,6 +3,7 @@ import { CircleHelp, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { BackLink } from '@/components/shared/back-link'
+import { HeaderMenu } from '@/components/shared/header-menu'
 import { Link as RouterLink } from 'react-router-dom'
 import { InstallButton } from '@/components/shared/install-button'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
@@ -37,13 +38,20 @@ export function AppShell({
           {/* Back sits before the wordmark, where a thumb reaches on a phone
               and where every other app puts it. */}
           <BackLink />
-          <Link to="/" className="mr-auto flex items-baseline gap-2">
+          <Link to="/" className="mr-auto flex items-baseline gap-2 py-2">
             <span lang="ta" className="font-display text-display-md leading-none">
               {t('app.nameScript')}
             </span>
             <span className="sr-only">{t('app.name')}</span>
           </Link>
-          <div className="flex items-center gap-1">
+          {/* Below `sm` the same actions collapse into one menu. Seven controls
+              in a 360px header cannot each keep a 44px target, and the row was
+              running to the edge; see header-menu.tsx. */}
+          <div className="sm:hidden">
+            <HeaderMenu />
+          </div>
+
+          <div className="hidden items-center gap-1 sm:flex">
             <Button
               asChild
               variant="ghost"

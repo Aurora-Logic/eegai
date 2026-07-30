@@ -46,7 +46,7 @@ export default function SignIn() {
       illustration={<ReturningScene className="w-full max-w-sm" />}
       footer={
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Link to="/forgot-password" className="underline underline-offset-4">
+          <Link to="/forgot-password" className="inline-block py-2 underline underline-offset-4">
             {t('auth.forgot')}
           </Link>
         </span>
