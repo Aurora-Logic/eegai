@@ -12,6 +12,7 @@ import { acknowledgementRoutes } from './routes/acknowledgements.ts'
 import { donationRoutes } from './routes/donations.ts'
 import { legalRoutes } from './routes/legal.ts'
 import { pickupRoutes } from './routes/pickups.ts'
+import { profileRoutes } from './routes/profile.ts'
 import { shipmentRoutes, trackOpenShipments } from './routes/shipments.ts'
 import { uploadRoutes } from './routes/uploads.ts'
 
@@ -43,6 +44,7 @@ app.route('/api/donations', donationRoutes)
 app.route('/api/legal', legalRoutes)
 app.route('/api/acknowledgements', acknowledgementRoutes)
 app.route('/api/pickups', pickupRoutes)
+app.route('/api/profile', profileRoutes)
 app.route('/api/shipments', shipmentRoutes)
 app.route('/api/uploads', uploadRoutes)
 app.route('/api/files', uploadRoutes)

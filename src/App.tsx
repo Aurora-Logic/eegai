@@ -32,6 +32,7 @@ const NgoItem = lazy(() => import('./app/ngo/NgoItem'))
 const VolunteerHome = lazy(() => import('./app/volunteer/VolunteerHome'))
 const AdminHome = lazy(() => import('./app/admin/AdminHome'))
 const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
+const Profile = lazy(() => import('./app/Profile'))
 const Guide = lazy(() => import('./app/Guide'))
 // Lazy for weight, not for behaviour: it renders only for a signed-in user, and
 // eager it dragged the whole manual into the first paint of the landing page.
@@ -135,6 +136,16 @@ export default function App() {
           {/* The manual. Signed in or not — someone can be told to read it
               before they have an account. */}
           <Route path="/guide" element={<Guide />} />
+
+          {/* Every role edits their own record here; the page adapts. */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allow={['donor', 'ngo', 'volunteer', 'admin']}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/privacy" element={<LegalDocument />} />
           <Route path="/terms" element={<LegalDocument />} />

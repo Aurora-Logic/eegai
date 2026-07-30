@@ -93,9 +93,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Enter your password'),
 })
 
+/**
+ * What anyone may change about themselves.
+ *
+ * Phone is deliberately absent. It is the login identity and the number a
+ * volunteer rings from a doorstep — changing it silently would lock somebody out
+ * of their own account and send a volunteer to a dead line. An admin does it, so
+ * there is a person and a trail behind the change.
+ *
+ * Role is absent for the same reason it always has been: guard_role_change
+ * refuses it from anyone but an admin.
+ */
 export const profileUpdateSchema = z.object({
-  fullName: z.string().trim().min(2).max(120).optional(),
-  phone: phoneSchema.optional(),
+  fullName: z.string().trim().min(2, 'Enter a name').max(120).optional(),
   pincode: z
     .string()
     .trim()
@@ -103,6 +113,16 @@ export const profileUpdateSchema = z.object({
     .optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+
+  // Organisation-only. Ignored by the route for any other role.
+  address: z.string().trim().max(500).optional(),
+  contactPerson: z.string().trim().max(200).optional(),
+  contactPhone: z.string().trim().max(20).optional(),
+  isAccepting: z.boolean().optional(),
+  acceptsCategories: z.array(z.string()).min(1, 'Accept at least one category').optional(),
+
+  // Volunteer-only.
+  serviceRadiusKm: z.number().int().min(1).max(50).optional(),
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>

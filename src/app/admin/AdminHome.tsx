@@ -8,6 +8,7 @@ import { VolunteerQueue } from './panels/VolunteerQueue'
 import { Moderation } from './panels/Moderation'
 import { People } from './panels/People'
 import { LegalPanel } from './panels/LegalPanel'
+import { ProductPanel } from './panels/ProductPanel'
 
 const TABS = [
   { value: 'overview', label: 'Overview' },
@@ -16,6 +17,7 @@ const TABS = [
   { value: 'items', label: 'Items' },
   { value: 'people', label: 'People' },
   { value: 'legal', label: 'Legal' },
+  { value: 'product', label: 'Product' },
 ] as const
 
 export default function AdminHome() {
@@ -61,6 +63,9 @@ export default function AdminHome() {
         </TabsContent>
         <TabsContent value="legal">
           <LegalPanel />
+        </TabsContent>
+        <TabsContent value="product">
+          <ProductPanel />
         </TabsContent>
       </Tabs>
     </AppShell>

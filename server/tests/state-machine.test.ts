@@ -254,7 +254,9 @@ describe('capacity and claim expiry', () => {
     )
     const ngo = ngos[0]
 
-    // Pin capacity to whatever they have already taken this month.
+    // Pin capacity to whatever they have already taken this month. That may be
+    // zero, which is the case that caught the bug: 021 treated 0 as "no limit"
+    // and let the claim through.
     const { rows: used } = await adminPool.query('select app.ngo_claims_this_month($1) as n', [
       ngo.id,
     ])

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CircleHelp, LogOut, Moon, Sun } from 'lucide-react'
+import { CircleHelp, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { BackLink } from '@/components/shared/back-link'
@@ -44,6 +44,18 @@ export function AppShell({
             <span className="sr-only">{t('app.name')}</span>
           </Link>
           <div className="flex items-center gap-1">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="min-h-11"
+              aria-label="Your details"
+              title="Your details"
+            >
+              <RouterLink to="/profile">
+                <UserRound aria-hidden />
+              </RouterLink>
+            </Button>
             <Button
               asChild
               variant="ghost"
