@@ -81,7 +81,7 @@ const TEST_DB_NAME = `${DB_NAME}_test`
  *
  * Override explicitly with APP_ROLE if a deployment genuinely uses another name.
  */
-const APP_ROLE = process.env.APP_ROLE ?? 'eegai_app'
+const APP_ROLE = process.env.APP_ROLE ?? dbUser ?? process.env.PGUSER ?? 'eegai_app'
 const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? process.env.PGPASSWORD
 const MIGRATIONS_DIR = 'db/migrations'
 
