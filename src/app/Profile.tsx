@@ -99,12 +99,18 @@ export default function Profile() {
   if (isLoading || !data || !draft) {
     return (
       <AppShell title="Your details">
-        <Skeleton className="h-96 w-full" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
+        </div>
       </AppShell>
     )
   }
 
   const role = data.profile.role
+  // Donors and admins have no second card, so the password card fills the
+  // other column instead of leaving it empty.
+  const hasRoleCard = Boolean(data.ngo || data.volunteer)
   const set = (patch: Record<string, unknown>) => {
     setDraft({ ...draft, ...patch })
     setSaved(false)
@@ -112,200 +118,231 @@ export default function Profile() {
 
   return (
     <AppShell title="Your details" subtitle="What other people see, and how you are reached.">
-      <div className="max-w-2xl space-y-6">
-        <section className="hairline space-y-4 rounded-sm bg-card p-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="p-name">{role === 'ngo' ? 'Organisation name' : 'Your name'}</Label>
-            <Input
-              id="p-name"
-              value={String(draft.fullName ?? '')}
-              onChange={(e) => set({ fullName: e.target.value })}
-            />
-          </div>
+      {/* A single narrow column left the right half of a desktop empty and the
+          page read as a phone screenshot pasted onto a monitor.
 
-          <div className="space-y-1.5">
-            <Label>{t('post.area')}</Label>
-            <Combobox
-              options={areaOptions()}
-              value={String(draft.pincode ?? '')}
-              onChange={(next) => {
-                const area = AREA_BY_PINCODE.get(next)
-                set({ pincode: next, lat: area?.lat, lng: area?.lng })
-              }}
-              placeholder={t('post.areaPlaceholder')}
-              searchPlaceholder={t('post.areaSearch')}
-              emptyText={t('post.areaEmpty')}
-            />
-          </div>
+          Multi-column rather than a grid, for the same reason the wall uses it:
+          the cards are different heights, and a two-column grid aligns rows, so
+          a tall organisation card pushed the password card onto a second row and
+          left a hole under the first. Columns balance instead. Below lg it is
+          one column, in the order the cards matter. */}
+      {/* Two explicit stacks, not a grid and not CSS columns.
 
-          {/* Read-only, and said plainly rather than left as a disabled box
-              somebody will keep tapping. */}
-          <div className="space-y-1.5">
-            <Label>{t('auth.phone')}</Label>
-            <p className="font-mono text-sm">{data.profile.phone ?? '—'}</p>
-            <p className="text-xs text-muted-foreground">
-              This is how you sign in and how a volunteer reaches you. An administrator changes it,
-              so there is a record of who did.
-            </p>
-          </div>
-        </section>
+          A grid aligns rows, so the tall organisation card pushed the password
+          card onto a second row and left a hole beneath the short one. CSS
+          columns balance by height and did no better — they put the short card
+          alone in the first column.
 
-        {data.ngo ? (
+          Deciding the arrangement here is honest about what is actually going
+          on: there are two long cards and one short one, and which column the
+          short one belongs in depends on whether this role has a second card at
+          all. Below lg it is one column in reading order. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-6">
           <section className="hairline space-y-4 rounded-sm bg-card p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-display-sm">Your organisation</h2>
-              <Badge variant={data.ngo.verification_status === 'verified' ? 'success' : 'muted'}>
-                {data.ngo.verification_status}
-              </Badge>
-              {data.ngo.has_80g ? <Badge variant="outline">80G</Badge> : null}
-            </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="p-address">Where things are delivered</Label>
+              <Label htmlFor="p-name">{role === 'ngo' ? 'Organisation name' : 'Your name'}</Label>
               <Input
-                id="p-address"
-                value={String(draft.address ?? '')}
-                onChange={(e) => set({ address: e.target.value })}
+                id="p-name"
+                value={String(draft.fullName ?? '')}
+                onChange={(e) => set({ fullName: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground">
-                A volunteer is given this address. Keep it one somebody can find.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-person">Contact person</Label>
-                <Input
-                  id="p-person"
-                  value={String(draft.contactPerson ?? '')}
-                  onChange={(e) => set({ contactPerson: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-cphone">Contact number</Label>
-                <Input
-                  id="p-cphone"
-                  inputMode="tel"
-                  value={String(draft.contactPhone ?? '')}
-                  onChange={(e) => set({ contactPhone: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-1.5 block">What you accept</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((category) => {
-                  const on = (draft.acceptsCategories as string[]).includes(category)
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        const current = draft.acceptsCategories as string[]
-                        const next = on
-                          ? current.filter((c) => c !== category)
-                          : [...current, category]
-                        // Accepting nothing would empty your wall with no
-                        // explanation; the pause switch is what that is for.
-                        if (next.length > 0) set({ acceptsCategories: next })
-                      }}
-                      className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <Badge variant={on ? 'tag' : 'outline'} className={cn(!on && 'opacity-60')}>
-                        {t(`category.${category}` as StringKey)}
-                      </Badge>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <label className="flex items-center justify-between gap-3 py-1">
-              <span className="text-sm">
-                Currently accepting
-                <span className="block text-xs text-muted-foreground">
-                  Off hides the wall from you without touching your verification.
-                </span>
-              </span>
-              <Switch
-                checked={Boolean(draft.isAccepting)}
-                onCheckedChange={(isAccepting) => set({ isAccepting })}
-              />
-            </label>
-
-            <Separator />
-            <p className="text-sm text-muted-foreground">
-              You have claimed{' '}
-              <strong className="text-foreground">
-                {data.ngo.claimed_this_month} of {data.ngo.monthly_capacity}
-              </strong>{' '}
-              items this month. An administrator sets the limit — ask them to change it.
-            </p>
-          </section>
-        ) : null}
-
-        {data.volunteer ? (
-          <section className="hairline space-y-4 rounded-sm bg-card p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-display-sm">Your collections</h2>
-              <Badge
-                variant={data.volunteer.verification_status === 'verified' ? 'success' : 'muted'}
-              >
-                {data.volunteer.verification_status}
-              </Badge>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="p-radius">How far you will travel</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="p-radius"
-                  type="number"
-                  min={1}
-                  max={50}
-                  className="w-24"
-                  value={Number(draft.serviceRadiusKm ?? 8)}
-                  onChange={(e) => set({ serviceRadiusKm: Number(e.target.value) || 1 })}
-                />
-                <span className="text-sm text-muted-foreground">km from your area</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                You only see collections inside this. Set it short and the list will look empty when
-                it is not.
-              </p>
+              <Label>{t('post.area')}</Label>
+              <Combobox
+                options={areaOptions()}
+                value={String(draft.pincode ?? '')}
+                onChange={(next) => {
+                  const area = AREA_BY_PINCODE.get(next)
+                  set({ pincode: next, lat: area?.lat, lng: area?.lng })
+                }}
+                placeholder={t('post.areaPlaceholder')}
+                searchPlaceholder={t('post.areaSearch')}
+                emptyText={t('post.areaEmpty')}
+              />
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              {data.volunteer.pickups} collection{data.volunteer.pickups === 1 ? '' : 's'} so far.
-            </p>
+            {/* Read-only, and said plainly rather than left as a disabled box
+              somebody will keep tapping. */}
+            <div className="space-y-1.5">
+              <Label>{t('auth.phone')}</Label>
+              <p className="font-mono text-sm">{data.profile.phone ?? '—'}</p>
+              <p className="text-xs text-muted-foreground">
+                This is how you sign in and how a volunteer reaches you. An administrator changes
+                it, so there is a record of who did.
+              </p>
+            </div>
           </section>
-        ) : null}
-
-        {error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button className="min-h-11" disabled={save.isPending} onClick={() => save.mutate()}>
-            <Save aria-hidden /> {save.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-          {saved ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              Saved.
-            </p>
-          ) : null}
+          {hasRoleCard ? <ChangePassword /> : null}
         </div>
 
-        <ChangePassword />
+        <div className="space-y-6">
+          {data.ngo ? (
+            <section className="hairline space-y-4 rounded-sm bg-card p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-display text-display-sm">Your organisation</h2>
+                <Badge variant={data.ngo.verification_status === 'verified' ? 'success' : 'muted'}>
+                  {data.ngo.verification_status}
+                </Badge>
+                {data.ngo.has_80g ? <Badge variant="outline">80G</Badge> : null}
+              </div>
 
-        <p className="text-xs text-muted-foreground">
-          With us since {formatDate(data.profile.created_at)}.
-        </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="p-address">Where things are delivered</Label>
+                <Input
+                  id="p-address"
+                  value={String(draft.address ?? '')}
+                  onChange={(e) => set({ address: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A volunteer is given this address. Keep it one somebody can find.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-person">Contact person</Label>
+                  <Input
+                    id="p-person"
+                    value={String(draft.contactPerson ?? '')}
+                    onChange={(e) => set({ contactPerson: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-cphone">Contact number</Label>
+                  <Input
+                    id="p-cphone"
+                    inputMode="tel"
+                    value={String(draft.contactPhone ?? '')}
+                    onChange={(e) => set({ contactPhone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block">What you accept</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORIES.map((category) => {
+                    const on = (draft.acceptsCategories as string[]).includes(category)
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => {
+                          const current = draft.acceptsCategories as string[]
+                          const next = on
+                            ? current.filter((c) => c !== category)
+                            : [...current, category]
+                          // Accepting nothing would empty your wall with no
+                          // explanation; the pause switch is what that is for.
+                          if (next.length > 0) set({ acceptsCategories: next })
+                        }}
+                        className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        <Badge variant={on ? 'tag' : 'outline'} className={cn(!on && 'opacity-60')}>
+                          {t(`category.${category}` as StringKey)}
+                        </Badge>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <label className="flex items-center justify-between gap-3 py-1">
+                <span className="text-sm">
+                  Currently accepting
+                  <span className="block text-xs text-muted-foreground">
+                    Off hides the wall from you without touching your verification.
+                  </span>
+                </span>
+                <Switch
+                  checked={Boolean(draft.isAccepting)}
+                  onCheckedChange={(isAccepting) => set({ isAccepting })}
+                />
+              </label>
+
+              <Separator />
+              <p className="text-sm text-muted-foreground">
+                You have claimed{' '}
+                <strong className="text-foreground">
+                  {data.ngo.claimed_this_month} of {data.ngo.monthly_capacity}
+                </strong>{' '}
+                items this month. An administrator sets the limit — ask them to change it.
+              </p>
+            </section>
+          ) : null}
+
+          {data.volunteer ? (
+            <section className="hairline space-y-4 rounded-sm bg-card p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-display text-display-sm">Your collections</h2>
+                <Badge
+                  variant={data.volunteer.verification_status === 'verified' ? 'success' : 'muted'}
+                >
+                  {data.volunteer.verification_status}
+                </Badge>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="p-radius">How far you will travel</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="p-radius"
+                    type="number"
+                    min={1}
+                    max={50}
+                    className="w-24"
+                    value={Number(draft.serviceRadiusKm ?? 8)}
+                    onChange={(e) => set({ serviceRadiusKm: Number(e.target.value) || 1 })}
+                  />
+                  <span className="text-sm text-muted-foreground">km from your area</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You only see collections inside this. Set it short and the list will look empty
+                  when it is not.
+                </p>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                {data.volunteer.pickups} collection{data.volunteer.pickups === 1 ? '' : 's'} so far.
+              </p>
+            </section>
+          ) : null}
+
+          {hasRoleCard ? null : <ChangePassword />}
+        </div>
       </div>
+
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      {/* Sticky on a phone: this page is several screens long and the button
+            that commits it should not be somewhere below the fold. Static once
+            the whole form is visible at once. */}
+      <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
+        <Button
+          className="min-h-11 flex-1 sm:flex-none"
+          disabled={save.isPending}
+          onClick={() => save.mutate()}
+        >
+          <Save aria-hidden /> {save.isPending ? 'Saving…' : 'Save changes'}
+        </Button>
+        {saved ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Saved.
+          </p>
+        ) : null}
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        With us since {formatDate(data.profile.created_at)}.
+      </p>
     </AppShell>
   )
 }
