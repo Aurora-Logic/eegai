@@ -74,8 +74,20 @@ setInterval(() => {
   withSystemActor(async (tx) => {
     const { rows } = await tx.query('select * from app.expire_stale_posts()')
     const result = rows[0]
-    if (result && (result.widened > 0 || result.returned > 0)) {
-      log.info('expiry sweep', { widened: result.widened, returned: result.returned })
+
+    // A claim nobody arranged collection for goes back on the wall. Until this
+    // ran, claim_expires_at was written on every claim and read by nothing —
+    // an item claimed and forgotten stayed invisible to every other
+    // organisation indefinitely.
+    const { rows: released } = await tx.query('select app.release_expired_claims() as n')
+    const releasedCount = (released[0]?.n as number) ?? 0
+
+    if (result && (result.widened > 0 || result.returned > 0 || releasedCount > 0)) {
+      log.info('expiry sweep', {
+        widened: result.widened,
+        returned: result.returned,
+        claims_released: releasedCount,
+      })
     }
   }).catch((error) => log.error('expiry sweep failed', { err: String(error) }))
 }, EXPIRY_INTERVAL_MS).unref()

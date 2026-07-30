@@ -183,18 +183,37 @@ donationRoutes.post('/:id/claim', requireRole('ngo'), async (c) => {
   const actor = actorOf(c)
   const id = c.req.param('id')
 
-  const claimed = await withActor(actor, async (tx) => {
-    const { rows: ngoRows } = await tx.query(
-      `select n.id from public.ngos n
+  let claimed
+  try {
+    claimed = await withActor(actor, async (tx) => {
+      const { rows: ngoRows } = await tx.query(
+        `select n.id from public.ngos n
        join public.profiles p on p.id = n.profile_id
        where p.user_id = app.current_user_id()`,
-    )
-    const ngoId = ngoRows[0]?.id
-    if (!ngoId) return { error: 'no-ngo' as const }
+      )
+      const ngoId = ngoRows[0]?.id
+      if (!ngoId) return { error: 'no-ngo' as const }
 
-    const { rows } = await tx.query('select * from app.claim_donation($1, $2)', [id, ngoId])
-    return rows[0] ? { donation: rows[0] } : { error: 'taken' as const }
-  })
+      const { rows } = await tx.query('select * from app.claim_donation($1, $2)', [id, ngoId])
+      return rows[0] ? { donation: rows[0] } : { error: 'taken' as const }
+    })
+  } catch (error) {
+    // Capacity is a different answer from "already claimed", and an
+    // organisation that cannot tell them apart will keep tapping. The message
+    // carries the numbers so they know how full they are.
+    const raw = error instanceof Error ? error.message : ''
+    const match = /monthly capacity reached: (\d+) of (\d+)/.exec(raw)
+    if (match) {
+      return c.json(
+        {
+          error: `You have claimed ${match[1]} of your ${match[2]} items this month. Ask an administrator to raise your capacity, or wait until next month.`,
+          code: 'at_capacity',
+        },
+        409,
+      )
+    }
+    throw error
+  }
 
   if ('error' in claimed) {
     if (claimed.error === 'no-ngo') {

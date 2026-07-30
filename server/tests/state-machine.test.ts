@@ -2,6 +2,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { adminPool, asActor, closePools, loadFixtures, testPool, type Fixture } from './helpers.ts'
 
+/** The uuid withSystemActor uses; the sweep runs with admin authority. */
+const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000'
+
 /**
  * The database half of the LOCKED state machine (PLAN.md §7). The TypeScript
  * half is tested in src/lib/state-machine.test.ts; this proves the backstop
@@ -235,5 +238,74 @@ describe('photo count rule', () => {
     await expect(
       adminPool.query('delete from public.donation_photos where donation_id = $1', [id]),
     ).rejects.toThrow(/at least 1 photo/)
+  })
+})
+
+/**
+ * The two rules that keep the wall alive. Both columns existed from M0 and
+ * neither was read by anything, so these tests exist to stop that recurring:
+ * `monthly_capacity` was shown and edited without ever being enforced, and
+ * `claim_expires_at` was written on every claim and looked at by nothing.
+ */
+describe('capacity and claim expiry', () => {
+  it('refuses a claim once the organisation has used its month', async () => {
+    const { rows: ngos } = await adminPool.query(
+      `select n.id, n.monthly_capacity from public.ngos n limit 1`,
+    )
+    const ngo = ngos[0]
+
+    // Pin capacity to whatever they have already taken this month.
+    const { rows: used } = await adminPool.query('select app.ngo_claims_this_month($1) as n', [
+      ngo.id,
+    ])
+    await adminPool.query('update public.ngos set monthly_capacity = $1 where id = $2', [
+      used[0].n,
+      ngo.id,
+    ])
+
+    const { rows: posted } = await adminPool.query(
+      `select id from public.donations where status = 'posted' limit 1`,
+    )
+
+    await expect(
+      adminPool.query('select * from app.claim_donation($1, $2)', [posted[0].id, ngo.id]),
+    ).rejects.toThrow(/monthly capacity reached/)
+
+    // Restored, so the ordering of tests in this file cannot matter.
+    await adminPool.query('update public.ngos set monthly_capacity = $1 where id = $2', [
+      ngo.monthly_capacity,
+      ngo.id,
+    ])
+  })
+
+  it('puts an expired claim back on the wall, and leaves a scheduled one alone', async () => {
+    const { rows: claimed } = await adminPool.query(
+      `select id from public.donations where status = 'claimed' limit 1`,
+    )
+    const { rows: scheduled } = await adminPool.query(
+      `select id from public.donations where status = 'scheduled' limit 1`,
+    )
+    if (!claimed[0] || !scheduled[0])
+      throw new Error('fixture: need a claimed and a scheduled item')
+
+    await adminPool.query(
+      `update public.donations set claim_expires_at = now() - interval '1 hour' where id = any($1)`,
+      [[claimed[0].id, scheduled[0].id]],
+    )
+
+    await asActor({ userId: SYSTEM_ACTOR, role: 'admin' }, async (tx) => {
+      await tx.query('select app.release_expired_claims()')
+    })
+
+    const { rows: after } = await adminPool.query(
+      'select id, status from public.donations where id = any($1)',
+      [[claimed[0].id, scheduled[0].id]],
+    )
+    const byId = new Map(after.map((r) => [r.id, r.status]))
+
+    expect(byId.get(claimed[0].id)).toBe('posted')
+    // Once it is scheduled a volunteer has a slot or a courier has an AWB.
+    // Releasing it underneath them strands the item and wastes the journey.
+    expect(byId.get(scheduled[0].id)).toBe('scheduled')
   })
 })
