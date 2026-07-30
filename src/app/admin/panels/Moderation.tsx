@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import type { DonationStatus } from '@/lib/validation/donation'
 import { AddItemDialog } from './AddItemDialog'
+import { RemoveItem } from './RemoveItem'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +27,7 @@ interface Row {
   category: string
   condition: string
   quantity: number
-  status: string
+  status: DonationStatus
   pincode: string | null
   posted_at: string
   donor_name: string
@@ -122,9 +124,12 @@ export function Moderation() {
                 </Badge>
               }
               actions={
-                <Button asChild variant="outline" size="sm">
-                  <Link to={`/admin/items/${row.id}`}>Open</Link>
-                </Button>
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/admin/items/${row.id}`}>Open</Link>
+                  </Button>
+                  <RemoveItem id={row.id} title={row.title} status={row.status} />
+                </>
               }
             >
               <Field label="What">

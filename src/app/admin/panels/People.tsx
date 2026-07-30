@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatRelative } from '@/lib/dates'
-import { Ban, RotateCcw } from 'lucide-react'
+import { Ban, KeyRound, RotateCcw, UserCog } from 'lucide-react'
 import { CreateAccountDialog } from './CreateAccountDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import {
@@ -85,7 +85,13 @@ export function People() {
                   {!person.is_active ? <Badge variant="destructive">disabled</Badge> : null}
                 </>
               }
-              actions={<ActiveToggle person={person} />}
+              actions={
+                <>
+                  <ChangeRole person={person} />
+                  <ResetPassword person={person} />
+                  <ActiveToggle person={person} />
+                </>
+              }
             >
               <Field label="Area">{person.pincode ?? '—'}</Field>
               <Field label="Last seen">
@@ -188,5 +194,172 @@ function ActiveToggle({ person }: { person: Person }) {
         </p>
       ) : null}
     </div>
+  )
+}
+
+const ROLES = ['donor', 'ngo', 'volunteer', 'admin'] as const
+
+/**
+ * Move somebody between roles.
+ *
+ * The server refuses while they still have work in hand, and says what — an
+ * organisation mid-delivery demoted to donor strands the item where no screen
+ * can reach it. That message is shown verbatim rather than replaced with a
+ * generic failure, because it tells the operator what to finish first.
+ *
+ * Promoting to an organisation needs an address, which this dialog does not ask
+ * for. It is deliberately a two-step: change the role, then use Edit on the
+ * Organisations tab, where the whole record is in front of you.
+ */
+function ChangeRole({ person }: { person: Person }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [role, setRole] = useState<string>(person.role)
+  const [error, setError] = useState<string | null>(null)
+
+  const change = useMutation({
+    mutationFn: () => api.post<{ message: string }>(`/admin/users/${person.id}/role`, { role }),
+    onSuccess: async () => {
+      setOpen(false)
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <UserCog aria-hidden /> Role
+      </Button>
+
+      {open ? (
+        <AlertDialog open onOpenChange={(next) => !next && setOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change what {person.full_name} is</AlertDialogTitle>
+              <AlertDialogDescription>
+                They keep everything they have already done. An organisation promoted here still
+                needs an address — set it on the Organisations tab afterwards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger aria-label="New role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <AlertDialogFooter>
+              <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+              <Button
+                className="min-h-11"
+                disabled={role === person.role || change.isPending}
+                onClick={() => change.mutate()}
+              >
+                {change.isPending ? 'Changing…' : 'Change role'}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </>
+  )
+}
+
+/**
+ * The forgot-password path.
+ *
+ * There is no SMS gateway, so a self-service reset link has nowhere to send
+ * anything — the same constraint that put handover codes in the app. An admin
+ * resets it and reads the new one out. Shown once and never recoverable.
+ */
+function ResetPassword({ person }: { person: Person }) {
+  const [open, setOpen] = useState(false)
+  const [issued, setIssued] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const reset = useMutation({
+    mutationFn: () => api.post<{ temporaryPassword: string }>(`/admin/users/${person.id}/password`),
+    onSuccess: (result) => {
+      setIssued(result.temporaryPassword)
+      setError(null)
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  function close() {
+    setOpen(false)
+    setIssued(null)
+    setError(null)
+  }
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <KeyRound aria-hidden /> Password
+      </Button>
+
+      {open ? (
+        <AlertDialog open onOpenChange={(next) => !next && close()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {issued ? 'New password' : `Reset the password for ${person.full_name}?`}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {issued
+                  ? 'Read it out to them now. It is stored only as a hash, so once this closes nobody can recover it.'
+                  : 'Their current password stops working immediately. You will be given a new one to read out.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            {issued ? (
+              <div className="hairline rounded-sm bg-background p-4 text-center">
+                <p className="font-mono text-xl tracking-wide">{issued}</p>
+              </div>
+            ) : null}
+
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <AlertDialogFooter>
+              {issued ? (
+                <Button className="min-h-11" onClick={close}>
+                  Done
+                </Button>
+              ) : (
+                <>
+                  <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+                  <Button
+                    className="min-h-11"
+                    disabled={reset.isPending}
+                    onClick={() => reset.mutate()}
+                  >
+                    {reset.isPending ? 'Resetting…' : 'Reset password'}
+                  </Button>
+                </>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </>
   )
 }

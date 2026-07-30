@@ -732,3 +732,77 @@ adminRoutes.post('/donations', async (c) => {
     throw error
   }
 })
+
+/**
+ * Change someone's role.
+ *
+ * The guards live in app.admin_change_role: in-flight work blocks the change,
+ * because demoting an organisation mid-delivery strands somebody's belongings
+ * where no screen can reach them. The messages it raises are written to be shown
+ * to the operator, so they are passed through rather than flattened to "that did
+ * not work".
+ */
+adminRoutes.post('/users/:id/role', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const role = body?.role
+
+  if (!['donor', 'ngo', 'volunteer', 'admin'].includes(role)) {
+    return c.json({ error: 'Pick donor, ngo, volunteer or admin.' }, 400)
+  }
+
+  try {
+    const message = await withActor(actor, async (tx) => {
+      const { rows } = await tx.query(
+        'select app.admin_change_role($1, $2::public.user_role, $3, $4, $5, $6) as message',
+        [
+          c.req.param('id'),
+          role,
+          typeof body?.address === 'string' ? body.address : null,
+          typeof body?.pincode === 'string' ? body.pincode : null,
+          typeof body?.lat === 'number' ? body.lat : null,
+          typeof body?.lng === 'number' ? body.lng : null,
+        ],
+      )
+      return rows[0]?.message as string
+    })
+
+    log.info('role changed', { profile_id: c.req.param('id'), role })
+    return c.json({ ok: true, message })
+  } catch (error) {
+    // These are written for the operator — "still has 3 item(s) in progress"
+    // tells them what to finish, where a generic failure tells them nothing.
+    const raw = error instanceof Error ? error.message : ''
+    if (/in progress|in hand|own role|needs an address|no such person/.test(raw)) {
+      return c.json({ error: raw.replace(/^.*?:\s*/, '') }, 409)
+    }
+    throw error
+  }
+})
+
+/**
+ * Reset someone's password and return the new one, once.
+ *
+ * This is the "forgot password" path. Without an SMS gateway a self-service
+ * reset link has nowhere to go — the same constraint that put handover codes in
+ * the app rather than in a text message. An admin resets it and reads the new
+ * one out, over the channel that already exists.
+ */
+adminRoutes.post('/users/:id/password', async (c) => {
+  const actor = actorOf(c)
+  const temporaryPassword = generatePassphrase()
+  const passwordHash = await hashPassword(temporaryPassword)
+
+  const ok = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query('select app.admin_reset_password($1, $2) as ok', [
+      c.req.param('id'),
+      passwordHash,
+    ])
+    return rows[0]?.ok === true
+  })
+
+  if (!ok) return c.json({ error: 'No such person.' }, 404)
+
+  log.info('password reset by admin', { profile_id: c.req.param('id') })
+  return c.json({ temporaryPassword })
+})
