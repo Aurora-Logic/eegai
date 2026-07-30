@@ -128,5 +128,15 @@
   "auth.roleNgo": "हम एक संस्था हैं",
   "auth.roleNgoHint": "जिन लोगों की आप सेवा करते हैं, उनके लिए चीज़ें माँगें।",
   "auth.roleVolunteer": "मैं ला और पहुँचा सकता हूँ",
-  "auth.roleVolunteerHint": "कोयंबटूर भर में चीज़ें पहुँचाएँ।"
+  "auth.roleVolunteerHint": "कोयंबटूर भर में चीज़ें पहुँचाएँ।",
+  "auth.forgot": "पासवर्ड भूल गए?",
+  "auth.forgotTitle": "पासवर्ड रीसेट कराएँ",
+  "auth.forgotBody": "अपना नंबर बताएँ, कोई आपको फ़ोन करके नया पासवर्ड देगा। हम अभी संदेश से नहीं भेज सकते।",
+  "auth.forgotSent": "अगर उस नंबर का खाता है, तो कोई आपको फ़ोन करके उसे रीसेट करेगा।",
+  "auth.forgotSend": "रीसेट माँगें",
+  "guide.title": "EEGAI कैसे काम करता है",
+  "guide.open": "यह कैसे काम करता है",
+  "guide.skip": "छोड़ें",
+  "guide.next": "आगे",
+  "guide.done": "शुरू करें"
 }

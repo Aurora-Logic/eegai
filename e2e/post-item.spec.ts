@@ -16,6 +16,12 @@ const photo = () => ({
 })
 
 async function signInAsDonor(page: import('@playwright/test').Page) {
+  // A returning user has already dismissed the first-run guide. Without this
+  // every signed-in spec clicks through an overlay that a real second visit
+  // would not show.
+  await page.addInitScript(
+    `for (const role of ['donor','ngo','volunteer','admin']) localStorage.setItem('eegai.guide-seen.' + role, '1')`,
+  )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(DONOR.phone)
   await page.getByLabel('Password').fill(DONOR.password)

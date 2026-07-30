@@ -1,10 +1,8 @@
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateTime, formatStamp } from '@/lib/dates'
-import { ArrowLeft } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
@@ -68,17 +66,7 @@ export default function DonationTrail() {
   })
 
   return (
-    <AppShell
-      title="Item trail"
-      subtitle={data?.donation.title}
-      actions={
-        <Button asChild variant="outline">
-          <Link to="/admin">
-            <ArrowLeft aria-hidden /> Back to admin
-          </Link>
-        </Button>
-      }
-    >
+    <AppShell title="Item trail" subtitle={data?.donation.title}>
       {isLoading ? (
         <Skeleton className="h-96 w-full" />
       ) : isError || !data ? (

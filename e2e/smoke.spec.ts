@@ -13,15 +13,8 @@ test('the landing page loads, and the legal pages are reachable from it', async 
   await expect(page.getByRole('heading', { name: 'Terms', level: 1 })).toBeVisible()
 })
 
-test('the style guide is still reachable directly', async ({ page }) => {
-  // No longer linked from the public footer — it is a development throwaway
-  // (PLAN.md §9 M0) and did not belong on the front page of the product.
-  await page.goto('/style-guide')
-  await expect(page.getByRole('heading', { name: 'Style guide', level: 1 })).toBeVisible()
-})
-
 test('the theme toggle inverts the ground', async ({ page }) => {
-  await page.goto('/style-guide')
+  await page.goto('/guide')
 
   const html = page.locator('html')
   await expect(html).not.toHaveClass(/dark/)

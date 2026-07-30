@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatRelative } from '@/lib/dates'
-import { Ban, KeyRound, RotateCcw, UserCog } from 'lucide-react'
+import { Ban, KeyRound, PhoneCall, RotateCcw, UserCog } from 'lucide-react'
 import { CreateAccountDialog } from './CreateAccountDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import {
@@ -48,6 +48,8 @@ export function People() {
 
   return (
     <section className="space-y-4">
+      <ResetQueue />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Everyone with an account. Accounts are created here — there is no public sign-up.
@@ -361,5 +363,88 @@ function ResetPassword({ person }: { person: Person }) {
         </AlertDialog>
       ) : null}
     </>
+  )
+}
+
+interface ResetRequest {
+  id: string
+  phone: string
+  note: string | null
+  created_at: string
+  profile_id: string | null
+  full_name: string | null
+  role: string | null
+}
+
+/**
+ * People waiting to be called back about a password.
+ *
+ * Sits above the list rather than in its own tab: it is a queue that should be
+ * empty, and a queue nobody passes is a queue nobody clears. It disappears
+ * entirely when there is nothing waiting.
+ *
+ * A request from an unregistered number is shown too. It usually means somebody
+ * is trying the wrong number, which is worth knowing when they ring.
+ */
+function ResetQueue() {
+  const queryClient = useQueryClient()
+
+  const { data } = useQuery({
+    queryKey: ['admin', 'password-requests'],
+    queryFn: () => api.get<{ requests: ResetRequest[] }>('/admin/password-requests'),
+  })
+
+  const close = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/password-requests/${id}/close`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+
+  const requests = data?.requests ?? []
+  if (requests.length === 0) return null
+
+  return (
+    <section className="hairline rounded-sm border-primary/40 bg-card p-4">
+      <h2 className="flex items-center gap-2 font-display text-display-sm">
+        <PhoneCall className="size-4 text-primary" aria-hidden />
+        {requests.length === 1
+          ? 'Someone is locked out'
+          : `${requests.length} people are locked out`}
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        There is no automatic reset, so these are waiting on a phone call. Find them below, reset
+        the password, read it out, then clear the request.
+      </p>
+
+      <ul className="mt-3 space-y-2">
+        {requests.map((request) => (
+          <li
+            key={request.id}
+            className="hairline flex flex-wrap items-center justify-between gap-2 rounded-sm p-3 text-sm"
+          >
+            <span className="min-w-0">
+              <span className="block font-medium">
+                {request.full_name ?? 'No account with that number'}
+              </span>
+              <span className="block font-mono text-xs text-muted-foreground">
+                {request.phone} · asked {formatRelative(request.created_at)}
+              </span>
+              {request.note ? (
+                <span className="mt-1 block text-muted-foreground">“{request.note}”</span>
+              ) : null}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-11"
+              disabled={close.isPending}
+              onClick={() => close.mutate(request.id)}
+            >
+              Done
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

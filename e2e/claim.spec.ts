@@ -10,6 +10,12 @@ const NGO = { phone: '9100000001', password: 'password123' } // Sahyadri, takes 
 const DONOR = { phone: '9300000001', password: 'password123' }
 
 async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
+  // A returning user has already dismissed the first-run guide. Without this
+  // every signed-in spec clicks through an overlay that a real second visit
+  // would not show.
+  await page.addInitScript(
+    `for (const role of ['donor','ngo','volunteer','admin']) localStorage.setItem('eegai.guide-seen.' + role, '1')`,
+  )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(who.phone)
   await page.getByLabel('Password').fill(who.password)

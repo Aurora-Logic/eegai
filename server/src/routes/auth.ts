@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from '../lib/password.ts'
 import { SESSION_COOKIE, signSession } from '../lib/jwt.ts'
 import { actorOf, requireAuth, type AppEnv } from '../middleware/auth.ts'
 import { env } from '../lib/env.ts'
+import { log } from '../lib/logger.ts'
 
 export const authRoutes = new Hono<AppEnv>()
 
@@ -128,6 +129,38 @@ authRoutes.post('/register', async (c) => {
     }
     throw error
   }
+})
+
+/**
+ * "I have forgotten my password."
+ *
+ * Records a request for an admin to action. There is no SMS gateway, so there
+ * is nowhere to send a reset link — the admin resets it and reads the new one
+ * out, the same channel the handover codes use.
+ *
+ * The answer is identical whether or not the number is registered. Saying "no
+ * such account" would turn this into a way to discover which numbers have one.
+ */
+authRoutes.post('/forgot-password', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
+  const note = typeof body?.note === 'string' ? body.note.trim().slice(0, 500) : null
+
+  const answer = {
+    ok: true,
+    message: 'If that number has an account, someone will call you to reset it.',
+  }
+
+  // Shape-check only. An invalid number is not worth a row, but it still gets
+  // the same answer.
+  if (!/^[6-9]\d{9}$/.test(phone)) return c.json(answer)
+
+  await withSystemActor(async (tx) => {
+    await tx.query('select app.request_password_reset($1, $2)', [phone, note])
+  })
+
+  log.info('password reset requested')
+  return c.json(answer)
 })
 
 authRoutes.post('/login', async (c) => {

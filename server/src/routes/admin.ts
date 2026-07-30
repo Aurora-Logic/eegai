@@ -806,3 +806,45 @@ adminRoutes.post('/users/:id/password', async (c) => {
   log.info('password reset by admin', { profile_id: c.req.param('id') })
   return c.json({ temporaryPassword })
 })
+
+/** People waiting on a password reset. */
+adminRoutes.get('/password-requests', async (c) => {
+  const actor = actorOf(c)
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      // Joined to profiles so the operator sees a name, not just a number — and
+      // left, because a request from an unregistered number is still a row and
+      // still tells them somebody is confused about which number they used.
+      `select r.id, r.phone, r.note, r.created_at,
+              p.id as profile_id, p.full_name, p.role
+       from public.password_reset_requests r
+       left join public.profiles p on p.phone = r.phone
+       where r.handled_at is null
+       order by r.created_at`,
+    )
+    return rows
+  })
+
+  return c.json({ requests: rows })
+})
+
+/** Mark one as dealt with, once the password has actually been reset. */
+adminRoutes.post('/password-requests/:id/close', async (c) => {
+  const actor = actorOf(c)
+
+  const closed = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `update public.password_reset_requests
+       set handled_at = now(),
+           handled_by = (select id from public.profiles where user_id = app.current_user_id())
+       where id = $1 and handled_at is null
+       returning id`,
+      [c.req.param('id')],
+    )
+    return rows.length > 0
+  })
+
+  if (!closed) return c.json({ error: 'That request is already dealt with.' }, 409)
+  return c.json({ ok: true })
+})

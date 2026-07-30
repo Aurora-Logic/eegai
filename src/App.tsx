@@ -23,6 +23,7 @@ import { HOME_FOR_ROLE, useSession } from './hooks/use-session'
  * visitor, and a spinner on the front door to save 4KB is a bad trade.
  */
 const SignUp = lazy(() => import('./app/auth/SignUp'))
+const ForgotPassword = lazy(() => import('./app/auth/ForgotPassword'))
 const DonorHome = lazy(() => import('./app/donor/DonorHome'))
 const PostItem = lazy(() => import('./app/donor/PostItem'))
 const DonationTimeline = lazy(() => import('./app/donor/DonationTimeline'))
@@ -31,7 +32,12 @@ const NgoItem = lazy(() => import('./app/ngo/NgoItem'))
 const VolunteerHome = lazy(() => import('./app/volunteer/VolunteerHome'))
 const AdminHome = lazy(() => import('./app/admin/AdminHome'))
 const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
-const StyleGuide = lazy(() => import('./app/StyleGuide'))
+const Guide = lazy(() => import('./app/Guide'))
+// Lazy for weight, not for behaviour: it renders only for a signed-in user, and
+// eager it dragged the whole manual into the first paint of the landing page.
+const FirstRunGuide = lazy(() =>
+  import('./components/shared/first-run-guide').then((m) => ({ default: m.FirstRunGuide })),
+)
 const LegalDocument = lazy(() => import('./app/legal/LegalDocument'))
 const NotFound = lazy(() => import('./app/NotFound'))
 
@@ -56,6 +62,7 @@ export default function App() {
           <Route path="/" element={<Root />} />
           <Route path="/sign-in" element={<SignIn />} />
           <Route path="/sign-up" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route
             path="/donor"
@@ -125,15 +132,20 @@ export default function App() {
 
           {/* Public, and reachable signed out — someone deciding whether to
               register must be able to read these first. */}
+          {/* The manual. Signed in or not — someone can be told to read it
+              before they have an account. */}
+          <Route path="/guide" element={<Guide />} />
+
           <Route path="/privacy" element={<LegalDocument />} />
           <Route path="/terms" element={<LegalDocument />} />
 
-          {/* Throwaway. Delete once the wall is built — PLAN.md §9 M0. */}
-          <Route path="/style-guide" element={<StyleGuide />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <PwaPrompt />
+      <Suspense fallback={null}>
+        <FirstRunGuide />
+      </Suspense>
       <DevRoleSwitcher />
     </>
   )

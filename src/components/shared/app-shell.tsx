@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import { LogOut, Moon, Sun } from 'lucide-react'
+import { CircleHelp, LogOut, Moon, Sun } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { BackLink } from '@/components/shared/back-link'
+import { Link as RouterLink } from 'react-router-dom'
 import { InstallButton } from '@/components/shared/install-button'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { useSession } from '@/hooks/use-session'
@@ -32,13 +34,28 @@ export function AppShell({
           {/* The logotype is the Tamil wordmark alone. `lang` so a screen reader
               reaches for a Tamil voice, and an sr-only Latin name so the link
               still announces as EEGAI to anyone whose reader has no Tamil. */}
-          <Link to="/" className="flex items-baseline gap-2">
+          {/* Back sits before the wordmark, where a thumb reaches on a phone
+              and where every other app puts it. */}
+          <BackLink />
+          <Link to="/" className="mr-auto flex items-baseline gap-2">
             <span lang="ta" className="font-display text-display-md leading-none">
               {t('app.nameScript')}
             </span>
             <span className="sr-only">{t('app.name')}</span>
           </Link>
           <div className="flex items-center gap-1">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="min-h-11"
+              aria-label={t('guide.open')}
+              title={t('guide.open')}
+            >
+              <RouterLink to="/guide">
+                <CircleHelp aria-hidden />
+              </RouterLink>
+            </Button>
             <LanguageSwitcher />
             <InstallButton />
             <Button

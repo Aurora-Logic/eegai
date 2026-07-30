@@ -128,5 +128,15 @@
   "auth.roleNgo": "We're an organisation",
   "auth.roleNgoHint": "Claim items for the people you serve.",
   "auth.roleVolunteer": "I can collect and deliver",
-  "auth.roleVolunteerHint": "Move items across Coimbatore."
+  "auth.roleVolunteerHint": "Move items across Coimbatore.",
+  "auth.forgot": "Forgotten your password?",
+  "auth.forgotTitle": "Get your password reset",
+  "auth.forgotBody": "Tell us your number and someone will call you to set a new one. We cannot send it by message yet.",
+  "auth.forgotSent": "If that number has an account, someone will call you to reset it.",
+  "auth.forgotSend": "Ask for a reset",
+  "guide.title": "How EEGAI works",
+  "guide.open": "How this works",
+  "guide.skip": "Skip",
+  "guide.next": "Next",
+  "guide.done": "Start"
 }

@@ -45,12 +45,11 @@ export default function SignIn() {
       subtitle={t('auth.signInSubtitle')}
       illustration={<ReturningScene className="w-full max-w-sm" />}
       footer={
-        <>
-          {t('auth.noAccount')}{' '}
-          <Link to="/sign-up" className="underline underline-offset-4">
-            {t('auth.signUp')}
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Link to="/forgot-password" className="underline underline-offset-4">
+            {t('auth.forgot')}
           </Link>
-        </>
+        </span>
       }
     >
       <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>

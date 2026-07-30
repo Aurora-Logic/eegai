@@ -39,7 +39,10 @@ describe('en.json', () => {
   it('keeps copy in sentence case, not Title Case', () => {
     // PLAN.md §8: "Active voice, sentence case." Proper nouns are exempt —
     // the product is called Wall of Kindness, not Wall of kindness.
-    const PROPER_NOUNS = new Set<string>(['app.name'])
+    // Strings that legitimately carry the product name. The heuristic counts
+    // capitalised words, and "How EEGAI works" trips it on a proper noun rather
+    // than on Title Case.
+    const PROPER_NOUNS = new Set<string>(['app.name', 'guide.title'])
 
     const titleCased = Object.entries(en).filter(([k, v]) => {
       if (PROPER_NOUNS.has(k)) return false

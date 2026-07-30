@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
-import { ArrowLeft, Check, MapPin, PackageCheck, TriangleAlert, X } from 'lucide-react'
+import { Check, MapPin, PackageCheck, TriangleAlert, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { PhotoGallery } from '@/components/shared/photo-gallery'
@@ -130,13 +130,6 @@ export default function NgoItem() {
     <AppShell
       title={donation?.title ?? 'Item'}
       subtitle={arrived ? 'Confirm what arrived.' : undefined}
-      actions={
-        <Button asChild variant="outline">
-          <Link to="/ngo">
-            <ArrowLeft aria-hidden /> Back
-          </Link>
-        </Button>
-      }
     >
       {isLoading ? (
         <Skeleton className="h-96 w-full" />
