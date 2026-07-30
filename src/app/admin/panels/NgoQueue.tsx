@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileText, Pencil, ShieldCheck } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import { ClearedQueueScene, NoMatchesScene } from '@/components/illustrations/admin'
+import { EmptyState } from '@/components/shared/empty-state'
 import { EditNgoDialog, type EditableNgo } from './EditNgoDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -93,9 +95,22 @@ export function NgoQueue() {
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : ngos.length === 0 ? (
-        <p className="hairline rounded-sm bg-card p-8 text-center text-muted-foreground">
-          Nothing waiting here.
-        </p>
+        // An empty review queue and an empty filter mean opposite things. The
+        // first is the queue being clear, which is the goal; the second is a
+        // question that found nothing, and the records are still there.
+        status === 'pending' ? (
+          <EmptyState
+            illustration={<ClearedQueueScene className="w-full" />}
+            title="The queue is clear"
+            hint="Every organisation that applied has been reviewed. New applications land here."
+          />
+        ) : (
+          <EmptyState
+            illustration={<NoMatchesScene className="w-full" />}
+            title="No organisation is in that state"
+            hint="Try another filter, or All to see every organisation on record."
+          />
+        )
       ) : (
         <RecordList>
           {ngos.map((ngo) => (

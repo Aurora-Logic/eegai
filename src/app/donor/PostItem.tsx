@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
 import { Check, Trash2, X } from 'lucide-react'
+import { StepMark } from '@/components/illustrations/steps'
 import { AppShell } from '@/components/shared/app-shell'
 import { PhotoGrid } from '@/components/shared/photo-grid'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +34,20 @@ import {
 
 const DRAFT_KEY = 'eegai.donation-draft'
 const STEPS = ['Photos', 'What it is', 'Condition', 'Pickup', 'Review'] as const
+
+/**
+ * One line per step, saying why the step exists rather than what the fields are.
+ *
+ * Read at call time, not at module load, so switching language re-renders these
+ * along with everything else.
+ */
+const stepHints = (): string[] => [
+  t('post.photosHint'),
+  t('post.detailsHint'),
+  t('post.checklistHint'),
+  t('post.pickupHint'),
+  t('post.reviewHint'),
+]
 
 interface Draft {
   title: string
@@ -146,10 +161,18 @@ export default function PostItem() {
         ))}
       </ol>
 
+      {/* The mark and the reason for the step, in one row.
+          Five form screens in the same shell look alike enough that people lose
+          their place between them; the badges say which one in words, and this
+          says it in a shape. The hint used to sit inside two of the five
+          sections and be missing from the other three. */}
+      <div className="hairline mb-6 flex items-center gap-3 rounded-sm bg-card p-3">
+        <StepMark step={step} className="h-11 w-11 shrink-0 text-foreground" />
+        <p className="text-sm text-muted-foreground">{stepHints()[step]}</p>
+      </div>
+
       {step === 0 && (
         <section className="space-y-4">
-          <p className="text-muted-foreground">{t('post.photosHint')}</p>
-
           <PhotoGrid
             paths={draft.photoPaths}
             onReorder={(photoPaths) => patch({ photoPaths })}
@@ -258,8 +281,6 @@ export default function PostItem() {
 
       {step === 2 && (
         <section className="space-y-3">
-          <p className="text-muted-foreground">{t('post.checklistHint')}</p>
-
           {gates.map((gate) => {
             const answer = draft.conditionChecklist[gate.key]
             return (

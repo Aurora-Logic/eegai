@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ShieldCheck } from 'lucide-react'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import { ClearedQueueScene, NoMatchesScene } from '@/components/illustrations/admin'
+import { EmptyState } from '@/components/shared/empty-state'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -65,9 +67,19 @@ export function VolunteerQueue() {
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : volunteers.length === 0 ? (
-        <p className="hairline rounded-sm bg-card p-8 text-center text-muted-foreground">
-          Nothing waiting here.
-        </p>
+        status === 'pending' ? (
+          <EmptyState
+            illustration={<ClearedQueueScene className="w-full" />}
+            title="The queue is clear"
+            hint="Everyone who offered to collect has been reviewed. New offers land here."
+          />
+        ) : (
+          <EmptyState
+            illustration={<NoMatchesScene className="w-full" />}
+            title="No volunteer is in that state"
+            hint="Try another filter, or All to see everyone on record."
+          />
+        )
       ) : (
         <RecordList>
           {volunteers.map((v) => (

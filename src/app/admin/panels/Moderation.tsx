@@ -6,6 +6,8 @@ import type { DonationStatus } from '@/lib/validation/donation'
 import { AddItemDialog } from './AddItemDialog'
 import { RemoveItem } from './RemoveItem'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
+import { ClearedQueueScene, NoMatchesScene } from '@/components/illustrations/admin'
+import { EmptyState } from '@/components/shared/empty-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -96,9 +98,23 @@ export function Moderation() {
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : rows.length === 0 ? (
-        <p className="hairline rounded-sm bg-card p-8 text-center text-muted-foreground">
-          Nothing matches that.
-        </p>
+        // With no filter and no search there is nothing to look elsewhere for —
+        // the wall is genuinely empty, and the useful thing is the way to fix
+        // that rather than an apology.
+        status === 'all' && committed === '' ? (
+          <EmptyState
+            illustration={<ClearedQueueScene className="w-full" />}
+            title="Nothing has been posted yet"
+            hint="Every item a donor puts on the wall shows up here, at every stage of its journey."
+            action={<AddItemDialog />}
+          />
+        ) : (
+          <EmptyState
+            illustration={<NoMatchesScene className="w-full" />}
+            title="Nothing matches that"
+            hint="Items are still there — this search just did not find them. Try a shorter word, or clear the filter."
+          />
+        )
       ) : (
         <RecordList columns={3}>
           {rows.map((row) => (
