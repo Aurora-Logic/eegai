@@ -327,6 +327,63 @@ begin
          null, 'provider timeout', 3
   from public.donations d where d.status = 'scheduled' limit 1;
 
-  raise notice 'seeded: 2 admins, 7 NGOs (5 verified, 2 pending), 4 volunteers, 6 donors, 30 donations';
+  -- -------------------------------------------------------------------------
+  -- Queues an admin is meant to clear.
+  --
+  -- Neither of these was seeded, so both panels in the People tab rendered as
+  -- nothing on a fresh database and an operator had no way to know they exist.
+  -- A queue you have never seen is a queue you do not check.
+  -- -------------------------------------------------------------------------
+
+  -- A donor who has since registered a trust. Whether this one can actually be
+  -- granted depends on what they have in flight — which is the point: the
+  -- refusal an operator meets here is the real guard, not a demo.
+  insert into public.role_change_requests (profile_id, requested_role, reason, created_at)
+  select p.id, 'ngo', 'We registered as a trust last month and want to receive instead of give.',
+         now() - interval '2 days'
+  from public.profiles p
+  where p.role = 'donor'
+  order by p.created_at
+  limit 1;
+
+  -- Someone who signed up to collect and meant to give. Chosen from the
+  -- volunteers with nothing in hand, so this one grants cleanly and the
+  -- request-clears-itself behaviour is visible without setting anything up.
+  insert into public.role_change_requests (profile_id, requested_role, reason, created_at)
+  select p.id, 'donor', null, now() - interval '5 hours'
+  from public.profiles p
+  join public.volunteers v on v.profile_id = p.id
+  where p.role = 'volunteer'
+    and not exists (
+      select 1 from public.pickups pk
+      where pk.volunteer_id = v.id and pk.delivered_at is null
+    )
+  order by p.created_at
+  limit 1;
+
+  -- One already dealt with, so the table is not only ever open rows.
+  insert into public.role_change_requests
+    (profile_id, requested_role, reason, created_at, handled_at, handled_by)
+  select p.id, 'volunteer', 'Changed my mind.', now() - interval '9 days',
+         now() - interval '8 days', (select id from public.profiles where role = 'admin' limit 1)
+  from public.profiles p
+  where p.role = 'donor'
+  order by p.created_at desc
+  limit 1;
+
+  -- And one person locked out, for the queue directly beneath it. Explicitly
+  -- somebody who is not already in the queue above: the seeded donors share a
+  -- created_at, so ordering by it and taking an offset is not stable and put the
+  -- same name in both panels.
+  insert into public.password_reset_requests (phone, note, created_at)
+  select p.phone, 'New phone, cannot remember the password.', now() - interval '6 hours'
+  from public.profiles p
+  where p.role = 'donor'
+    and p.phone is not null
+    and not exists (select 1 from public.role_change_requests r where r.profile_id = p.id)
+  order by p.phone
+  limit 1;
+
+  raise notice 'seeded: 2 admins, 7 NGOs (5 verified, 2 pending), 4 volunteers, 6 donors, 30 donations, 3 waiting on an admin';
 end
 $seed$;
