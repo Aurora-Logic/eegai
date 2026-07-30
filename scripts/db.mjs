@@ -63,7 +63,25 @@ if (!dbUser && process.env.DATABASE_URL) {
 
 const DB_NAME = process.env.PGDATABASE_APP ?? process.env.PGDATABASE
 const TEST_DB_NAME = `${DB_NAME}_test`
-const APP_ROLE = process.env.APP_ROLE ?? dbUser ?? 'eegai_app'
+/**
+ * The low-privilege role the API connects as, and the role every migration
+ * grants to.
+ *
+ * Deliberately NOT derived from PGUSER. PGUSER is who *this script* connects as,
+ * and it has to be a superuser to create and drop databases. Falling back to it
+ * meant two things went wrong at once and neither said so:
+ *
+ *   1. The migration runner rewrites `eegai_app` to APP_ROLE, so every
+ *      `grant ... to eegai_app` granted the superuser instead and the API role
+ *      was left with no access to schema `app` at all.
+ *   2. With .env.example suggesting PGUSER=postgres, the API would then connect
+ *      as a superuser — and a superuser bypasses row-level security. Every
+ *      policy in db/migrations would silently stop applying, which is the whole
+ *      security model of this product.
+ *
+ * Override explicitly with APP_ROLE if a deployment genuinely uses another name.
+ */
+const APP_ROLE = process.env.APP_ROLE ?? 'eegai_app'
 const APP_PASSWORD = process.env.APP_DB_PASSWORD ?? process.env.PGPASSWORD
 const MIGRATIONS_DIR = 'db/migrations'
 
@@ -102,9 +120,32 @@ async function connectMaintenance() {
   return connect('postgres')
 }
 
+/**
+ * A superuser ignores row-level security entirely. If the API ever connects as
+ * one, every policy in db/migrations stops applying and nothing anywhere
+ * reports it — the app keeps working and simply shows people each other's data.
+ * Cheap to check, so it is checked on every run rather than trusted.
+ */
+async function assertAppRoleIsNotSuperuser(admin) {
+  const { rows } = await admin.query(
+    'select rolsuper, rolbypassrls from pg_roles where rolname = $1',
+    [APP_ROLE],
+  )
+  const role = rows[0]
+  if (role && (role.rolsuper || role.rolbypassrls)) {
+    console.error(
+      `\n  Refusing to continue: "${APP_ROLE}" is a superuser or has BYPASSRLS.\n` +
+        `  The API connects as this role, and such a role ignores every RLS policy.\n` +
+        `  Set APP_ROLE to a dedicated low-privilege role (default: eegai_app).\n`,
+    )
+    process.exit(1)
+  }
+}
+
 async function setup() {
   const admin = await connectMaintenance()
   try {
+    await assertAppRoleIsNotSuperuser(admin)
     const { rows } = await admin.query('select 1 from pg_roles where rolname = $1', [APP_ROLE])
     if (rows.length === 0) {
       // Identifiers cannot be parameterised; APP_ROLE is a constant, and the
@@ -212,6 +253,7 @@ async function reset(database = DB_NAME) {
       `select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()`,
       [database],
     )
+    await assertAppRoleIsNotSuperuser(admin)
     await admin.query(`drop database if exists ${ident(database)}`)
     await admin.query(`create database ${ident(database)}`)
     console.log(`  recreated ${database}`)
