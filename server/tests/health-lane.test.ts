@@ -20,8 +20,10 @@ import { adminPool, asActor, closePools, loadFixtures } from './helpers.ts'
  */
 let institution: { userId: string; ngoId: string }
 let nearbyDonor: { userId: string; profileId: string }
-let farDonor: { userId: string }
-let hairDonor: { userId: string }
+let farDonor: { userId: string; profileId: string }
+let hairDonor: { userId: string; profileId: string }
+let farProfileId: string
+let hairProfileId: string
 let unverified: { userId: string }
 let requestId: string
 
@@ -73,6 +75,8 @@ beforeAll(async () => {
   nearbyDonor = await makeDonor(nextPhone(), 11.0175, 76.9562, ['blood'])
   farDonor = await makeDonor(nextPhone(), 11.9, 77.9, ['blood'])
   hairDonor = await makeDonor(nextPhone(), 11.0176, 76.9563, ['hair'])
+  farProfileId = farDonor.profileId
+  hairProfileId = hairDonor.profileId
 })
 
 afterAll(closePools)
@@ -87,9 +91,23 @@ describe('rule 3 — only verified institutions can post', () => {
     })
 
     requestId = row.request_id
-    // The far donor is 100km away and the hair donor offers something else, so
-    // exactly one person should have been told.
-    expect(row.notified).toBe(1)
+
+    // Who was told, not how many. An exact count depends on every donor any
+    // earlier run left in the database, so it fails for reasons that have
+    // nothing to do with the rule — the rule is that the far donor and the
+    // hair donor are not on the list.
+    const told = await adminPool.query(
+      `select p.id from public.notifications n
+       join public.profiles p on p.id = n.profile_id
+       where n.template_key = 'health_request_nearby'
+         and n.payload->>'request_id' = $1`,
+      [requestId],
+    )
+    const ids = told.rows.map((r) => r.id)
+
+    expect(ids).toContain(nearbyDonor.profileId)
+    expect(ids).not.toContain(farProfileId)
+    expect(ids).not.toContain(hairProfileId)
   })
 
   it('refuses an organisation that is not approved for the category', async () => {
