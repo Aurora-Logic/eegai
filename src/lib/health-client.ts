@@ -61,6 +61,14 @@ export interface OwnRequest {
   closed_at: string | null
 }
 
+/** Whether this institution may post, and why not if it may not. */
+export interface Standing {
+  verification_status: string
+  health_categories: string[]
+  visit_instructions: string | null
+  has_location: boolean
+}
+
 export interface Responder {
   profile_id: string
   full_name: string
@@ -85,7 +93,8 @@ export const healthApi = {
 
   postRequest: (body: unknown) =>
     api.post<{ id: string; notified: number }>('/needs/requests', body),
-  myRequests: () => api.get<{ requests: OwnRequest[] }>('/needs/requests/mine'),
+  myRequests: () =>
+    api.get<{ requests: OwnRequest[]; standing: Standing | null }>('/needs/requests/mine'),
   responders: (id: string) =>
     api.get<{ responders: Responder[] }>(`/needs/requests/${id}/responders`),
   close: (id: string, status: string) => api.post(`/needs/requests/${id}/close`, { status }),

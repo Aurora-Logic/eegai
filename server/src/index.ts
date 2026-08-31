@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth.ts'
 import { adminRoutes } from './routes/admin.ts'
 import { acknowledgementRoutes } from './routes/acknowledgements.ts'
 import { donationRoutes } from './routes/donations.ts'
+import { inboxRoutes } from './routes/inbox.ts'
 import { needRoutes } from './routes/needs.ts'
 import { legalRoutes } from './routes/legal.ts'
 import { pickupRoutes } from './routes/pickups.ts'
@@ -42,6 +43,7 @@ app.get('/api/health', async (c) => {
 app.route('/api/auth', authRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/donations', donationRoutes)
+app.route('/api/inbox', inboxRoutes)
 app.route('/api/needs', needRoutes)
 app.route('/api/legal', legalRoutes)
 app.route('/api/acknowledgements', acknowledgementRoutes)

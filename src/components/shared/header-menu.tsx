@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CircleHelp, Download, LogOut, Moon, Sun, UserRound } from 'lucide-react'
+import { Bell, CircleHelp, Download, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -95,6 +95,12 @@ export function HeaderMenu() {
             <Link to="/profile">
               <UserRound aria-hidden />
               {t('menu.profile')}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="min-h-11 gap-2">
+            <Link to="/inbox">
+              <Bell aria-hidden />
+              Alerts
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="min-h-11 gap-2">

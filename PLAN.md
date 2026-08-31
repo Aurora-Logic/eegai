@@ -459,10 +459,41 @@ but not yet a user: the sign-up form and the dev role switcher.
 **Still the goods wall's:** the landing hero illustration. Replacing it needs a
 drawing rather than a rearrangement, and a bad one is worse than a dated one.
 
-**Not built yet:** no real push or SMS delivery (rows land in `notifications`
-and the dispatcher is still the goods lane's), no admin screen for the account
-deletion queue, and no institution-side onboarding for health categories — an
-admin grants them from the Organisations tab.
+### The admin panel, and the rest of §4
+
+Every admin must-have in the brief now has a screen:
+
+| Brief §4                    | Where                                                              |
+| --------------------------- | ------------------------------------------------------------------ |
+| approve/reject institutions | Organisations tab; health categories granted per organisation      |
+| moderate requests           | **Requests** tab — every request, filterable, take one down        |
+| handle complaints           | **Complaints** tab — closing one needs a note saying what was done |
+| basic analytics             | Overview has its own health block                                  |
+| account controls            | deletion queue at the top of People, beside the other two          |
+
+Two things the admin deliberately cannot do: post a request, or see who
+answered one. Both belong to the institution, and brief §5 keeps donor
+identities out of anywhere they are not needed.
+
+`reports` is one table for both lanes. A complaint about a hospital that never
+turned up and one about an item that arrived ruined are the same shape of thing
+— somebody was let down and a human has to look — and two tables would mean two
+queues with one of them going unread. Resolving requires a sentence, enforced by
+the database: a complaints process that can be cleared silently is not one.
+
+An institution that cannot post is told which of the three reasons applies —
+not verified, not approved for a category, or no location on file — instead of
+being given a button that fails. That is brief §7's Verification Status screen,
+put where somebody would look for it.
+
+`notifications` gained `read_at` and there is an inbox at `/inbox` for every
+role. Until then the proximity engine wrote alerts nobody could read: correct,
+and silent.
+
+**Still not built:** real push or SMS delivery. Rows are written with the right
+recipients and the inbox shows them, but nothing leaves the building without a
+provider — a donor still has to open the app. That is the one gap that changes
+how well §2's flow actually works.
 
 ## 11. Open questions to resolve before M5
 

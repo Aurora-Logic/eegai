@@ -25,6 +25,7 @@ let hairDonor: { userId: string; profileId: string }
 let farProfileId: string
 let hairProfileId: string
 let unverified: { userId: string }
+let admin: { userId: string }
 let requestId: string
 
 const AT_HOSPITAL = { lat: 11.0168, lng: 76.9558 }
@@ -71,6 +72,7 @@ beforeAll(async () => {
 
   // A second organisation that is NOT approved for any health category.
   unverified = { userId: f.ngos[1]!.userId }
+  admin = { userId: f.admins[0]!.userId }
 
   nearbyDonor = await makeDonor(nextPhone(), 11.0175, 76.9562, ['blood'])
   farDonor = await makeDonor(nextPhone(), 11.9, 77.9, ['blood'])
@@ -266,5 +268,92 @@ describe('rule 4 — consent is explicit and withdrawable', () => {
       return rows
     })
     expect(responders).toHaveLength(1)
+  })
+})
+
+describe('the admin side of the lane', () => {
+  it('lets an admin see and take down any request, and nobody else', async () => {
+    const seen = await asActor({ userId: admin.userId, role: 'admin' }, async (tx) => {
+      const { rows } = await tx.query('select id from public.health_requests where id = $1', [
+        requestId,
+      ])
+      return rows
+    })
+    expect(seen).toHaveLength(1)
+
+    // A different institution cannot close somebody else's request, even though
+    // the function accepts an id — the check is inside it, not in the route.
+    await expect(
+      asActor({ userId: unverified.userId, role: 'ngo' }, (tx) =>
+        tx.query("select app.close_health_request($1, 'cancelled')", [requestId]),
+      ),
+    ).rejects.toThrow(/not yours/i)
+
+    await asActor({ userId: admin.userId, role: 'admin' }, (tx) =>
+      tx.query("select app.close_health_request($1, 'cancelled')", [requestId]),
+    )
+
+    const after = await adminPool.query('select status from public.health_requests where id = $1', [
+      requestId,
+    ])
+    expect(after.rows[0].status).toBe('cancelled')
+  })
+
+  it('keeps one donor from reading another donor complaint', async () => {
+    await asActor({ userId: nearbyDonor.userId, role: 'donor' }, (tx) =>
+      tx.query("select app.file_report('ngo', null, $1)", ['They were closed when I arrived.']),
+    )
+
+    const mine = await asActor({ userId: nearbyDonor.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query('select id from public.reports')
+      return rows
+    })
+    expect(mine.length).toBeGreaterThanOrEqual(1)
+
+    const theirs = await asActor({ userId: hairDonor.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query('select id from public.reports')
+      return rows
+    })
+    const mineIds = new Set(mine.map((r) => r.id))
+    expect(theirs.filter((r) => mineIds.has(r.id))).toHaveLength(0)
+  })
+
+  it('refuses to close a complaint without saying what was done', async () => {
+    const { rows } = await adminPool.query(
+      `insert into public.reports (reporter_id, subject_type, detail)
+       values ($1, 'ngo', 'Nobody answered the phone.') returning id`,
+      [nearbyDonor.profileId],
+    )
+
+    await expect(
+      asActor({ userId: admin.userId, role: 'admin' }, (tx) =>
+        tx.query("select app.resolve_report($1, 'resolved', '')", [rows[0].id]),
+      ),
+    ).rejects.toThrow(/what was done/i)
+
+    // And an ordinary donor cannot resolve one at all.
+    await expect(
+      asActor({ userId: nearbyDonor.userId, role: 'donor' }, (tx) =>
+        tx.query("select app.resolve_report($1, 'dismissed', 'nothing')", [rows[0].id]),
+      ),
+    ).rejects.toThrow(/only an admin/i)
+  })
+
+  it('marks only the caller notifications as read', async () => {
+    await adminPool.query(
+      `insert into public.notifications (profile_id, channel, template_key, payload)
+       values ($1, 'push', 'health_request_nearby', '{}'), ($2, 'push', 'health_request_nearby', '{}')`,
+      [nearbyDonor.profileId, hairDonor.profileId],
+    )
+
+    await asActor({ userId: nearbyDonor.userId, role: 'donor' }, (tx) =>
+      tx.query('select app.mark_notifications_read()'),
+    )
+
+    const theirs = await adminPool.query(
+      'select count(*)::int as unread from public.notifications where profile_id = $1 and read_at is null',
+      [hairDonor.profileId],
+    )
+    expect(theirs.rows[0].unread).toBeGreaterThan(0)
   })
 })

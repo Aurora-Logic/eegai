@@ -39,6 +39,7 @@ const Guide = lazy(() => import('./app/Guide'))
 const DonorNeeds = lazy(() => import('./app/health/DonorNeeds'))
 const DonorResponses = lazy(() => import('./app/health/DonorResponses'))
 const HealthSettings = lazy(() => import('./app/health/HealthSettings'))
+const Inbox = lazy(() => import('./app/health/Inbox'))
 const InstitutionNeeds = lazy(() => import('./app/health/InstitutionNeeds'))
 // Lazy for weight, not for behaviour: it renders only for a signed-in user, and
 // eager it dragged the whole manual into the first paint of the landing page.
@@ -161,6 +162,14 @@ export default function App() {
             element={
               <ProtectedRoute allow={['donor']}>
                 <HealthSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inbox"
+            element={
+              <ProtectedRoute allow={['donor', 'ngo', 'volunteer', 'admin']}>
+                <Inbox />
               </ProtectedRoute>
             }
           />

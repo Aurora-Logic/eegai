@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MapPin, Phone } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { EmptyState } from '@/components/shared/empty-state'
+import { ReportDialog } from '@/components/shared/report-dialog'
 import { Disclosure } from '@/components/health/disclosure'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -86,17 +87,26 @@ export default function DonorResponses() {
 
               {/* Changing your mind is better than not turning up, so it is a
                   plain button rather than something to hunt for. */}
-              {r.status === 'open' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  disabled={withdraw.isPending}
-                  onClick={() => withdraw.mutate(r.request_id)}
-                >
-                  I can no longer make it
-                </Button>
-              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {r.status === 'open' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={withdraw.isPending}
+                    onClick={() => withdraw.mutate(r.request_id)}
+                  >
+                    I can no longer make it
+                  </Button>
+                ) : null}
+                {/* The moment a complaint is most likely: somebody travelled to
+                    a hospital and it did not go as agreed. */}
+                <ReportDialog
+                  subjectType="health_request"
+                  subjectId={r.request_id}
+                  about={r.institution}
+                  label="Something went wrong"
+                />
+              </div>
             </li>
           ))}
         </ul>

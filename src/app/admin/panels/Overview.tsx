@@ -17,6 +17,15 @@ interface Metrics {
   donors: number
   notifications_failed: number
   median_hours_to_complete: string | null
+  institutions: number
+  needs_total: number
+  needs_open: number
+  needs_fulfilled: number
+  offers: number
+  consented_donors: number
+  needs_unanswered: number
+  reports_open: number
+  deletions_open: number
 }
 
 function Tile({
@@ -86,7 +95,42 @@ export function Overview() {
         />
       </div>
 
+      {/* The health lane asks a different question from the goods wall. There,
+          the number that matters is whether a thing arrived; here it is whether
+          anybody answered — so an unanswered request is the tile with the
+          colour on it. */}
+      <div>
+        <h2 className="mb-3 font-display text-display-sm">Blood, hair and breast milk</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Tile
+            label="Requests with no answer"
+            value={m.needs_unanswered}
+            hint={`of ${m.needs_total} ever posted`}
+            tone={m.needs_unanswered > 0 ? 'warn' : 'good'}
+          />
+          <Tile label="Open right now" value={m.needs_open} hint={`${m.needs_fulfilled} filled`} />
+          <Tile label="People who said yes" value={m.offers} hint="not withdrawn" />
+          <Tile
+            label="Donors signed up"
+            value={m.consented_donors}
+            hint={`${m.institutions} institutions approved`}
+          />
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Tile
+          label="Complaints open"
+          value={m.reports_open}
+          hint="somebody is waiting to hear back"
+          tone={m.reports_open > 0 ? 'warn' : 'default'}
+        />
+        <Tile
+          label="Deletion requests"
+          value={m.deletions_open}
+          hint="each one expects a phone call"
+          tone={m.deletions_open > 0 ? 'warn' : 'default'}
+        />
         <Tile
           label="Organisations waiting"
           value={m.ngos_pending}
@@ -99,6 +143,9 @@ export function Overview() {
           hint={`${m.volunteers_verified} verified`}
           tone={m.volunteers_pending > 0 ? 'warn' : 'default'}
         />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Donors" value={m.donors} />
         <Tile
           label="Failed messages"

@@ -232,9 +232,27 @@ needRoutes.post('/requests', async (c) => {
   }
 })
 
-/** This institution's own requests, active and past. */
+/**
+ * This institution's own requests, active and past — plus its own standing.
+ *
+ * The standing comes back with the list because the screen has to be able to
+ * say *why* somebody cannot post: not verified yet, or verified but not
+ * approved for any category. A "Post a request" button that fails with an
+ * error is a worse answer than a sentence.
+ */
 needRoutes.get('/requests/mine', async (c) => {
   const actor = actorOf(c)
+
+  const standing = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select n.verification_status, n.health_categories::text[] as health_categories,
+              n.visit_instructions, (n.lat is not null) as has_location
+       from public.ngos n
+       join public.profiles p on p.id = n.profile_id
+       where p.user_id = app.current_user_id()`,
+    )
+    return rows[0] ?? null
+  })
 
   const requests = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
@@ -250,7 +268,7 @@ needRoutes.get('/requests/mine', async (c) => {
     return rows
   })
 
-  return c.json({ requests })
+  return c.json({ requests, standing })
 })
 
 /**

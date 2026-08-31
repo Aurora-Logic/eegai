@@ -58,24 +58,59 @@ export default function InstitutionNeeds() {
   const open = requests.filter((r) => r.status === 'open')
   const past = requests.filter((r) => r.status !== 'open')
 
+  const standing = data?.standing ?? null
+  // Brief §5: only verified institutions can post, and only in categories an
+  // admin approved. Saying which of those is missing beats a button that fails.
+  const blocker = !standing
+    ? null
+    : standing.verification_status !== 'verified'
+      ? {
+          title: 'Your organisation is not verified yet',
+          body: 'An administrator is checking your papers. You will be able to post as soon as that is done — nothing is needed from you.',
+        }
+      : standing.health_categories.length === 0
+        ? {
+            title: 'Not approved for health donations',
+            body: 'Blood, hair and breast milk requests are granted per organisation by an administrator. Ring us if you are a hospital, blood centre or milk bank and this looks wrong.',
+          }
+        : !standing.has_location
+          ? {
+              title: 'Your address has no location on it',
+              body: 'We work out who is nearby from your location, so a request cannot go out without one. An administrator can set it.',
+            }
+          : null
+
   return (
     <AppShell
       title="Donation requests"
       subtitle="Ask the donors near you. They come to you."
       actions={
-        <Button onClick={() => setPosting(true)}>
-          <Megaphone aria-hidden /> Post a request
-        </Button>
+        blocker ? null : (
+          <Button onClick={() => setPosting(true)}>
+            <Megaphone aria-hidden /> Post a request
+          </Button>
+        )
       }
     >
+      {blocker ? (
+        <div className="hairline mb-6 rounded-sm border-primary/40 bg-card p-4">
+          <p className="font-display text-display-sm">{blocker.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{blocker.body}</p>
+        </div>
+      ) : null}
+
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : requests.length === 0 ? (
-        <EmptyState
-          title="You have not asked for anything yet"
-          hint="Post a request and every consenting donor nearby who offers that category is told. You will see how many."
-          action={<Button onClick={() => setPosting(true)}>Post a request</Button>}
-        />
+        // Nothing when blocked: the panel above already says why there is
+        // nothing here, and an invitation to post underneath it contradicts it.
+        blocker ? null : (
+          <EmptyState
+            title="You have not asked for anything yet"
+            hint="Post a request and every consenting donor nearby who offers that category is told. You will see how many."
+            action={<Button onClick={() => setPosting(true)}>Post a request</Button>}
+          />
+        )
       ) : (
         <div className="space-y-6">
           <Section title="Open" requests={open} onView={setViewing} />

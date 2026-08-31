@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CircleHelp, LogOut, Moon, Sun, UserRound } from 'lucide-react'
+import { Bell, CircleHelp, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { BackLink } from '@/components/shared/back-link'
@@ -52,6 +52,18 @@ export function AppShell({
           </div>
 
           <div className="hidden items-center gap-1 sm:flex">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="min-h-11"
+              aria-label="Alerts"
+              title="Alerts"
+            >
+              <RouterLink to="/inbox">
+                <Bell aria-hidden />
+              </RouterLink>
+            </Button>
             <Button
               asChild
               variant="ghost"

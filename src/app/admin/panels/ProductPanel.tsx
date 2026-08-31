@@ -144,6 +144,22 @@ export function ProductPanel() {
               'Removing an item cancels it. Disabling an account stops sign-in. The trail survives both.',
             ],
             [
+              'Two lanes, one login',
+              'Blood, hair and breast milk are a coordination layer — the donation happens at the institution and this app never touches it. Clothes and books are the wall, where a volunteer moves things. Nothing crosses between them.',
+            ],
+            [
+              'A donor location never reaches an institution',
+              'Matching happens inside the database and returns a count. An institution gets a name and a phone number when somebody says yes, and nothing else — the schema cannot give it a location.',
+            ],
+            [
+              'Only approved institutions can ask',
+              'An admin grants blood, hair or milk per organisation from the Organisations tab. Nobody can grant it to themselves.',
+            ],
+            [
+              'No medical judgements anywhere',
+              'Blood groups filter alerts so an O- request does not page every A+ donor. Whether somebody can actually donate is decided at the institution, in person.',
+            ],
+            [
               'Roles are asked for, never taken',
               'Anyone can request a different role from their own profile; an admin grants it, and admin is never askable.',
             ],

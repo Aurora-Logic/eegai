@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatRelative } from '@/lib/dates'
-import { Ban, KeyRound, PhoneCall, RotateCcw, UserCog, UserRoundCog } from 'lucide-react'
+import { Ban, KeyRound, PhoneCall, RotateCcw, Trash2, UserCog, UserRoundCog } from 'lucide-react'
 import { CreateAccountDialog } from './CreateAccountDialog'
 import { Field, RecordCard, RecordList } from '@/components/admin/record-card'
 import {
@@ -48,6 +48,7 @@ export function People() {
 
   return (
     <section className="space-y-4">
+      <DeletionQueue />
       <RoleQueue />
       <ResetQueue />
 
@@ -528,6 +529,94 @@ function RoleQueue() {
               onClick={() => dismiss.mutate(request.id)}
             >
               Dismiss
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+interface DeletionRequest {
+  id: string
+  profile_id: string
+  full_name: string
+  phone: string | null
+  role: string
+  reason: string | null
+  created_at: string
+  is_active: boolean
+}
+
+/**
+ * People who asked to be deleted.
+ *
+ * The app tells them somebody will call, so this queue is that promise. It sits
+ * at the top of People with the other two for the same reason: a queue nobody
+ * walks past is a queue nobody clears, and it disappears when it is empty.
+ *
+ * Marking one done does not delete anything. Donations already made are
+ * referenced by audit rows that exist to settle disputes, so the honest action
+ * is a phone call and a record that it happened.
+ */
+function DeletionQueue() {
+  const queryClient = useQueryClient()
+
+  const { data } = useQuery({
+    queryKey: ['admin', 'deletion-requests'],
+    queryFn: () => api.get<{ requests: DeletionRequest[] }>('/admin/deletion-requests'),
+  })
+
+  const handle = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/deletion-requests/${id}/handle`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+
+  const requests = data?.requests ?? []
+  if (requests.length === 0) return null
+
+  return (
+    <section className="hairline rounded-sm border-destructive/40 bg-card p-4">
+      <h2 className="flex items-center gap-2 font-display text-display-sm">
+        <Trash2 className="size-4 text-destructive" aria-hidden />
+        {requests.length === 1
+          ? 'Someone asked to be deleted'
+          : `${requests.length} people asked to be deleted`}
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        They were told somebody would call. Ring them, agree what happens, then clear it — marking
+        it done removes nothing on its own.
+      </p>
+
+      <ul className="mt-3 space-y-2">
+        {requests.map((request) => (
+          <li
+            key={request.id}
+            className="hairline flex flex-wrap items-center justify-between gap-2 rounded-sm p-3 text-sm"
+          >
+            <span className="min-w-0">
+              <span className="block font-medium">
+                {request.full_name}
+                {!request.is_active ? (
+                  <span className="ml-2 text-xs text-muted-foreground">already turned off</span>
+                ) : null}
+              </span>
+              <span className="block font-mono text-xs text-muted-foreground">
+                {request.phone ?? '—'} · {request.role} · asked {formatRelative(request.created_at)}
+              </span>
+              {request.reason ? (
+                <span className="mt-1 block text-muted-foreground">“{request.reason}”</span>
+              ) : null}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-11"
+              disabled={handle.isPending}
+              onClick={() => handle.mutate(request.id)}
+            >
+              Done
             </Button>
           </li>
         ))}

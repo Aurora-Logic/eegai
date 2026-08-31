@@ -1,5 +1,15 @@
 import type { LucideIcon } from 'lucide-react'
-import { CheckCheck, KeyRound, PackageCheck, ShieldCheck, Truck, Upload } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  Droplet,
+  HeartHandshake,
+  KeyRound,
+  PackageCheck,
+  ShieldCheck,
+  Truck,
+  Upload,
+} from 'lucide-react'
 import type { Role } from '@/lib/state-machine'
 
 /**
@@ -20,6 +30,22 @@ export interface GuideStep {
 
 export const GUIDE: Record<Role, GuideStep[]> = {
   donor: [
+    // The health lane leads, because that is what the app opens on.
+    {
+      icon: Droplet,
+      title: 'Say what you can give',
+      body: 'Blood, hair or breast milk, and the part of Coimbatore you are in. Your exact location is never shown to anybody — it is only used to work out what is near you.',
+    },
+    {
+      icon: Bell,
+      title: 'A verified institution asks',
+      body: 'Only hospitals, blood centres and milk banks we have checked, and only within the distance they chose. Turn alerts off any time and you can still look.',
+    },
+    {
+      icon: HeartHandshake,
+      title: 'Say yes, then go there',
+      body: 'You get the address and a number to ring. The donation happens at the institution, with them — this app never handles it and never decides whether you are eligible.',
+    },
     {
       icon: Upload,
       title: 'Photograph what you are giving',
@@ -47,6 +73,16 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     },
   ],
   ngo: [
+    {
+      icon: Droplet,
+      title: 'Ask for blood, hair or breast milk',
+      body: 'If an administrator has approved your institution for a category, you can post what you need. Everyone nearby who offers it and has alerts on is told — you are given the number told, never who they are.',
+    },
+    {
+      icon: HeartHandshake,
+      title: 'Ring the people who said yes',
+      body: 'You get a name and a phone number when somebody offers, and nothing else. Where they live is not something this app will ever show you.',
+    },
     {
       icon: ShieldCheck,
       title: 'Get verified first',

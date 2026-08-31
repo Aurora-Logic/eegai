@@ -35,6 +35,21 @@ adminRoutes.get('/metrics', async (c) => {
         (select count(*) from public.volunteers where verification_status = 'verified')::int as volunteers_verified,
         (select count(*) from public.profiles where role = 'donor')::int as donors,
         (select count(*) from public.notifications where sent_at is null and error is not null)::int as notifications_failed,
+        -- The health lane. Counted separately because it is a different
+        -- product with a different question: not "did the thing arrive" but
+        -- "did anybody answer".
+        (select count(*) from public.ngos where health_categories <> '{}')::int as institutions,
+        (select count(*) from public.health_requests)::int as needs_total,
+        (select count(*) from public.health_requests where status = 'open')::int as needs_open,
+        (select count(*) from public.health_requests where status = 'fulfilled')::int as needs_fulfilled,
+        (select count(*) from public.health_responses where withdrawn_at is null)::int as offers,
+        (select count(*) from public.donor_health_profiles
+          where consented_at is not null and consent_withdrawn_at is null)::int as consented_donors,
+        -- A request nobody answered is the number that should worry somebody.
+        (select count(*) from public.health_requests hr
+          where hr.status <> 'cancelled' and hr.responses_count = 0)::int as needs_unanswered,
+        (select count(*) from public.reports where status in ('open','reviewing'))::int as reports_open,
+        (select count(*) from public.account_deletion_requests where handled_at is null)::int as deletions_open,
         -- Median hours from posting to acknowledgement, over completed items.
         (select round(
             percentile_cont(0.5) within group (
@@ -444,6 +459,155 @@ adminRoutes.patch('/ngos/:id', async (c) => {
 
   log.info('ngo updated', { ngo_id: updated.id, fields: entries.map(([k]) => k) })
   return c.json({ ngo: updated })
+})
+
+// ---------------------------------------------------------------------------
+// The health lane (migration 024/025)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every health request, for moderation. Brief §4: "moderate requests".
+ *
+ * Reads the denormalised institution name rather than joining `ngos`, for the
+ * same reason the donor wall does — and because it keeps working for a request
+ * whose institution has since been suspended, which is exactly when somebody
+ * is likely to be looking.
+ */
+adminRoutes.get('/health-requests', async (c) => {
+  const actor = actorOf(c)
+  const status = c.req.query('status') ?? 'open'
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select hr.id, hr.institution_name, hr.category, hr.blood_group, hr.urgency,
+              hr.donors_needed, hr.responses_count, hr.radius_km, hr.status,
+              hr.note, hr.pincode, hr.created_at, hr.expires_at, hr.closed_at,
+              n.verification_status as institution_status
+       from public.health_requests hr
+       left join public.ngos n on n.id = hr.ngo_id
+       where ($1 = 'all' or hr.status = $1::public.health_request_status)
+       order by hr.created_at desc
+       limit 200`,
+      [status],
+    )
+    return rows
+  })
+
+  return c.json({ requests: rows })
+})
+
+/** Take one down. The function permits an owner or an admin; this is the admin door. */
+adminRoutes.post('/health-requests/:id/close', async (c) => {
+  const actor = actorOf(c)
+  const status = (await c.req.json().catch(() => null))?.status
+
+  if (!['fulfilled', 'closed', 'cancelled'].includes(status)) {
+    return c.json({ error: 'Close it as fulfilled, closed or cancelled.' }, 400)
+  }
+
+  await withActor(actor, (tx) =>
+    tx.query('select app.close_health_request($1, $2::public.health_request_status)', [
+      c.req.param('id'),
+      status,
+    ]),
+  )
+
+  log.info('health request closed by admin', { id: c.req.param('id'), status })
+  return c.json({ ok: true })
+})
+
+/**
+ * People who asked to be deleted.
+ *
+ * The donor is told somebody will call them, so this queue is the promise. It
+ * was recorded and unreadable until now, which is the worst of both.
+ */
+adminRoutes.get('/deletion-requests', async (c) => {
+  const actor = actorOf(c)
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select d.id, d.reason, d.created_at, d.handled_at,
+              p.id as profile_id, p.full_name, p.phone, p.role, p.is_active
+       from public.account_deletion_requests d
+       join public.profiles p on p.id = d.profile_id
+       where d.handled_at is null
+       order by d.created_at`,
+    )
+    return rows
+  })
+
+  return c.json({ requests: rows })
+})
+
+adminRoutes.post('/deletion-requests/:id/handle', async (c) => {
+  const actor = actorOf(c)
+
+  const handled = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `update public.account_deletion_requests
+       set handled_at = now(),
+           handled_by = (select id from public.profiles where user_id = app.current_user_id())
+       where id = $1 and handled_at is null
+       returning id`,
+      [c.req.param('id')],
+    )
+    return rows.length > 0
+  })
+
+  if (!handled) return c.json({ error: 'That one is already dealt with.' }, 409)
+  return c.json({ ok: true })
+})
+
+/** Complaints. Brief §4: "handle complaints". */
+adminRoutes.get('/reports', async (c) => {
+  const actor = actorOf(c)
+  const status = c.req.query('status') ?? 'open'
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select r.id, r.subject_type, r.subject_id, r.detail, r.status, r.resolution,
+              r.created_at, r.handled_at,
+              p.full_name as reporter_name, p.phone as reporter_phone, p.role as reporter_role
+       from public.reports r
+       join public.profiles p on p.id = r.reporter_id
+       where ($1 = 'all' or r.status = $1::public.report_status)
+       order by r.created_at desc
+       limit 200`,
+      [status],
+    )
+    return rows
+  })
+
+  return c.json({ reports: rows })
+})
+
+adminRoutes.post('/reports/:id/resolve', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const status = body?.status
+  const resolution = typeof body?.resolution === 'string' ? body.resolution.trim() : ''
+
+  if (!['open', 'reviewing', 'resolved', 'dismissed'].includes(status)) {
+    return c.json({ error: 'Pick open, reviewing, resolved or dismissed.' }, 400)
+  }
+
+  try {
+    await withActor(actor, (tx) =>
+      tx.query('select app.resolve_report($1, $2::public.report_status, $3)', [
+        c.req.param('id'),
+        status,
+        resolution || null,
+      ]),
+    )
+    return c.json({ ok: true })
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : ''
+    // Closing one without saying why leaves the person who complained with
+    // nothing, so the database refuses it and the message is passed through.
+    if (/what was done/.test(raw)) return c.json({ error: raw.replace(/^.*?:\s*/, '') }, 400)
+    throw error
+  }
 })
 
 const volunteerPatchSchema = z.object({

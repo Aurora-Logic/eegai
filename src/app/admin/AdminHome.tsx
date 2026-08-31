@@ -6,6 +6,8 @@ import { Overview } from './panels/Overview'
 import { NgoQueue } from './panels/NgoQueue'
 import { VolunteerQueue } from './panels/VolunteerQueue'
 import { Moderation } from './panels/Moderation'
+import { NeedsPanel } from './panels/NeedsPanel'
+import { ReportsPanel } from './panels/ReportsPanel'
 import { People } from './panels/People'
 import { LegalPanel } from './panels/LegalPanel'
 import { ProductPanel } from './panels/ProductPanel'
@@ -15,6 +17,10 @@ const TABS = [
   { value: 'ngos', label: 'Organisations' },
   { value: 'volunteers', label: 'Volunteers' },
   { value: 'items', label: 'Items' },
+  // The health lane's own queue. Named for what an institution posts rather
+  // than for the lane, because that is the word the rest of the product uses.
+  { value: 'needs', label: 'Requests' },
+  { value: 'reports', label: 'Complaints' },
   { value: 'people', label: 'People' },
   { value: 'legal', label: 'Legal' },
   { value: 'product', label: 'Product' },
@@ -57,6 +63,12 @@ export default function AdminHome() {
         </TabsContent>
         <TabsContent value="items">
           <Moderation />
+        </TabsContent>
+        <TabsContent value="needs">
+          <NeedsPanel />
+        </TabsContent>
+        <TabsContent value="reports">
+          <ReportsPanel />
         </TabsContent>
         <TabsContent value="people">
           <People />
