@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { AppShell } from '@/components/shared/app-shell'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/hooks/use-session'
 import { t } from '@/lib/i18n'
+import { FlowDiagram } from '@/components/shared/flow-diagram'
+import { flowsFor } from '@/lib/flows'
 import { GUIDE } from '@/lib/guide'
 import type { Role } from '@/lib/state-machine'
 
@@ -29,24 +30,29 @@ export default function Guide() {
       title={t('guide.title')}
       subtitle={`For ${role === 'ngo' ? 'organisations' : `${role}s`}.`}
     >
-      <ol className="space-y-3">
-        {steps.map((step, index) => (
+      {/* The shape of the thing first, then the detail. "How does this work"
+          is a question about order, and a numbered list of features never
+          answers it — so the diagram leads and the steps explain. */}
+      <div className="mb-8 space-y-8">
+        {flowsFor(role).map((flow) => (
+          <FlowDiagram key={flow.title} title={flow.title} steps={flow.steps} />
+        ))}
+      </div>
+
+      <h2 className="mb-3 font-display text-display-sm">Worth knowing</h2>
+      <ul className="space-y-3">
+        {steps.map((step) => (
           <li key={step.title} className="hairline flex gap-4 rounded-sm bg-card p-4">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
               <step.icon className="size-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="font-medium">
-                <Badge variant="muted" className="mr-2 align-middle">
-                  {index + 1}
-                </Badge>
-                {step.title}
-              </p>
+              <p className="font-medium">{step.title}</p>
               <p className="mt-1 text-pretty text-sm text-muted-foreground">{step.body}</p>
             </div>
           </li>
         ))}
-      </ol>
+      </ul>
 
       <div className="mt-8 space-y-3 border-t border-border pt-6 text-sm text-muted-foreground">
         <p>
