@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Droplet, HeartHandshake, Scissors, Settings2 } from 'lucide-react'
+import { Droplet, HeartHandshake, Package, Scissors, Settings2 } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { EmptyState } from '@/components/shared/empty-state'
 import { Disclosure } from '@/components/health/disclosure'
@@ -50,12 +50,21 @@ export default function DonorNeeds() {
     onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
   })
 
+  // This is the donor's front door now, so the goods wall needs a way back to
+  // it from here rather than the other way round.
   const actions = (
-    <Button asChild variant="outline">
-      <Link to="/health/settings">
-        <Settings2 aria-hidden /> Preferences
-      </Link>
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button asChild variant="outline">
+        <Link to="/donor">
+          <Package aria-hidden /> Give things
+        </Link>
+      </Button>
+      <Button asChild variant="outline">
+        <Link to="/health/settings">
+          <Settings2 aria-hidden /> Preferences
+        </Link>
+      </Button>
+    </div>
   )
 
   if (me.isLoading) {

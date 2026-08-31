@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { HOME_FOR_ROLE, useSession } from '@/hooks/use-session'
+import { homeFor, useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import { loginSchema, type LoginInput } from '@/lib/validation/auth'
@@ -26,7 +26,7 @@ export default function SignIn() {
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) })
 
-  if (user) return <Navigate to={HOME_FOR_ROLE[user.role]} replace />
+  if (user) return <Navigate to={homeFor(user)} replace />
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)

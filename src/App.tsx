@@ -8,7 +8,7 @@ import { ProtectedRoute } from './components/shared/protected-route'
 import { PwaPrompt } from './components/shared/pwa-prompt'
 import { RouteFallback } from './components/shared/route-fallback'
 import { useLocale } from './hooks/use-locale'
-import { HOME_FOR_ROLE, useSession } from './hooks/use-session'
+import { homeFor, useSession } from './hooks/use-session'
 
 /**
  * Everything past the front door is split out of the initial bundle.
@@ -52,7 +52,7 @@ const NotFound = lazy(() => import('./app/NotFound'))
 function Root() {
   const { user, isLoading } = useSession()
   if (isLoading) return null
-  return user ? <Navigate to={HOME_FOR_ROLE[user.role]} replace /> : <Landing />
+  return user ? <Navigate to={homeFor(user)} replace /> : <Landing />
 }
 
 export default function App() {

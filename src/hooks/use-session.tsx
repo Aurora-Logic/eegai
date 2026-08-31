@@ -13,6 +13,8 @@ export interface Profile {
   lat: number | null
   lng: number | null
   is_active: boolean
+  /** Which health donations this organisation may request. Empty for everyone else. */
+  health_categories: string[]
 }
 
 export interface SessionUser {
@@ -94,10 +96,29 @@ export function useSession(): SessionContextValue {
   return context
 }
 
-/** Where each role lands after signing in. */
+/**
+ * Where each role lands after signing in.
+ *
+ * The health lane leads: a donor arrives at nearby requests, and an
+ * organisation approved to ask for blood or milk arrives at its requests. The
+ * goods wall is still one tap away from both, it is simply no longer the front
+ * door.
+ *
+ * This map is the fallback for the places that know a role but not yet a user —
+ * the sign-up form, and the dev role switcher. `homeFor` is the real answer
+ * wherever a user exists, because an organisation's landing screen depends on
+ * whether an admin has approved it for a health category.
+ */
 export const HOME_FOR_ROLE: Record<Role, string> = {
-  donor: '/donor',
+  donor: '/health',
   ngo: '/ngo',
   volunteer: '/volunteer',
   admin: '/admin',
+}
+
+export function homeFor(user: Pick<SessionUser, 'role' | 'profile'>): string {
+  if (user.role === 'ngo' && (user.profile.health_categories?.length ?? 0) > 0) {
+    return '/ngo/needs'
+  }
+  return HOME_FOR_ROLE[user.role]
 }

@@ -19,6 +19,7 @@ async function signIn(page: import('@playwright/test').Page, who: typeof ADMIN) 
   await page.getByLabel('Phone number').fill(who.phone)
   await page.getByLabel('Password').fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).not.toHaveURL(/sign-in/)
 }
 
 test('an admin sees the metrics that matter', async ({ page }) => {
@@ -105,13 +106,13 @@ test('the dispute view shows a full trail with request ids', async ({ page }) =>
 
 test('a donor cannot reach any admin route', async ({ page }) => {
   await signIn(page, DONOR)
-  await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 
+  // Bounced back to their own home, which is the health lane.
   await page.goto('/admin')
-  await expect(page).toHaveURL(/\/donor$/)
+  await expect(page).toHaveURL(/\/health$/)
 
   await page.goto('/admin/items/00000000-0000-0000-0000-000000000000')
-  await expect(page).toHaveURL(/\/donor$/)
+  await expect(page).toHaveURL(/\/health$/)
 })
 
 test('the API refuses admin endpoints for a donor even without the UI', async ({ request }) => {

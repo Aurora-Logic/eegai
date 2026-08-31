@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { HOME_FOR_ROLE, useSession } from '@/hooks/use-session'
+import { homeFor, useSession } from '@/hooks/use-session'
 import type { Role } from '@/lib/state-machine'
 
 /**
@@ -25,7 +25,7 @@ export function ProtectedRoute({ allow, children }: { allow: Role[]; children: R
   }
 
   if (!allow.includes(user.role)) {
-    return <Navigate to={HOME_FOR_ROLE[user.role]} replace />
+    return <Navigate to={homeFor(user)} replace />
   }
 
   return <>{children}</>

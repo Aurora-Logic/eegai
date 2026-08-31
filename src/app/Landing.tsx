@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
-import { CheckCheck, KeyRound, ShieldCheck } from 'lucide-react'
+import { CheckCheck, Droplet, KeyRound, Package, ShieldCheck } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { Button } from '@/components/ui/button'
 import { WallScene } from '@/components/illustrations'
+import { Disclosure } from '@/components/health/disclosure'
 import { t } from '@/lib/i18n'
 import type { StringKey } from '@/lib/i18n'
+
+/** The goods lane, compressed to one line per step. */
+const GOODS_STEPS: StringKey[] = ['landing.goodsStep1', 'landing.goodsStep2', 'landing.goodsStep3']
 
 const STEPS: { n: string; title: StringKey; body: StringKey }[] = [
   { n: '1', title: 'landing.step1Title', body: 'landing.step1Body' },
@@ -67,12 +71,36 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* The condition gates are the single thing that stops this being a
-            dump, and they are the reason an organisation will trust it. Saying
-            so plainly on the front page is more honest than a feature list. */}
-        <section className="mt-16 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
-          <h2 className="text-balance font-display text-display-md">{t('landing.gatesTitle')}</h2>
-          <p className="text-pretty text-muted-foreground">{t('landing.gatesBody')}</p>
+        {/* The two lanes, health first.
+            EEGAI is a coordination layer for blood, hair and breast milk, and
+            a wall for second-hand goods. They are different promises — one
+            ends with the donor walking into a hospital, the other with a
+            volunteer at a door — so somebody deciding whether to sign up needs
+            to see both, and to see which one leads. */}
+        <section className="mt-16 border-t border-border pt-10">
+          <h2 className="font-display text-display-md">{t('landing.lanesTitle')}</h2>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="hairline rounded-sm bg-card p-5 ring-1 ring-primary/30">
+              <p className="flex items-center gap-2">
+                <Droplet className="size-5 shrink-0 text-primary" aria-hidden />
+                <span className="font-display text-display-sm">{t('landing.laneHealthTitle')}</span>
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{t('landing.laneHealthBody')}</p>
+            </div>
+
+            <div className="hairline rounded-sm bg-card p-5">
+              <p className="flex items-center gap-2">
+                <Package className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="font-display text-display-sm">{t('landing.laneGoodsTitle')}</span>
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{t('landing.laneGoodsBody')}</p>
+            </div>
+          </div>
+
+          {/* Brief §8 marks this required. It belongs here too: this is the page
+              somebody reads before deciding whether to hand over a number. */}
+          <Disclosure className="mt-4" />
         </section>
 
         <section className="mt-16 border-t border-border pt-10">
@@ -86,6 +114,26 @@ export default function Landing() {
               </li>
             ))}
           </ol>
+
+          {/* The goods lane, in a sentence each rather than three cards. It is
+              still here and still works; it is simply no longer the thing this
+              page is about. */}
+          <h3 className="mt-10 font-display text-display-sm">{t('landing.goodsHowTitle')}</h3>
+          <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+            {GOODS_STEPS.map((key) => (
+              <li key={key} className="flex items-start gap-2">
+                <Package className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {t(key)}
+              </li>
+            ))}
+          </ul>
+        </section>
+        {/* The condition gates are the single thing that stops this being a
+            dump, and they are the reason an organisation will trust it. Saying
+            so plainly on the front page is more honest than a feature list. */}
+        <section className="mt-16 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
+          <h2 className="text-balance font-display text-display-md">{t('landing.gatesTitle')}</h2>
+          <p className="text-pretty text-muted-foreground">{t('landing.gatesBody')}</p>
         </section>
 
         <section className="mt-16 border-t border-border pt-10">

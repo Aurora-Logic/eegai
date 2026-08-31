@@ -26,6 +26,11 @@ async function signInAsDonor(page: import('@playwright/test').Page) {
   await page.getByLabel('Phone number').fill(DONOR.phone)
   await page.getByLabel('Password').fill(DONOR.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  // Waited on the URL leaving /sign-in. Navigating before the session lands
+  // bounces off ProtectedRoute, and the failure then reads as a missing
+  // heading on a page that was never reached.
+  await expect(page).not.toHaveURL(/sign-in/)
+  await page.goto('/donor')
   await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 }
 

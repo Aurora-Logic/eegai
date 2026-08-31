@@ -9,6 +9,13 @@ import { expect, test } from '@playwright/test'
 const NGO = { phone: '9100000001', password: 'password123' } // Sahyadri, takes all categories
 const DONOR = { phone: '9300000001', password: 'password123' }
 
+/**
+ * Sign in, then walk to the goods wall.
+ *
+ * The health lane is the front door now — a donor lands on nearby requests and
+ * an approved institution on its own requests — so a spec about the goods lane
+ * navigates there deliberately instead of assuming where signing in ends up.
+ */
 async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
   // A returning user has already dismissed the first-run guide. Without this
   // every signed-in spec clicks through an overlay that a real second visit
@@ -20,11 +27,13 @@ async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
   await page.getByLabel('Phone number').fill(who.phone)
   await page.getByLabel('Password').fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).not.toHaveURL(/sign-in/)
 }
 
 test('an NGO signs in, sees the wall, and claims a brick', async ({ page }) => {
   await signIn(page, NGO)
 
+  await page.goto('/ngo')
   await expect(page.getByRole('heading', { name: 'The wall' })).toBeVisible()
 
   const bricks = page.locator('article')
@@ -55,12 +64,13 @@ test('an NGO signs in, sees the wall, and claims a brick', async ({ page }) => {
 test('a donor cannot reach the NGO wall', async ({ page }) => {
   await signIn(page, DONOR)
 
+  await page.goto('/donor')
   await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 
-  // Route guard sends them back to their own shell rather than showing an
-  // empty wall.
+  // Route guard sends them back to their own home rather than showing an empty
+  // wall — and a donor's home is the health lane now.
   await page.goto('/ngo')
-  await expect(page).toHaveURL(/\/donor$/)
+  await expect(page).toHaveURL(/\/health$/)
 })
 
 test('a signed-out visitor is sent to sign in', async ({ page }) => {

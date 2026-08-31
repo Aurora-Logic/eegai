@@ -444,6 +444,21 @@ name a group, they must match — so an O- request does not page every A+ donor
 in the district. No compatibility matrix is computed anywhere; brief §6 forbids
 medical logic, and this is a filter, not a judgement about anyone's eligibility.
 
+**The health lane leads.** A donor signing in arrives at nearby requests, and
+an organisation an admin has approved for a health category arrives at its own
+requests; a plain clothes-and-books organisation still lands on the wall. The
+goods wall is one tap from both and unchanged — it is simply no longer the
+front door, and the landing page now explains the health flow in full and the
+goods flow in three lines.
+
+`homeFor(user)` is the real answer for that, because an organisation's landing
+screen depends on an admin decision rather than on its role alone.
+`HOME_FOR_ROLE` survives as the fallback for the two places that know a role
+but not yet a user: the sign-up form and the dev role switcher.
+
+**Still the goods wall's:** the landing hero illustration. Replacing it needs a
+drawing rather than a rearrangement, and a bad one is worse than a dated one.
+
 **Not built yet:** no real push or SMS delivery (rows land in `notifications`
 and the dispatcher is still the goods lane's), no admin screen for the account
 deletion queue, and no institution-side onboarding for health categories — an

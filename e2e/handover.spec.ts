@@ -25,6 +25,10 @@ async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
   await page.getByLabel('Phone number').fill(who.phone)
   await page.getByLabel('Password').fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  // Waited on the URL leaving /sign-in. Navigating before the session lands
+  // bounces off ProtectedRoute, and the failure then reads as a missing
+  // heading on a page that was never reached.
+  await expect(page).not.toHaveURL(/sign-in/)
 }
 
 /**
@@ -34,7 +38,10 @@ async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
  * screen in a crowded street. Tapping Show is therefore part of the flow a real
  * donor performs, not a detail the test works around.
  */
-async function readCode(page: import('@playwright/test').Page, label: RegExp) {
+async function readCode(page: import('@playwright/test').Page, label: RegExp, home: string) {
+  // The codes panel lives on the goods-lane home, which is no longer where
+  // signing in lands — a donor arrives at the health lane now.
+  await page.goto(home)
   const row = page.getByRole('listitem').filter({ hasText: label })
   await expect(row.first()).toBeVisible({ timeout: 10_000 })
 
@@ -59,6 +66,7 @@ test('an NGO claims an item belonging to our donor', async ({ page }) => {
   // The item has to be *this* donor's, or the next step has nothing to choose
   // a delivery method for. The seed spreads donations across six donors.
   await signIn(page, DONOR)
+  await page.goto('/donor')
   await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 
   const posted = page.locator('article').filter({ hasText: 'posted' }).first()
@@ -66,6 +74,7 @@ test('an NGO claims an item belonging to our donor', async ({ page }) => {
   itemTitle = await posted.getByRole('heading').innerText()
 
   await signIn(page, NGO)
+  await page.goto('/ngo')
   await expect(page.getByRole('heading', { name: 'The wall' })).toBeVisible()
 
   const brick = page.locator('article').filter({ hasText: itemTitle }).first()
@@ -76,6 +85,7 @@ test('an NGO claims an item belonging to our donor', async ({ page }) => {
 
 test('the donor chooses a volunteer', async ({ page }) => {
   await signIn(page, DONOR)
+  await page.goto('/donor')
   await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 
   const card = page.locator('article').filter({ hasText: itemTitle }).first()
@@ -115,7 +125,7 @@ test('a wrong code does not advance the item', async ({ page }) => {
 test('the real codes complete the handover', async ({ page }) => {
   // Collect gate: the donor's code.
   await signIn(page, DONOR)
-  const collectCode = await readCode(page, /when they collect/i)
+  const collectCode = await readCode(page, /when they collect/i, '/donor')
 
   await signIn(page, VOLUNTEER)
   await page.getByRole('tab', { name: /Your runs/ }).click()
@@ -127,7 +137,7 @@ test('the real codes complete the handover', async ({ page }) => {
 
   // Deliver gate: the NGO's code.
   await signIn(page, NGO)
-  const deliverCode = await readCode(page, /when they deliver/i)
+  const deliverCode = await readCode(page, /when they deliver/i, '/ngo')
 
   await signIn(page, VOLUNTEER)
   await page.getByRole('tab', { name: /Your runs/ }).click()
