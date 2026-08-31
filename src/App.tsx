@@ -34,6 +34,12 @@ const AdminHome = lazy(() => import('./app/admin/AdminHome'))
 const DonationTrail = lazy(() => import('./app/admin/DonationTrail'))
 const Profile = lazy(() => import('./app/Profile'))
 const Guide = lazy(() => import('./app/Guide'))
+// The health-donation lane (blood, hair, breast milk). Its own chunk: a donor
+// who only ever gives clothes never downloads it.
+const DonorNeeds = lazy(() => import('./app/health/DonorNeeds'))
+const DonorResponses = lazy(() => import('./app/health/DonorResponses'))
+const HealthSettings = lazy(() => import('./app/health/HealthSettings'))
+const InstitutionNeeds = lazy(() => import('./app/health/InstitutionNeeds'))
 // Lazy for weight, not for behaviour: it renders only for a signed-in user, and
 // eager it dragged the whole manual into the first paint of the landing page.
 const FirstRunGuide = lazy(() =>
@@ -127,6 +133,42 @@ export default function App() {
             element={
               <ProtectedRoute allow={['admin']}>
                 <DonationTrail />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ---- the health-donation lane ---- */}
+          <Route
+            path="/health"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <DonorNeeds />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/health/responses"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <DonorResponses />
+              </ProtectedRoute>
+            }
+          />
+          {/* Consent and account controls. Brief §4 wants this reachable from
+              settings at any time, so it is a route rather than a dialog. */}
+          <Route
+            path="/health/settings"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <HealthSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ngo/needs"
+            element={
+              <ProtectedRoute allow={['ngo']}>
+                <InstitutionNeeds />
               </ProtectedRoute>
             }
           />

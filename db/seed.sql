@@ -384,6 +384,45 @@ begin
   order by p.phone
   limit 1;
 
+  -- -------------------------------------------------------------------------
+  -- The health-donation lane (migration 024).
+  --
+  -- Seeded for the same reason the admin queues are: a screen nobody has ever
+  -- seen is a screen nobody checks, and this whole lane renders as nothing
+  -- until an institution exists and a donor has consented.
+  -- -------------------------------------------------------------------------
+
+  update public.ngos
+  set health_categories = '{blood,breast_milk}'::public.health_category[],
+      visit_instructions = 'Reception, Block B. Bring photo ID and eat something first.'
+  where id = (
+    select id from public.ngos where verification_status = 'verified' order by created_at limit 1
+  );
+
+  -- Two donors who have consented and offer blood, and one who offers hair —
+  -- so the category filter is visibly doing something rather than matching
+  -- everybody.
+  insert into public.donor_health_profiles
+    (profile_id, categories, blood_group, consented_at, consent_version)
+  select p.id, '{blood}'::public.health_category[], 'O+'::public.blood_group, now(), 1
+  from public.profiles p where p.role = 'donor' order by p.created_at limit 2;
+
+  insert into public.donor_health_profiles
+    (profile_id, categories, consented_at, consent_version)
+  select p.id, '{hair}'::public.health_category[], now(), 1
+  from public.profiles p where p.role = 'donor' order by p.created_at offset 2 limit 1;
+
+  -- One open request, so the donor wall and the institution's list both have
+  -- something in them.
+  insert into public.health_requests
+    (ngo_id, institution_name, category, blood_group, urgency, donors_needed, radius_km,
+     lat, lng, address, pincode, note, expires_at)
+  select n.id, n.name, 'blood', 'O+', 'urgent', 3, 10,
+         n.lat, n.lng, n.address, n.pincode,
+         'Two units short for a scheduled surgery tomorrow morning.',
+         now() + interval '3 days'
+  from public.ngos n where n.health_categories <> '{}' limit 1;
+
   raise notice 'seeded: 2 admins, 7 NGOs (5 verified, 2 pending), 4 volunteers, 6 donors, 30 donations, 3 waiting on an admin';
 end
 $seed$;

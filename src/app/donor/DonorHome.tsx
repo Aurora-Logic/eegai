@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { Droplet } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
@@ -62,9 +63,19 @@ export default function DonorHome() {
       title={t('donor.title')}
       subtitle={t('donor.subtitle')}
       actions={
-        <Button asChild>
-          <Link to="/donor/post">{t('action.post')}</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* The other lane. A donor who gives blood and a donor who gives a
+              sofa are the same person, so the door is here rather than behind
+              a separate account. */}
+          <Button asChild variant="outline">
+            <Link to="/health">
+              <Droplet aria-hidden /> Blood, hair, milk
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to="/donor/post">{t('action.post')}</Link>
+          </Button>
+        </div>
       }
     >
       <HandoverCodes />

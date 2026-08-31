@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { HEALTH_CATEGORIES } from '../../../src/lib/validation/health.ts'
 import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { withActor } from '../lib/db.ts'
 import { log } from '../lib/logger.ts'
@@ -61,6 +62,8 @@ adminRoutes.get('/ngos', async (c) => {
               -- custom enum array OID and would hand back the raw '{a,b}'
               -- string, which looks close enough to an array to fail late.
               n.accepts_categories::text[] as accepts_categories,
+              n.health_categories::text[] as health_categories,
+              n.visit_instructions,
               n.is_accepting,
               n.contact_person, n.contact_phone,
               n.created_at,
@@ -356,6 +359,13 @@ const ngoPatchSchema = z.object({
     .nullable()
     .optional(),
   monthlyCapacity: z.number().int().min(0).max(10_000).optional(),
+  // Brief §5: only verified institutions can post. Which categories they may
+  // post is an admin decision, so it is set here and nowhere else — an
+  // organisation cannot grant itself blood.
+  healthCategories: z
+    .array(z.enum(HEALTH_CATEGORIES as unknown as [string, ...string[]]))
+    .optional(),
+  visitInstructions: z.string().trim().max(500).nullable().optional(),
   acceptsCategories: z
     .array(z.enum(CATEGORIES as [string, ...string[]]))
     .min(1)
@@ -378,6 +388,8 @@ const NGO_COLUMNS: Record<string, string> = {
   contactPerson: 'contact_person',
   contactPhone: 'contact_phone',
   isAccepting: 'is_accepting',
+  healthCategories: 'health_categories',
+  visitInstructions: 'visit_instructions',
 }
 
 adminRoutes.patch('/ngos/:id', async (c) => {
@@ -403,7 +415,9 @@ adminRoutes.patch('/ngos/:id', async (c) => {
     sets.push(
       key === 'acceptsCategories'
         ? `${column} = $${values.length}::public.donation_category[]`
-        : `${column} = $${values.length}`,
+        : key === 'healthCategories'
+          ? `${column} = $${values.length}::public.health_category[]`
+          : `${column} = $${values.length}`,
     )
   }
   if (sets.length === 0) return c.json({ error: 'Nothing to change.' }, 400)
@@ -419,6 +433,7 @@ adminRoutes.patch('/ngos/:id', async (c) => {
        where id = $${values.length}
        returning id, name, registration_number, darpan_id, has_80g, address, pincode,
                  monthly_capacity, accepts_categories::text[] as accepts_categories,
+                 health_categories::text[] as health_categories, visit_instructions,
                  contact_person, contact_phone, is_accepting, verification_status`,
       values,
     )

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { CATEGORY_LABEL, HEALTH_CATEGORIES } from '@/lib/validation/health'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -30,6 +32,8 @@ export interface EditableNgo {
   contact_person: string | null
   contact_phone: string | null
   is_accepting: boolean
+  health_categories?: string[] | null
+  visit_instructions?: string | null
 }
 
 /**
@@ -58,6 +62,8 @@ export function EditNgoDialog({ ngo, onClose }: { ngo: EditableNgo; onClose: () 
     has80g: ngo.has_80g,
     isAccepting: ngo.is_accepting,
     acceptsCategories: ngo.accepts_categories,
+    healthCategories: ngo.health_categories ?? [],
+    visitInstructions: ngo.visit_instructions ?? '',
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -82,6 +88,10 @@ export function EditNgoDialog({ ngo, onClose }: { ngo: EditableNgo; onClose: () 
       if (draft.isAccepting !== ngo.is_accepting) patch.isAccepting = draft.isAccepting
       if (draft.acceptsCategories.join() !== ngo.accepts_categories.join())
         patch.acceptsCategories = draft.acceptsCategories
+      if (draft.healthCategories.join() !== (ngo.health_categories ?? []).join())
+        patch.healthCategories = draft.healthCategories
+      if (text(draft.visitInstructions) !== (ngo.visit_instructions ?? null))
+        patch.visitInstructions = text(draft.visitInstructions)
 
       if (Object.keys(patch).length === 0) {
         return Promise.reject(new ApiError(400, 'Nothing has changed.'))
@@ -212,6 +222,62 @@ export function EditNgoDialog({ ngo, onClose }: { ngo: EditableNgo; onClose: () 
               })}
             </div>
           </div>
+
+          {/* Brief §5: only verified institutions can post or broadcast, and
+              which categories is an admin decision. An organisation cannot
+              grant itself blood, so this control exists only here.
+
+              Empty is the normal state — most organisations on this platform
+              collect clothes and books and have nothing to do with the health
+              lane. */}
+          <div>
+            <Label className="mb-1.5 block">May request health donations</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {HEALTH_CATEGORIES.map((category) => {
+                const on = draft.healthCategories.includes(category)
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={`Allow ${CATEGORY_LABEL[category]} requests`}
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        healthCategories: on
+                          ? d.healthCategories.filter((c) => c !== category)
+                          : [...d.healthCategories, category],
+                      }))
+                    }
+                    className="inline-flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <Badge variant={on ? 'tag' : 'outline'} className={cn(!on && 'opacity-60')}>
+                      {CATEGORY_LABEL[category]}
+                    </Badge>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Leave empty unless this is a hospital, blood centre or milk bank you have checked.
+            </p>
+          </div>
+
+          {draft.healthCategories.length > 0 ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="visit-instructions">Where a donor should go</Label>
+              <Textarea
+                id="visit-instructions"
+                rows={2}
+                value={draft.visitInstructions}
+                onChange={(e) => setDraft((d) => ({ ...d, visitInstructions: e.target.value }))}
+                placeholder="Reception, Block B. Bring photo ID."
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown to a donor only after they say yes.
+              </p>
+            </div>
+          ) : null}
 
           <label className="flex items-center justify-between gap-3 py-1">
             <span className="text-sm">Has 80G registration</span>

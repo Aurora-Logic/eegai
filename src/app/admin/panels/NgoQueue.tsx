@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { api, photoUrl } from '@/lib/api'
 import { VerifyDialog, type VerifyAction } from './VerifyDialog'
 import { STATUS_VARIANT } from './status'
+import { CATEGORY_LABEL, type HealthCategory } from '@/lib/validation/health'
 
 interface Ngo {
   id: string
@@ -44,6 +45,8 @@ interface Ngo {
   unreviewed_count: number
   claims: number
   created_at: string
+  health_categories: string[] | null
+  visit_instructions: string | null
 }
 
 interface Doc {
@@ -124,6 +127,14 @@ export function NgoQueue() {
                     {ngo.verification_status}
                   </Badge>
                   {ngo.has_80g ? <Badge variant="outline">80G</Badge> : null}
+                  {/* An institution is a different kind of thing from an
+                      organisation collecting clothes, and an operator should
+                      see which is which without opening the record. */}
+                  {(ngo.health_categories ?? []).map((c) => (
+                    <Badge key={c} variant="tag">
+                      {CATEGORY_LABEL[c as HealthCategory] ?? c}
+                    </Badge>
+                  ))}
                 </>
               }
               actions={

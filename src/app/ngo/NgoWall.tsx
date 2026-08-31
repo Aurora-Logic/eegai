@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Droplet } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
@@ -68,7 +69,15 @@ export default function NgoWall() {
       title={tab === 'wall' ? t('ngo.wallTitle') : t('ngo.claimsTitle')}
       subtitle={tab === 'wall' ? t('ngo.wallSubtitle') : undefined}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Only shown to an organisation an admin has approved for a health
+              category — the others have nothing to post and the screen would
+              refuse them. */}
+          <Button asChild variant="outline">
+            <Link to="/ngo/needs">
+              <Droplet aria-hidden /> Donation requests
+            </Link>
+          </Button>
           <Button variant={tab === 'wall' ? 'default' : 'outline'} onClick={() => setTab('wall')}>
             {t('ngo.tabWall')}
           </Button>

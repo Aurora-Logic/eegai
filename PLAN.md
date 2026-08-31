@@ -387,6 +387,68 @@ fire-and-forget relative to the transaction.
 
 ---
 
+## 12. The health-donation lane
+
+Added from the EEGAI Developer Brief. Blood, hair and breast milk — a
+coordination layer only, and a different shape from the goods wall:
+
+|               | goods lane                      | health lane                      |
+| ------------- | ------------------------------- | -------------------------------- |
+| who posts     | a donor posts a thing           | an institution posts a need      |
+| what moves    | a volunteer or courier moves it | nothing; the donor goes there    |
+| the app's job | tracks the handover             | makes the introduction and stops |
+
+Brief §6 forbids collection, storage, testing and transport here, so nothing in
+this lane touches `pickups`, `shipments`, OTPs or acknowledgements. A health
+request has no delivery concept at all.
+
+**The institution is the organisation we already verify.** `ngos` gained
+`health_categories`; empty — the default, and every organisation already on the
+platform — means "not a health institution". A separate table would have meant
+a second verification queue and a second admin screen.
+
+**Brief §5's four privacy rules are enforced in the database**, migration 024:
+
+1. _A donor's exact location is never shown._ There is no policy anywhere
+   granting an institution read on `profiles`. Matching happens inside
+   `app.notify_nearby_donors`, which returns a count; the only route from a
+   response to a person is `app.request_responders`, which returns a name, a
+   phone and a time and cannot return a coordinate because it does not select
+   one.
+2. _Collect only what is needed._ `donor_health_profiles` has no location
+   column of its own.
+3. _Only verified institutions can post._ Checked twice inside
+   `app.post_health_request` — verified, and approved for that category.
+4. _Consent is explicit and withdrawable._ Recorded with the version agreed to,
+   and re-checked when somebody responds rather than assumed from the wall
+   being visible.
+
+`server/tests/health-lane.test.ts` asserts all four as the non-BYPASSRLS app
+role. The location test was confirmed to go red by temporarily adding a policy
+that leaks — a test never seen to fail is not yet a test.
+
+**Known cross-lane exposure, not introduced here.** `profiles_donation_counterparty`
+(migration 011) lets an organisation read the profile — including `lat`/`lng` —
+of a donor whose _goods_ donation it has claimed. That is deliberate in the
+goods lane, where somebody has to collect a sofa from an address. It means an
+organisation that is both a goods NGO and a health institution could learn the
+location of a donor it has a goods relationship with. The health lane adds no
+path of its own, and the test suite asserts that: an institution with no goods
+relationship sees zero profile rows for a donor who responded. Closing it
+properly means narrowing the goods policy to the donation's pickup address
+rather than the donor's profile row, which is a change to a working lane and
+wants doing deliberately.
+
+**Blood groups are targeting, not screening.** Where a request and a donor both
+name a group, they must match — so an O- request does not page every A+ donor
+in the district. No compatibility matrix is computed anywhere; brief §6 forbids
+medical logic, and this is a filter, not a judgement about anyone's eligibility.
+
+**Not built yet:** no real push or SMS delivery (rows land in `notifications`
+and the dispatcher is still the goods lane's), no admin screen for the account
+deletion queue, and no institution-side onboarding for health categories — an
+admin grants them from the Organisations tab.
+
 ## 11. Open questions to resolve before M5
 
 These need answers from the product owner, not a guess:
