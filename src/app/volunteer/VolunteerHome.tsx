@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDayMonth, istDateStamp } from '@/lib/dates'
 import { CheckCircle2, MapPin, PackageCheck } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { GuideCard } from '@/components/shared/guide-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -222,6 +223,7 @@ export default function VolunteerHome() {
           }}
         />
       ) : null}
+      <GuideCard className="mt-6" />
     </AppShell>
   )
 }

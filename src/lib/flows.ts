@@ -66,6 +66,22 @@ export const GOODS_FLOW: FlowStep[] = [
   { label: 'They tell you it was used', who: 'with a photo' },
 ]
 
+/**
+ * The volunteer's own journey.
+ *
+ * GOODS_FLOW is written from the donor's side — "you post it" — and handing
+ * that to a volunteer told them their journey starts with something they never
+ * do. Same lane, different person, so it needs its own words.
+ */
+export const VOLUNTEER_FLOW: FlowStep[] = [
+  { label: 'An admin verifies you', who: 'ID and a selfie' },
+  { label: 'You see pickups near you', who: 'inside the distance you set' },
+  { label: 'You take one', who: 'you' },
+  { label: 'You collect it', who: 'the donor reads their code to you' },
+  { label: 'You deliver it', who: 'the organisation reads theirs' },
+  { label: 'It is out of your hands', who: 'they confirm it with the donor', handoff: true },
+]
+
 /** Which lane a role can see, and in what order. */
 export function flowsFor(role: Role): { title: string; steps: FlowStep[] }[] {
   if (role === 'donor') {
@@ -81,7 +97,7 @@ export function flowsFor(role: Role): { title: string; steps: FlowStep[] }[] {
     ]
   }
   if (role === 'volunteer') {
-    return [{ title: 'Carrying things from a door to an organisation', steps: GOODS_FLOW }]
+    return [{ title: 'Carrying things from a door to an organisation', steps: VOLUNTEER_FLOW }]
   }
   return [
     { title: 'Blood, hair and breast milk', steps: HEALTH_FLOW.donor },

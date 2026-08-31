@@ -151,3 +151,25 @@ test('the required disclosure is on every screen of the lane', async ({ page }) 
     await expect(page.getByText(/does not itself collect, store, test/)).toBeVisible()
   }
 })
+
+test('the manual is reachable from the home screen, and drawn as a flow', async ({ page }) => {
+  // The manual used to be reachable only from a question-mark icon and a
+  // first-run overlay that shows once. Somebody who dismissed it on day one and
+  // wanted it on day three had to guess.
+  await signIn(page, DONOR)
+  await ensureConsent(page)
+  await page.goto('/health')
+
+  const card = page.locator('a[href="/guide"]').filter({ hasText: 'Starts with' })
+  await expect(card).toBeVisible()
+  await card.click()
+
+  await expect(page.getByRole('heading', { name: /How EEGAI works/i })).toBeVisible()
+
+  // The flow itself, not just a list: the health lane leads, and its last step
+  // is the one that happens outside the app.
+  await expect(page.getByRole('heading', { name: /Blood, hair and breast milk/i })).toBeVisible()
+  // `exact` because the same words appear twice on purpose: once in the drawn
+  // diagram and once in the sr-only list beside it.
+  await expect(page.getByText('You donate there', { exact: true })).toBeVisible()
+})

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOODS_SPINE, HEALTH_FLOW, GOODS_FLOW, flowsFor } from './flows'
+import { GOODS_SPINE, GOODS_FLOW, HEALTH_FLOW, VOLUNTEER_FLOW, flowsFor } from './flows'
 import { TRANSITIONS } from './state-machine'
 
 describe('the diagram in the manual', () => {
@@ -28,9 +28,17 @@ describe('the diagram in the manual', () => {
   })
 
   it('gives a volunteer only the lane they are part of', () => {
-    const titles = flowsFor('volunteer').map((f) => f.title)
-    expect(titles).toHaveLength(1)
-    expect(titles[0]).toMatch(/carrying/i)
+    const flows = flowsFor('volunteer')
+    expect(flows).toHaveLength(1)
+    expect(flows[0]?.title).toMatch(/carrying/i)
+  })
+
+  it('never opens a journey with a step that person does not do', () => {
+    // A volunteer was being shown the donor's flow, so their journey started
+    // with "you post it" — something a volunteer never does. Same lane,
+    // different person, different words.
+    expect(flowsFor('volunteer')[0]?.steps[0]?.label).not.toMatch(/you post it/i)
+    expect(VOLUNTEER_FLOW[0]?.label).toMatch(/verifies you/i)
   })
 
   it('leads with the health lane for a donor', () => {

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Megaphone, Users } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { EmptyState } from '@/components/shared/empty-state'
+import { GuideCard } from '@/components/shared/guide-card'
 import { Disclosure } from '@/components/health/disclosure'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -118,7 +119,8 @@ export default function InstitutionNeeds() {
         </div>
       )}
 
-      <Disclosure className="mt-6" />
+      <GuideCard className="mt-6" />
+      <Disclosure className="mt-4" />
 
       {posting ? <PostDialog onClose={() => setPosting(false)} /> : null}
       {viewing ? <RespondersDialog request={viewing} onClose={() => setViewing(null)} /> : null}

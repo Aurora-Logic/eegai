@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Droplet } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { GuideCard } from '@/components/shared/guide-card'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
 import { Brick, type BrickDonation } from '@/components/wall/brick'
@@ -147,6 +148,7 @@ export default function NgoWall() {
           ))}
         </Wall>
       )}
+      <GuideCard className="mt-6" />
     </AppShell>
   )
 }

@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Droplet, HeartHandshake, Package, Scissors, Settings2 } from 'lucide-react'
+import { Bell, Droplet, HeartHandshake, Package, Scissors, Settings2 } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { EmptyState } from '@/components/shared/empty-state'
+import { GuideCard } from '@/components/shared/guide-card'
+import { HomeHero } from '@/components/shared/home-hero'
 import { Disclosure } from '@/components/health/disclosure'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ApiError } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { formatRelative } from '@/lib/dates'
 import { healthApi, type NearbyRequest } from '@/lib/health-client'
 import { CATEGORY_LABEL, URGENCY_LABEL, type HealthCategory } from '@/lib/validation/health'
@@ -35,6 +37,12 @@ export default function DonorNeeds() {
   const [error, setError] = useState<string | null>(null)
 
   const me = useQuery({ queryKey: ['health', 'me'], queryFn: healthApi.me })
+  // Only for the badge on the Alerts tile — a number somebody can act on.
+  const inbox = useQuery({
+    queryKey: ['inbox'],
+    queryFn: () => api.get<{ unread: number }>('/inbox/notifications'),
+  })
+
   const wall = useQuery({
     queryKey: ['health', 'nearby'],
     queryFn: healthApi.nearby,
@@ -50,26 +58,39 @@ export default function DonorNeeds() {
     onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
   })
 
-  // This is the donor's front door now, so the goods wall needs a way back to
-  // it from here rather than the other way round.
-  const actions = (
-    <div className="flex flex-wrap gap-2">
-      <Button asChild variant="outline">
-        <Link to="/donor">
-          <Package aria-hidden /> Give things
-        </Link>
-      </Button>
-      <Button asChild variant="outline">
-        <Link to="/health/settings">
-          <Settings2 aria-hidden /> Preferences
-        </Link>
-      </Button>
-    </div>
-  )
+  const unread = inbox.data?.unread ?? 0
+
+  // This is the donor's front door, so it carries both lanes and the alerts
+  // rather than a row of same-weight buttons that said nothing about which of
+  // them somebody was actually in.
+  // No tile for this screen. A link to the page somebody is already on is a
+  // dead end, and the heading above already says where they are.
+  const tiles = [
+    {
+      icon: Package,
+      label: 'Things you no longer need',
+      hint: 'Clothes, books, household items',
+      to: '/donor',
+    },
+    {
+      icon: Bell,
+      label: 'Alerts',
+      hint: unread > 0 ? 'Something is waiting for you' : 'Nothing new',
+      to: '/inbox',
+      count: unread || undefined,
+      primary: unread > 0,
+    },
+    {
+      icon: Settings2,
+      label: 'What you can offer',
+      hint: 'Categories, alerts and your consent',
+      to: '/health/settings',
+    },
+  ]
 
   if (me.isLoading) {
     return (
-      <AppShell title="Nearby requests" actions={actions}>
+      <AppShell title="Nearby requests">
         <Skeleton className="h-40 w-full" />
       </AppShell>
     )
@@ -82,8 +103,8 @@ export default function DonorNeeds() {
       <AppShell
         title="Nearby requests"
         subtitle="Hospitals, blood centres and milk banks near you."
-        actions={actions}
       >
+        <HomeHero tiles={tiles} className="mb-6" />
         <EmptyState
           title="Agree to the donor terms first"
           hint="We only alert you about requests near you, in the categories you choose. Your exact location is never shown to anybody."
@@ -93,7 +114,10 @@ export default function DonorNeeds() {
             </Button>
           }
         />
-        <Disclosure className="mt-6" />
+        {/* Somebody who has not agreed yet is exactly who needs the manual,
+            so the way to it is on this screen too. */}
+        <GuideCard className="mt-6" />
+        <Disclosure className="mt-4" />
       </AppShell>
     )
   }
@@ -101,11 +125,9 @@ export default function DonorNeeds() {
   const requests = wall.data?.requests ?? []
 
   return (
-    <AppShell
-      title="Nearby requests"
-      subtitle="Hospitals, blood centres and milk banks near you."
-      actions={actions}
-    >
+    <AppShell title="Nearby requests" subtitle="Hospitals, blood centres and milk banks near you.">
+      <HomeHero tiles={tiles} className="mb-6" />
+
       {error ? (
         <p role="alert" className="hairline mb-4 rounded-sm bg-card p-3 text-sm text-destructive">
           {error}
@@ -137,7 +159,8 @@ export default function DonorNeeds() {
         </ul>
       )}
 
-      <Disclosure className="mt-6" />
+      <GuideCard className="mt-6" />
+      <Disclosure className="mt-4" />
     </AppShell>
   )
 }
