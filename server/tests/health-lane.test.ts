@@ -227,7 +227,7 @@ describe('rule 1 — a donor location never reaches an institution', () => {
     )
 
     const seen = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
-      const { rows } = await tx.query('select id, lat, lng from public.profiles where id = $1', [
+      const { rows } = await tx.query('select id from public.profiles where id = $1', [
         nearbyDonor.profileId,
       ])
       return rows

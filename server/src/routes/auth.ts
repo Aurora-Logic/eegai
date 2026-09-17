@@ -228,9 +228,10 @@ authRoutes.get('/me', async (c) => {
       // lands after signing in: a blood centre wants its requests, a clothes
       // charity wants the wall. Left-joined and coalesced, so a donor or a
       // volunteer simply gets an empty array rather than a null to guard.
-      `select p.id, p.full_name, p.phone, p.role, p.pincode, p.lat, p.lng, p.is_active,
+      `select p.id, p.full_name, p.phone, p.role, p.pincode, l.lat, l.lng, p.is_active,
               coalesce(n.health_categories::text[], '{}') as health_categories
        from public.profiles p
+       cross join app.my_location() l
        left join public.ngos n on n.profile_id = p.id
        where p.user_id = app.current_user_id()`,
     )

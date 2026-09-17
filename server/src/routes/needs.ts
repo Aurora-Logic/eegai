@@ -165,8 +165,9 @@ needRoutes.get('/requests', async (c) => {
                 limit 1) as my_answer
        from public.health_requests hr
        cross join lateral (
-         select pr.id, pr.lat, pr.lng, coalesce(d.share_location, false) as share_location
+         select pr.id, l.lat, l.lng, coalesce(d.share_location, false) as share_location
          from public.profiles pr
+         cross join app.my_location() l
          left join public.donor_health_profiles d on d.profile_id = pr.id
          where pr.user_id = app.current_user_id()
        ) p
