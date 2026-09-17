@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import imageCompression from 'browser-image-compression'
 import { PackagePlus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApiError, api, photoUrl } from '@/lib/api'
+import { compressPhoto } from '@/lib/compress'
 import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
@@ -115,12 +115,8 @@ export function AddItemDialog() {
     setError(null)
     try {
       for (const file of files.slice(0, 5 - photoPaths.length)) {
-        const compressed = await imageCompression(file, {
-          maxWidthOrHeight: 1600,
-          maxSizeMB: 0.4,
-          useWebWorker: true,
-        })
-        const { path } = await api.upload<{ path: string }>('/uploads', compressed as File)
+        const compressed = await compressPhoto(file)
+        const { path } = await api.upload<{ path: string }>('/uploads', compressed)
         setPhotoPaths((current) => [...current, path])
       }
     } catch (e) {
