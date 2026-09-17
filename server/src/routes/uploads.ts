@@ -18,14 +18,21 @@ const ALLOWED = new Map([
 ])
 
 /**
- * Two kinds of photo, with genuinely different audiences.
+ * Three kinds of photo, with genuinely different audiences.
  *
  * A donation photo is public to every NGO that can see the item on the wall. An
  * acknowledgement photo shows where someone's belongings ended up and is meant
- * for that donor alone (PLAN.md §M6). They are stored under different prefixes
- * so the read path can tell them apart without a database lookup on every hit.
+ * for that donor alone (PLAN.md §M6). A hair photo is part of an offer to one
+ * partner organisation and is for that organisation alone. They are stored
+ * under different prefixes so the read path can tell them apart without a
+ * database lookup on every hit.
  */
-const KINDS = new Set(['donation', 'acknowledgement'])
+const KINDS = new Set(['donation', 'acknowledgement', 'hair'])
+
+/** Kinds whose path carries the uploader's profile id as its second segment. */
+const OWNED = { acknowledgement: 'acknowledgements', hair: 'hair' } as const
+const OWNED_PREFIXES = Object.values(OWNED).map((prefix) => `${prefix}/`)
+const isOwnedPath = (path: string) => OWNED_PREFIXES.some((prefix) => path.startsWith(prefix))
 
 /** Malformed percent-encoding ('%zz') must be a 404, not an unhandled 500. */
 function decodePath(raw: string): string | null {
@@ -68,13 +75,13 @@ uploadRoutes.post('/', requireAuth, async (c) => {
   const id = randomUUID()
 
   let relative: string
-  if (kind === 'acknowledgement') {
+  if (kind === 'acknowledgement' || kind === 'hair') {
     // Namespaced by uploader so the photo is readable back into the form before
-    // the acknowledgement row that will own it exists. Without this the NGO
-    // uploads a photo and gets a broken preview until they submit.
+    // the row that will own it exists. Without this the uploader gets a broken
+    // preview until they submit — and submit_health_offer checks the prefix.
     const profileId = await profileIdOf(c)
     if (!profileId) return c.json({ error: 'Your profile is missing. Contact us.' }, 403)
-    relative = join('acknowledgements', profileId, `${id}${ext}`)
+    relative = join(OWNED[kind], profileId, `${id}${ext}`)
   } else {
     // Sharded by first two hex chars so one directory never holds every photo.
     relative = join('donations', id.slice(0, 2), `${id}${ext}`)
@@ -106,11 +113,11 @@ uploadRoutes.delete('/*', requireAuth, async (c) => {
   if (safe.startsWith('..') || safe.startsWith('/') || safe.includes('\0')) {
     return c.json({ error: 'Not found.' }, 404)
   }
-  if (!safe.startsWith('donations/') && !safe.startsWith('acknowledgements/')) {
+  if (!safe.startsWith('donations/') && !isOwnedPath(safe)) {
     return c.json({ error: 'Not found.' }, 404)
   }
 
-  if (safe.startsWith('acknowledgements/')) {
+  if (isOwnedPath(safe)) {
     const profileId = await profileIdOf(c)
     if (!profileId || safe.split('/')[1] !== profileId) {
       return c.json({ error: 'Not found.' }, 404)
@@ -125,13 +132,15 @@ uploadRoutes.delete('/*', requireAuth, async (c) => {
       `select 1 from public.donation_photos where storage_path = $1
        union all
        select 1 from public.acknowledgements where photo_path = $1
+       union all
+       select 1 from public.health_offers where photo_path = $1
        limit 1`,
       [safe],
     )
     return rows.length > 0
   })
   if (attached) {
-    return c.json({ error: 'That photo belongs to a posted item and cannot be removed.' }, 409)
+    return c.json({ error: 'That photo is part of a record and cannot be removed.' }, 409)
   }
 
   try {
@@ -164,8 +173,8 @@ uploadRoutes.get('/*', requireAuth, async (c) => {
     return c.json({ error: 'Not found.' }, 404)
   }
 
-  if (safe.startsWith('acknowledgements/')) {
-    const allowed = await canReadAcknowledgementPhoto(c, safe)
+  if (isOwnedPath(safe)) {
+    const allowed = await canReadOwnedPhoto(c, safe)
     if (!allowed) return c.json({ error: 'Not found.' }, 404)
   }
 
@@ -191,8 +200,11 @@ uploadRoutes.get('/*', requireAuth, async (c) => {
   }
 })
 
-/** Either you uploaded it, or you are a party to the item it belongs to. */
-async function canReadAcknowledgementPhoto(c: Context<AppEnv>, path: string): Promise<boolean> {
+/**
+ * Either you uploaded it, or RLS shows you the row it belongs to: the parties
+ * to an acknowledgement, or the organisation a hair offer was sent to.
+ */
+async function canReadOwnedPhoto(c: Context<AppEnv>, path: string): Promise<boolean> {
   const uploaderId = path.split('/')[1]
   const profileId = await profileIdOf(c)
 
@@ -201,7 +213,9 @@ async function canReadAcknowledgementPhoto(c: Context<AppEnv>, path: string): Pr
   const actor = actorOf(c)
   return withActor(actor, async (tx) => {
     const { rows } = await tx.query(
-      'select 1 from public.acknowledgements a where a.photo_path = $1',
+      path.startsWith('hair/')
+        ? 'select 1 from public.health_offers o where o.photo_path = $1'
+        : 'select 1 from public.acknowledgements a where a.photo_path = $1',
       [path],
     )
     return rows.length > 0

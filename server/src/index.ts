@@ -54,6 +54,13 @@ app.route('/api/uploads', uploadRoutes)
 app.route('/api/files', uploadRoutes)
 
 app.onError((error, c) => {
+  // 22P02 is a value Postgres could not parse — in practice a hand-typed id in a
+  // URL that is not a uuid. That is a thing that does not exist, not an outage,
+  // and every `:id` route reaches it the same way, so it is answered here once.
+  if ((error as { code?: unknown }).code === '22P02') {
+    return c.json({ error: 'Not found.' }, 404)
+  }
+
   // Never let a Postgres error message reach the client — they quote table and
   // column names, and sometimes row values. The request id is safe to return
   // and is the whole point: the user can read it out and we can find the trail.

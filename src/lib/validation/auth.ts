@@ -64,6 +64,27 @@ export const registerSchema = z
       .or(z.literal('')),
     lat: z.number().min(-90).max(90).optional(),
     lng: z.number().min(-180).max(180).optional(),
+    // A hospital is an organisation of another type, not another role — same
+    // verification queue. The home page's Hospital card says terms apply, so
+    // registering as one requires agreeing to them.
+    orgType: z.enum(['ngo', 'hospital']).default('ngo'),
+    acceptTerms: z.boolean().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.orgType === 'hospital' && value.role !== 'ngo') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['orgType'],
+        message: 'Only an organisation can register as a hospital.',
+      })
+    }
+    if (value.orgType === 'hospital' && value.acceptTerms !== true) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['acceptTerms'],
+        message: 'Agree to the terms and conditions to register a hospital.',
+      })
+    }
   })
   .superRefine((value, ctx) => {
     // An organisation without a location does not merely have a gap in its
