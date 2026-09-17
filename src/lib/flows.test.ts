@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { GOODS_SPINE, GOODS_FLOW, HEALTH_FLOW, VOLUNTEER_FLOW, flowsFor } from './flows'
+import {
+  GOODS_SPINE,
+  GOODS_FLOW,
+  HAIR_FLOW,
+  HEALTH_FLOW,
+  MILK_FLOW,
+  PARTNER_FLOW,
+  VOLUNTEER_FLOW,
+  flowsFor,
+} from './flows'
 import { TRANSITIONS } from './state-machine'
 
 describe('the diagram in the manual', () => {
@@ -18,11 +27,11 @@ describe('the diagram in the manual', () => {
     expect(GOODS_FLOW).toHaveLength(GOODS_SPINE.length)
   })
 
-  it('ends both health journeys outside the app', () => {
+  it('ends every health journey outside the app', () => {
     // Brief §6: the donation itself is the institution's, never ours. If the
     // last step ever stops saying so, the diagram is claiming something the
     // product must not claim.
-    for (const steps of [HEALTH_FLOW.donor, HEALTH_FLOW.ngo]) {
+    for (const steps of [HEALTH_FLOW.donor, HEALTH_FLOW.ngo, HAIR_FLOW, MILK_FLOW, PARTNER_FLOW]) {
       expect(steps.at(-1)?.handoff).toBe(true)
     }
   })
@@ -30,7 +39,7 @@ describe('the diagram in the manual', () => {
   it('gives a volunteer only the lane they are part of', () => {
     const flows = flowsFor('volunteer')
     expect(flows).toHaveLength(1)
-    expect(flows[0]?.title).toMatch(/carrying/i)
+    expect(flows[0]?.title).toMatch(/delivery partner/i)
   })
 
   it('never opens a journey with a step that person does not do', () => {
@@ -41,7 +50,22 @@ describe('the diagram in the manual', () => {
     expect(VOLUNTEER_FLOW[0]?.label).toMatch(/verifies you/i)
   })
 
-  it('leads with the health lane for a donor', () => {
-    expect(flowsFor('donor')[0]?.title).toMatch(/blood/i)
+  it('shows a donor the four donation types, blood first', () => {
+    // The donor-module spec's own order: Blood, Hair, Breast Milk, Material.
+    expect(flowsFor('donor').map((f) => f.title.split(' ')[0])).toEqual([
+      'Blood',
+      'Hair',
+      'Breast',
+      'Material',
+    ])
+  })
+
+  it('draws breast milk as the four steps the spec draws', () => {
+    expect(MILK_FLOW.map((s) => s.label)).toEqual([
+      'Mother',
+      'Eligibility & consent',
+      'LMC / CLMC screening',
+      'Donation',
+    ])
   })
 })

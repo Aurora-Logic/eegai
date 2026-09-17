@@ -24,7 +24,7 @@ import type { Role } from '@/lib/state-machine'
 const ROLES: { role: Role; label: string; hint: string }[] = [
   { role: 'donor', label: 'Donor', hint: 'posts items' },
   { role: 'ngo', label: 'NGO', hint: 'claims and acknowledges' },
-  { role: 'volunteer', label: 'Volunteer', hint: 'collects and delivers' },
+  { role: 'volunteer', label: 'Delivery partner', hint: 'picks up and delivers' },
   { role: 'admin', label: 'Admin', hint: 'verifies and disputes' },
 ]
 

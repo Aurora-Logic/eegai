@@ -153,7 +153,9 @@ needRoutes.get('/requests', async (c) => {
       `select hr.id, hr.category, hr.blood_group, hr.urgency, hr.donors_needed,
               hr.responses_count, hr.pincode, hr.note, hr.expires_at, hr.created_at,
               hr.institution_name as institution, hr.address,
-              case when p.lat is not null and hr.lat <> 0
+              -- Only for a donor who left "use my area" on; the switch has to
+              -- mean something now that it no longer gates the alerts.
+              case when p.lat is not null and p.share_location
                    then round(app.distance_km(p.lat, p.lng, hr.lat, hr.lng)::numeric, 1) end
                 as distance_km,
               app.has_responded_to(hr.id) as responded,
@@ -163,7 +165,10 @@ needRoutes.get('/requests', async (c) => {
                 limit 1) as my_answer
        from public.health_requests hr
        cross join lateral (
-         select id, lat, lng from public.profiles where user_id = app.current_user_id()
+         select pr.id, pr.lat, pr.lng, coalesce(d.share_location, false) as share_location
+         from public.profiles pr
+         left join public.donor_health_profiles d on d.profile_id = pr.id
+         where pr.user_id = app.current_user_id()
        ) p
        where hr.status = 'open'
        order by
@@ -207,10 +212,10 @@ needRoutes.post('/requests/:id/respond', async (c) => {
 
   try {
     const details = await withActor(actor, async (tx) => {
-      const { rows } = await tx.query(
-        'select * from app.respond_to_health_request($1, $2)',
-        [c.req.param('id'), available],
-      )
+      const { rows } = await tx.query('select * from app.respond_to_health_request($1, $2)', [
+        c.req.param('id'),
+        available,
+      ])
       return rows[0] ?? null
     })
 
@@ -369,7 +374,6 @@ needRoutes.post('/requests/:id/close', async (c) => {
   }
 })
 
-
 // ---------------------------------------------------------------------------
 // Hair and breast milk: offered by the donor to a partner organisation
 // ---------------------------------------------------------------------------
@@ -418,7 +422,10 @@ needRoutes.post('/offers', async (c) => {
   } else if (category === 'breast_milk') {
     const parsed = milkOfferSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'Every point must be confirmed.', issues: parsed.error.flatten() }, 400)
+      return c.json(
+        { error: 'Every point must be confirmed.', issues: parsed.error.flatten() },
+        400,
+      )
     }
     const { ngoId: id, ...rest } = parsed.data
     ngoId = id

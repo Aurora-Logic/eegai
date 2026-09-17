@@ -76,7 +76,7 @@ export default function NgoWall() {
               refuse them. */}
           <Button asChild variant="outline">
             <Link to="/ngo/needs">
-              <Droplet aria-hidden /> Donation requests
+              <Droplet aria-hidden /> Blood and donor offers
             </Link>
           </Button>
           <Button variant={tab === 'wall' ? 'default' : 'outline'} onClick={() => setTab('wall')}>

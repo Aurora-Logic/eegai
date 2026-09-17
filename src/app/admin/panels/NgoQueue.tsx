@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, photoUrl } from '@/lib/api'
+import { formatRelative } from '@/lib/dates'
 import { VerifyDialog, type VerifyAction } from './VerifyDialog'
 import { STATUS_VARIANT } from './status'
 import { CATEGORY_LABEL, type HealthCategory } from '@/lib/validation/health'
@@ -47,6 +48,8 @@ interface Ngo {
   created_at: string
   health_categories: string[] | null
   visit_instructions: string | null
+  org_type: 'ngo' | 'hospital'
+  terms_accepted_at: string | null
 }
 
 interface Doc {
@@ -126,6 +129,7 @@ export function NgoQueue() {
                   <Badge variant={STATUS_VARIANT[ngo.verification_status] ?? 'muted'}>
                     {ngo.verification_status}
                   </Badge>
+                  {ngo.org_type === 'hospital' ? <Badge variant="outline">Hospital</Badge> : null}
                   {ngo.has_80g ? <Badge variant="outline">80G</Badge> : null}
                   {/* An institution is a different kind of thing from an
                       organisation collecting clothes, and an operator should
@@ -190,6 +194,15 @@ export function NgoQueue() {
                   ))}
                 </span>
               </Field>
+              {ngo.org_type === 'hospital' ? (
+                <Field label="Terms">
+                  {ngo.terms_accepted_at ? (
+                    `accepted ${formatRelative(ngo.terms_accepted_at)}`
+                  ) : (
+                    <span className="text-destructive">not accepted</span>
+                  )}
+                </Field>
+              ) : null}
               <Field label="Capacity">
                 {ngo.monthly_capacity}/month · {ngo.claims} claims
               </Field>

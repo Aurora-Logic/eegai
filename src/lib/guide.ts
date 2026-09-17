@@ -1,11 +1,13 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Baby,
   Bell,
   CheckCheck,
   Droplet,
   HeartHandshake,
   KeyRound,
   PackageCheck,
+  Scissors,
   ShieldCheck,
   Truck,
   Upload,
@@ -30,25 +32,35 @@ export interface GuideStep {
 
 export const GUIDE: Record<Role, GuideStep[]> = {
   donor: [
-    // The health lane leads, because that is what the app opens on.
+    // The spec's order: Blood, Hair, Breast Milk, then Material.
     {
       icon: Droplet,
-      title: 'Say what you can give',
-      body: 'Blood, hair or breast milk, and the part of Coimbatore you are in. Your exact location is never shown to anybody — it is only used to work out what is near you.',
+      title: 'Blood: register once',
+      body: 'Give your blood type (required), age, gender, last donation date and whether you are available. Your name, phone and area come from your account.',
     },
     {
       icon: Bell,
-      title: 'A verified institution asks',
-      body: 'Only hospitals, blood centres and milk banks we have checked, and only within the distance they chose. Turn alerts off any time and you can still look.',
+      title: 'Blood: answer the alert',
+      body: 'When a verified hospital posts a blood alert, every registered blood donor is told — group, units, hospital, location and urgency. Tap Available to donate or Not available.',
     },
     {
       icon: HeartHandshake,
-      title: 'Say yes, then go there',
-      body: 'You get the address and a number to ring. The donation happens at the institution, with them — this app never handles it and never decides whether you are eligible.',
+      title: 'The hospital rings you',
+      body: 'Only if you said Available. You get its address and number under Where to go. The hospital decides whether you can donate, in person — this app never does.',
+    },
+    {
+      icon: Scissors,
+      title: 'Hair: fill the form, pick a partner',
+      body: 'Length in inches, clean and dry, tied or braided, natural or treated, and a photo if you like. The partner organisation you choose checks it and tells you what to do next.',
+    },
+    {
+      icon: Baby,
+      title: 'Breast milk: confirm, then screening',
+      body: 'Tick all seven eligibility points and choose a Lactation Management Centre. The centre screens you and the donation happens there.',
     },
     {
       icon: Upload,
-      title: 'Photograph what you are giving',
+      title: 'Material: photograph what you are giving',
       body: 'Up to five photos, from your phone. Daylight if you can — an organisation decides from these.',
     },
     {
@@ -59,12 +71,12 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     {
       icon: Truck,
       title: 'Choose how it travels',
-      body: 'A volunteer comes to your door, or a courier collects. You pick once an organisation has claimed it.',
+      body: 'A delivery partner comes to your door, or a courier collects. You pick once an organisation has accepted it.',
     },
     {
       icon: KeyRound,
       title: 'Read your code out at the door',
-      body: 'A 4-digit code appears on your items screen. Say it aloud to the volunteer. Never type it into anyone else’s phone.',
+      body: 'A 4-digit code appears on your items screen. Say it aloud to the delivery partner. Never type it into anyone else’s phone.',
     },
     {
       icon: PackageCheck,
@@ -75,13 +87,18 @@ export const GUIDE: Record<Role, GuideStep[]> = {
   ngo: [
     {
       icon: Droplet,
-      title: 'Ask for blood, hair or breast milk',
-      body: 'If an administrator has approved your institution for a category, you can post what you need. Everyone nearby who offers it and has alerts on is told — you are given the number told, never who they are.',
+      title: 'Hospitals: post a blood alert',
+      body: 'Once an administrator approves blood for you, post the group, units required and urgency. Every registered blood donor with alerts on is told — you see how many, never who.',
     },
     {
       icon: HeartHandshake,
-      title: 'Ring the people who said yes',
-      body: 'You get a name and a phone number when somebody offers, and nothing else. Where they live is not something this app will ever show you.',
+      title: 'Ring the donors who are available',
+      body: 'Each one who taps Available appears with name, phone, age, gender, group and last donation date. Where they live is not something this app will ever show you.',
+    },
+    {
+      icon: Scissors,
+      title: 'Partners: decide hair and milk offers',
+      body: 'Donors choose you and send their answers. Mark an offer as being checked, accept it, or decline with a reason the donor sees — then mark it received.',
     },
     {
       icon: ShieldCheck,
@@ -101,7 +118,7 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     {
       icon: KeyRound,
       title: 'Read your code out on delivery',
-      body: 'The volunteer asks for it. That is what proves the handover happened.',
+      body: 'The delivery partner asks for it. That is what proves the handover happened.',
     },
     {
       icon: Upload,
@@ -134,7 +151,7 @@ export const GUIDE: Record<Role, GuideStep[]> = {
   admin: [
     {
       icon: ShieldCheck,
-      title: 'Verify organisations and volunteers',
+      title: 'Verify organisations, hospitals and delivery partners',
       body: 'Read their papers, then approve or reject with a reason. The reason goes into the trail and is shown to them.',
     },
     {

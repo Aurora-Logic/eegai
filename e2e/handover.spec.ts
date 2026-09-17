@@ -89,10 +89,10 @@ test('the donor chooses a volunteer', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Your items' })).toBeVisible()
 
   const card = page.locator('article').filter({ hasText: itemTitle }).first()
-  await card.getByRole('button', { name: 'A volunteer' }).click()
+  await card.getByRole('button', { name: 'A delivery partner' }).click()
 
   // The choice sticks: the prompt disappears once delivery_method is set.
-  await expect(card.getByRole('button', { name: 'A volunteer' })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: 'A delivery partner' })).toHaveCount(0)
 })
 
 test('a volunteer accepts the pickup', async ({ page }) => {

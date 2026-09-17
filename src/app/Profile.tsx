@@ -177,8 +177,8 @@ export default function Profile() {
               <Label>{t('auth.phone')}</Label>
               <p className="font-mono text-sm">{data.profile.phone ?? '—'}</p>
               <p className="text-xs text-muted-foreground">
-                This is how you sign in and how a volunteer reaches you. An administrator changes
-                it, so there is a record of who did.
+                This is how you sign in and how a delivery partner reaches you. An administrator
+                changes it, so there is a record of who did.
               </p>
             </div>
           </section>
@@ -200,7 +200,7 @@ export default function Profile() {
                   onChange={(e) => set({ address: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground">
-                  A volunteer is given this address. Keep it one somebody can find.
+                  A delivery partner is given this address. Keep it one somebody can find.
                 </p>
               </div>
 
@@ -568,6 +568,6 @@ function RoleRequest({ role, open }: { role: string; open: ProfileData['roleRequ
 const LABEL: Record<string, string> = {
   donor: 'a donor',
   ngo: 'an organisation',
-  volunteer: 'a volunteer',
+  volunteer: 'a delivery partner',
   admin: 'an administrator',
 }

@@ -48,7 +48,7 @@ export function VolunteerQueue() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          A volunteer collects from people's homes. Verify before approving.
+          A delivery partner collects from people's homes. Verify before approving.
         </p>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-48" aria-label="Filter by status">
@@ -76,7 +76,7 @@ export function VolunteerQueue() {
         ) : (
           <EmptyState
             illustration={<NoMatchesScene className="w-full" />}
-            title="No volunteer is in that state"
+            title="No delivery partner is in that state"
             hint="Try another filter, or All to see everyone on record."
           />
         )

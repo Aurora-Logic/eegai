@@ -316,7 +316,6 @@ describe('rule 1 — a donor location never reaches an institution', () => {
   })
 })
 
-
 describe('hair and breast milk — offered to a partner the donor chooses', () => {
   const HAIR = {
     lengthInches: 14,

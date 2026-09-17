@@ -154,7 +154,8 @@ export function hairWarnings(v: {
   if (typeof v.lengthInches === 'number' && v.lengthInches > 0 && v.lengthInches < 10) {
     out.push('Most partners look for at least 10–12 inches.')
   }
-  if (v.tied === false) out.push('Tie it in a ponytail or braid before cutting, or it cannot be bundled.')
+  if (v.tied === false)
+    out.push('Tie it in a ponytail or braid before cutting, or it cannot be bundled.')
   if (v.natural === false || v.chemicallyTreated === true) {
     out.push('Coloured or chemically treated hair may not be accepted — the partner decides.')
   }

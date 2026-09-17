@@ -40,14 +40,16 @@ export default function DonorResponses() {
   }
 
   const responses = data?.responses ?? []
-  const live = responses.filter((r) => !r.withdrawn_at)
+  // A Not available answer is a record for the hospital's count, not somewhere
+  // to go, and it carries no address.
+  const live = responses.filter((r) => !r.withdrawn_at && r.available)
 
   return (
-    <AppShell title="Where to go" subtitle="Everything you have offered to help with.">
+    <AppShell title="Where to go" subtitle="Blood alerts you said you are available for.">
       {live.length === 0 ? (
         <EmptyState
-          title="You have not offered yet"
-          hint="When you say yes to a request, the address and the phone number appear here."
+          title="Nothing to go to yet"
+          hint="When you say Available to a blood alert, the hospital's address and phone number appear here."
         />
       ) : (
         <ul className="space-y-3" aria-label="Your offers">
@@ -82,7 +84,7 @@ export default function DonorResponses() {
               ) : null}
 
               <p className="mt-2 font-mono text-xs text-muted-foreground">
-                you said yes {formatRelative(r.responded_at)}
+                you said available {formatRelative(r.responded_at)}
               </p>
 
               {/* Changing your mind is better than not turning up, so it is a
