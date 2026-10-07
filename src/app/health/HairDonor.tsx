@@ -4,6 +4,7 @@ import { AlertTriangle, Check, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { FlowDiagram } from '@/components/shared/flow-diagram'
 import { ConsentGate } from '@/components/health/consent-gate'
+import { Requirements } from '@/components/health/requirements'
 import { OfferList } from '@/components/health/offer-list'
 import { PartnerSelect } from '@/components/health/partner-select'
 import { YesNo } from '@/components/health/yes-no'
@@ -31,6 +32,7 @@ export default function HairDonor() {
         {/* Full width: the diagram goes horizontal at the md breakpoint of the
             viewport, not of its column, and in half a desktop it overflowed. */}
         <FlowDiagram title="What happens next" steps={HAIR_FLOW} />
+        <Requirements category="hair" />
         <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
           <div className="space-y-6">
             <HairForm />

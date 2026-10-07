@@ -15,6 +15,8 @@ export interface Profile {
   is_active: boolean
   /** Which health donations this organisation may request. Empty for everyone else. */
   health_categories: string[]
+  /** 'hospital' or 'ngo' for an organisation; null for everybody else. */
+  org_type?: 'ngo' | 'hospital' | null
 }
 
 export interface SessionUser {
@@ -117,8 +119,16 @@ export const HOME_FOR_ROLE: Record<Role, string> = {
 }
 
 export function homeFor(user: Pick<SessionUser, 'role' | 'profile'>): string {
+  // A hospital has no wall at all — blood is the whole of what it does here —
+  // so it lands on its alerts whether or not an admin has approved it yet.
+  if (user.role === 'ngo' && user.profile.org_type === 'hospital') return '/ngo/needs'
   if (user.role === 'ngo' && (user.profile.health_categories?.length ?? 0) > 0) {
     return '/ngo/needs'
   }
   return HOME_FOR_ROLE[user.role]
+}
+
+/** Whether this user is an organisation that uses the goods wall. */
+export function hasGoodsWall(user: Pick<SessionUser, 'role' | 'profile'> | null): boolean {
+  return user?.role === 'ngo' && user.profile.org_type !== 'hospital'
 }

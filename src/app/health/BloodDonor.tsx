@@ -6,6 +6,8 @@ import { AppShell } from '@/components/shared/app-shell'
 import { EmptyState } from '@/components/shared/empty-state'
 import { FlowDiagram } from '@/components/shared/flow-diagram'
 import { ConsentGate } from '@/components/health/consent-gate'
+import { OfferList } from '@/components/health/offer-list'
+import { PartnerSelect } from '@/components/health/partner-select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
-import { AREA_BY_PINCODE } from '@/lib/coimbatore'
+import { AREA_BY_PINCODE } from '@/lib/areas'
 import { formatRelative } from '@/lib/dates'
 import { HEALTH_FLOW } from '@/lib/flows'
 import { healthApi, profileBody, type NearbyRequest } from '@/lib/health-client'
@@ -81,6 +83,7 @@ function BloodBody() {
         {registered ? (
           <div className="space-y-6">
             <Alerts />
+            <OfferBlood />
           </div>
         ) : null}
       </div>
@@ -272,10 +275,15 @@ function Registration({ registered }: { registered: boolean }) {
         />
       </label>
 
-      {/* The spec's note, in the place somebody reads it: we store these and
-          show them to a hospital, and decide nothing from them. */}
+      {/* Who sees what, on the screen where the details are handed over. The
+          form lists the location beside everything a hospital does receive,
+          and without this line it read as though the hospital got that too —
+          which is how the TypeSafe copy check flagged it. */}
       <p className="text-xs text-muted-foreground">
-        The hospital decides whether you can donate, in person. EEGAI does not screen anybody.
+        When you tap Available, that hospital sees your name, phone, age, gender, blood group
+        and last donation date. Your location is never shown to anybody — it is only used to
+        tell you how far away a hospital is. The hospital decides whether you can donate, in
+        person; EEGAI does not screen anybody.
       </p>
 
       {error ? (
@@ -293,6 +301,82 @@ function Registration({ registered }: { registered: boolean }) {
             Stop being a blood donor
           </Button>
         ) : null}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Giving blood without waiting to be asked.
+ *
+ * An alert only reaches somebody when a hospital happens to post one. A donor
+ * who is free on Saturday can go to a hospital that never posted anything, and
+ * refusing that was a gap rather than a rule.
+ */
+function OfferBlood() {
+  const queryClient = useQueryClient()
+  const [ngoId, setNgoId] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+
+  const offer = useMutation({
+    mutationFn: () => healthApi.submitOffer({ category: 'blood', ngoId, note: note.trim() }),
+    onSuccess: async () => {
+      setError(null)
+      setSent(true)
+      setNgoId('')
+      setNote('')
+      await queryClient.invalidateQueries({ queryKey: ['health', 'offers'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  return (
+    <section className="hairline space-y-3 rounded-sm bg-card p-4">
+      <h2 className="font-display text-display-sm">Offer blood to a hospital</h2>
+      <p className="text-sm text-muted-foreground">
+        For when you are free to donate and nobody has asked. The hospital screens you and confirms
+        the donation, exactly as it would for an alert.
+      </p>
+
+      <PartnerSelect
+        category="blood"
+        label="Hospital or blood centre"
+        value={ngoId}
+        onChange={setNgoId}
+      />
+
+      <div className="space-y-1.5">
+        <Label htmlFor="blood-note">When you can come (optional)</Label>
+        <Input
+          id="blood-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Any Saturday morning"
+        />
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      {sent ? (
+        <p role="status" className="text-sm text-success">
+          Sent. The hospital will contact you.
+        </p>
+      ) : null}
+
+      <Button disabled={!ngoId || offer.isPending} onClick={() => offer.mutate()}>
+        {offer.isPending ? 'Sending…' : 'Offer to donate'}
+      </Button>
+
+      <div className="pt-2">
+        <h3 className="text-sm font-medium">What you have offered</h3>
+        <div className="mt-2">
+          <OfferList category="blood" />
+        </div>
       </div>
     </section>
   )

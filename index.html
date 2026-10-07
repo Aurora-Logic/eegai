@@ -32,6 +32,27 @@
     />
 
     <title>EEGAI — Where giving finds its way</title>
+    <script>
+      // The theme, before first paint.
+      //
+      // useTheme() owns the toggle, but it only runs once a component that
+      // calls it mounts — which never happens on the landing, sign-in or legal
+      // pages. A visitor who prefers dark got a light page inside the dark
+      // browser chrome the meta tags above had already asked for, and somebody
+      // who chose dark in the app saw it forgotten every time they signed out.
+      try {
+        var saved = localStorage.getItem('eegai.theme')
+        var theme =
+          saved === 'light' || saved === 'dark'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+        document.documentElement.classList.toggle('dark', theme === 'dark')
+      } catch (error) {
+        // Private mode, or storage blocked. Light is the designed default.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

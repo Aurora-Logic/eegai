@@ -50,6 +50,7 @@ interface Ngo {
   visit_instructions: string | null
   org_type: 'ngo' | 'hospital'
   terms_accepted_at: string | null
+  requested_health_categories: string[] | null
 }
 
 interface Doc {
@@ -178,6 +179,25 @@ export function NgoQueue() {
                 </>
               }
             >
+              {/* What they asked for at registration, beside what they have
+                  been granted. Without it an operator has to guess which
+                  categories to tick. */}
+              {(ngo.requested_health_categories ?? []).length > 0 ? (
+                <Field label="Asked for">
+                  <span className="flex flex-wrap gap-1">
+                    {(ngo.requested_health_categories ?? []).map((c) => (
+                      <Badge key={c} variant="outline">
+                        {CATEGORY_LABEL[c as HealthCategory] ?? c}
+                      </Badge>
+                    ))}
+                  </span>
+                  {(ngo.health_categories ?? []).length === 0 ? (
+                    <span className="block text-xs text-muted-foreground">
+                      not granted yet — use Edit
+                    </span>
+                  ) : null}
+                </Field>
+              ) : null}
               <Field label="Contact">
                 <span className="font-mono text-xs">{ngo.contact_phone ?? '—'}</span>
               </Field>

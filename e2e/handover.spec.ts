@@ -8,7 +8,8 @@ import { expect, test } from '@playwright/test'
  */
 test.describe.configure({ mode: 'serial' })
 
-const NGO = { phone: '9100000001', password: 'password123' }
+// An NGO, not the seeded hospital: a hospital has no goods wall.
+const NGO = { phone: '9100000002', password: 'password123' }
 const DONOR = { phone: '9300000001', password: 'password123' }
 const VOLUNTEER = { phone: '9200000001', password: 'password123' }
 
@@ -23,7 +24,7 @@ async function signIn(page: import('@playwright/test').Page, who: typeof NGO) {
   )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(who.phone)
-  await page.getByLabel('Password').fill(who.password)
+  await page.getByLabel('Password', { exact: true }).fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   // Waited on the URL leaving /sign-in. Navigating before the session lands
   // bounces off ProtectedRoute, and the failure then reads as a missing

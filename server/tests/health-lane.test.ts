@@ -140,12 +140,29 @@ describe('rule 3 — only verified institutions can post', () => {
     expect(ids).not.toContain(awayDonor.profileId)
   })
 
-  it('refuses a hair or milk request — those are offered by donors', async () => {
-    await expect(
-      asActor({ userId: institution.userId, role: 'ngo' }, (tx) =>
-        tx.query(`select * from app.post_health_request('hair',null,'routine',1,null,null,72)`),
-      ),
-    ).rejects.toThrow(/only blood alerts/i)
+  it('lets an approved organisation ask for hair or milk as well', async () => {
+    // 026 had narrowed this to blood, on the reasoning that hair and milk are
+    // donor-initiated. Both directions exist: a partner may say it is short,
+    // and a donor may offer without being asked.
+    await adminPool.query(
+      `update public.ngos set health_categories = '{blood,hair}' where id = $1`,
+      [institution.ngoId],
+    )
+    const row = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
+      const { rows } = await tx.query(
+        `select * from app.post_health_request('hair',null,'routine',2,null,'For a wig camp',72)`,
+      )
+      return rows[0]
+    })
+    expect(row.request_id).toBeTruthy()
+
+    // Put it back: every test below reads this organisation as blood-only, and
+    // leaving it approved for hair made three of them fail for a reason that
+    // had nothing to do with what they were checking.
+    await adminPool.query(
+      `update public.ngos set health_categories = '{blood}' where id = $1`,
+      [institution.ngoId],
+    )
   })
 
   it('refuses a blood alert that does not say which group', async () => {
@@ -254,6 +271,7 @@ describe('rule 1 — a donor location never reaches an institution', () => {
       'phone',
       'profile_id',
       'responded_at',
+      'status',
     ])
   })
 
@@ -447,9 +465,15 @@ describe('hair and breast milk — offered to a partner the donor chooses', () =
       ),
     ).rejects.toThrow(/not sent to you/i)
 
+    // Forward jumps are allowed — an organisation that collected the hair and
+    // never tapped "checking" should not be stuck. Backwards is what is
+    // refused, because it would rewrite what the donor has already been told.
+    await asActor({ userId: hairPartner.userId, role: 'ngo' }, (tx) =>
+      tx.query(`select app.decide_health_offer($1, 'accepted', 'Post it on Tuesday.')`, [offerId]),
+    )
     await expect(
       asActor({ userId: hairPartner.userId, role: 'ngo' }, (tx) =>
-        tx.query(`select app.decide_health_offer($1, 'completed', null)`, [offerId]),
+        tx.query(`select app.decide_health_offer($1, 'in_review', null)`, [offerId]),
       ),
     ).rejects.toThrow(/cannot become/i)
 
@@ -458,10 +482,6 @@ describe('hair and breast milk — offered to a partner the donor chooses', () =
         tx.query(`select app.decide_health_offer($1, 'declined', '  ')`, [offerId]),
       ),
     ).rejects.toThrow(/say why/i)
-
-    await asActor({ userId: hairPartner.userId, role: 'ngo' }, (tx) =>
-      tx.query(`select app.decide_health_offer($1, 'accepted', 'Post it on Tuesday.')`, [offerId]),
-    )
 
     const mine = await asActor({ userId: farDonor.userId, role: 'donor' }, async (tx) => {
       const { rows } = await tx.query(
@@ -613,5 +633,162 @@ describe('the admin side of the lane', () => {
       [hairDonor.profileId],
     )
     expect(theirs.rows[0].unread).toBeGreaterThan(0)
+  })
+})
+
+describe('what the hospital confirms (migration 032)', () => {
+  let confirmRequest: string
+  let giver: { userId: string; profileId: string }
+
+  beforeAll(async () => {
+    // Its own donor: a test further up withdraws nearbyDonor's consent, and
+    // borrowing them made this block fail for somebody else's reason.
+    giver = await makeDonor(nextPhone(), 11.0171, 76.956, ['blood'])
+  })
+
+  it('counts only donations the hospital has confirmed', async () => {
+    confirmRequest = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
+      const { rows } = await tx.query(
+        `select * from app.post_health_request('blood','O+','urgent',2,null,'confirm test',72)`,
+      )
+      return rows[0].request_id as string
+    })
+
+    await asActor({ userId: giver.userId, role: 'donor' }, (tx) =>
+      tx.query('select * from app.respond_to_health_request($1, true)', [confirmRequest]),
+    )
+
+    const before = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
+      const { rows } = await tx.query('select * from app.request_progress($1)', [confirmRequest])
+      return rows[0]
+    })
+    // Saying you are available is not a donation.
+    expect(before).toEqual({ units_required: 2, completed: 0, pending: 1, remaining: 2 })
+
+    await asActor({ userId: institution.userId, role: 'ngo' }, (tx) =>
+      tx.query(`select app.set_response_status($1, $2, 'completed')`, [
+        confirmRequest,
+        giver.profileId,
+      ]),
+    )
+
+    const after = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
+      const { rows } = await tx.query('select * from app.request_progress($1)', [confirmRequest])
+      return rows[0]
+    })
+    expect(after).toEqual({ units_required: 2, completed: 1, pending: 0, remaining: 1 })
+  })
+
+  it('never lets a donor mark their own donation complete', async () => {
+    // The count above is what the next donor decides on, so a donor who could
+    // write to it could empty a hospital's queue by tapping a button.
+    await expect(
+      asActor({ userId: nearbyDonor.userId, role: 'donor' }, (tx) =>
+        tx.query(`select app.set_response_status($1, $2, 'completed')`, [
+          confirmRequest,
+          nearbyDonor.profileId,
+        ]),
+      ),
+    ).rejects.toThrow(/not yours/i)
+  })
+
+  it('refuses a step backwards', async () => {
+    await expect(
+      asActor({ userId: institution.userId, role: 'ngo' }, (tx) =>
+        tx.query(`select app.set_response_status($1, $2, 'in_review')`, [
+          confirmRequest,
+          giver.profileId,
+        ]),
+      ),
+    ).rejects.toThrow(/cannot become/i)
+  })
+
+  it('tells the people who answered when a requirement is closed', async () => {
+    // Somebody who said they were available and heard nothing goes on
+    // believing they are needed.
+    await asActor({ userId: institution.userId, role: 'ngo' }, (tx) =>
+      tx.query(`select app.close_health_request($1, 'fulfilled')`, [confirmRequest]),
+    )
+
+    const told = await adminPool.query(
+      `select profile_id from public.notifications
+       where template_key = 'health_request_closed' and payload->>'request_id' = $1`,
+      [confirmRequest],
+    )
+    // This donor's own donation was already completed, so they are not told
+    // again — the message is for the people still expecting to go.
+    expect(told.rows.map((r) => r.profile_id)).not.toContain(giver.profileId)
+  })
+
+  it('lets a donor offer blood to a hospital that never posted an alert', async () => {
+    const offerId = await asActor({ userId: farDonor.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query(
+        `select app.submit_health_offer($1, 'blood', '{}'::jsonb, null) as id`,
+        [institution.ngoId],
+      )
+      return rows[0].id as string
+    })
+
+    // The group is taken from the donor's registration, inside the database:
+    // the hospital cannot read donor_health_profiles itself.
+    const seen = await asActor({ userId: institution.userId, role: 'ngo' }, async (tx) => {
+      const { rows } = await tx.query(
+        'select details ->> $2 as blood_group from app.incoming_health_offers() where offer_id = $1',
+        [offerId, 'bloodGroup'],
+      )
+      return rows[0]
+    })
+    expect(seen.blood_group).toBe('O+')
+  })
+
+  it('refuses hair under six inches', async () => {
+    await adminPool.query(`update public.ngos set health_categories = '{hair}' where id = $1`, [
+      hairPartner.ngoId,
+    ])
+    await expect(
+      asActor({ userId: giver.userId, role: 'donor' }, (tx) =>
+        tx.query(`select app.submit_health_offer($1, 'hair', $2::jsonb, null)`, [
+          hairPartner.ngoId,
+          JSON.stringify({ cleanAndDry: true, lengthInches: 5 }),
+        ]),
+      ),
+    ).rejects.toThrow(/at least 6 inches/i)
+  })
+})
+
+describe('deleting an account (migration 033)', () => {
+  it('refuses while there is any history, and says what', async () => {
+    await expect(
+      asActor({ userId: admin.userId, role: 'admin' }, (tx) =>
+        tx.query('select app.purge_account($1)', [nearbyDonor.profileId]),
+      ),
+    ).rejects.toThrow(/disable it instead/i)
+  })
+
+  it('removes a test account that never did anything', async () => {
+    const { rows } = await adminPool.query(
+      `select * from app.register_user($1,'x','Nothing Doer','donor'::public.user_role,null,null,'641002',11.0,76.9)`,
+      [nextPhone()],
+    )
+    const gone = await asActor({ userId: admin.userId, role: 'admin' }, async (tx) => {
+      const { rows: done } = await tx.query('select app.purge_account($1) as ok', [
+        rows[0].profile_id,
+      ])
+      return done[0].ok as boolean
+    })
+    expect(gone).toBe(true)
+
+    const left = await adminPool.query('select id from public.profiles where id = $1', [
+      rows[0].profile_id,
+    ])
+    expect(left.rows).toHaveLength(0)
+  })
+
+  it('lets nobody but an admin do it', async () => {
+    await expect(
+      asActor({ userId: nearbyDonor.userId, role: 'donor' }, (tx) =>
+        tx.query('select app.purge_account($1)', [farDonor.profileId]),
+      ),
+    ).rejects.toThrow(/only an admin/i)
   })
 })

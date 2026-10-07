@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { CATEGORIES } from '../../../src/lib/validation/donation.ts'
 import { HEALTH_CATEGORIES } from '../../../src/lib/validation/health.ts'
 import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { withActor } from '../lib/db.ts'
@@ -84,6 +85,7 @@ adminRoutes.get('/ngos', async (c) => {
               n.health_categories::text[] as health_categories,
               n.visit_instructions,
               n.org_type, n.terms_accepted_at,
+              n.requested_health_categories::text[] as requested_health_categories,
               n.is_accepting,
               n.contact_person, n.contact_phone,
               n.created_at,
@@ -337,11 +339,20 @@ adminRoutes.get('/users', async (c) => {
 
   const rows = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
+      // A hospital is an organisation with org_type = 'hospital', and an
+      // operator looking for one should not have to open every NGO to find it,
+      // so 'hospital' and 'ngo' are separate filters over the same role.
       `select p.id, p.full_name, p.phone, p.role, p.pincode, p.is_active, p.created_at,
-              u.last_login_at
+              n.org_type, u.last_login_at
        from public.profiles p
        join public.users u on u.id = p.user_id
-       where ($1 = 'all' or p.role = $1::public.user_role)
+       left join public.ngos n on n.profile_id = p.id
+       where case $1
+               when 'all' then true
+               when 'hospital' then p.role = 'ngo' and n.org_type = 'hospital'
+               when 'ngo' then p.role = 'ngo' and coalesce(n.org_type, 'ngo') = 'ngo'
+               else p.role = $1::public.user_role
+             end
        order by p.created_at desc
        limit 500`,
       [role],
@@ -364,8 +375,6 @@ adminRoutes.get('/users', async (c) => {
 // means operationally.
 // ---------------------------------------------------------------------------
 
-const CATEGORIES = ['clothes', 'books', 'toys', 'education', 'furniture', 'household']
-
 const ngoPatchSchema = z.object({
   name: z.string().trim().min(2).max(200).optional(),
   registrationNumber: z.string().trim().max(100).nullable().optional(),
@@ -386,10 +395,10 @@ const ngoPatchSchema = z.object({
     .array(z.enum(HEALTH_CATEGORIES as unknown as [string, ...string[]]))
     .optional(),
   visitInstructions: z.string().trim().max(500).nullable().optional(),
-  acceptsCategories: z
-    .array(z.enum(CATEGORIES as [string, ...string[]]))
-    .min(1)
-    .optional(),
+  // No minimum: a hospital accepts no material at all, and an NGO that only
+  // takes hair should not have to tick a material category to be saved.
+  acceptsCategories: z.array(z.enum(CATEGORIES as unknown as [string, ...string[]])).optional(),
+  orgType: z.enum(['ngo', 'hospital']).optional(),
   contactPerson: z.string().trim().max(200).nullable().optional(),
   contactPhone: z.string().trim().max(20).nullable().optional(),
   isAccepting: z.boolean().optional(),
@@ -410,6 +419,7 @@ const NGO_COLUMNS: Record<string, string> = {
   isAccepting: 'is_accepting',
   healthCategories: 'health_categories',
   visitInstructions: 'visit_instructions',
+  orgType: 'org_type',
 }
 
 adminRoutes.patch('/ngos/:id', async (c) => {
@@ -437,7 +447,9 @@ adminRoutes.patch('/ngos/:id', async (c) => {
         ? `${column} = $${values.length}::public.donation_category[]`
         : key === 'healthCategories'
           ? `${column} = $${values.length}::public.health_category[]`
-          : `${column} = $${values.length}`,
+          : key === 'orgType'
+            ? `${column} = $${values.length}::public.org_type`
+            : `${column} = $${values.length}`,
     )
   }
   if (sets.length === 0) return c.json({ error: 'Nothing to change.' }, 400)
@@ -562,8 +574,12 @@ adminRoutes.post('/health-offers/:id/decide', async (c) => {
   const status = body?.status
   const note = typeof body?.note === 'string' ? body.note.slice(0, 500) : null
 
-  if (!['in_review', 'accepted', 'declined', 'completed'].includes(status)) {
-    return c.json({ error: 'Choose in review, accepted, declined or completed.' }, 400)
+  // The whole chain, so an organisation can record collection and receipt
+  // rather than jumping from accepted straight to done.
+  if (
+    !['in_review', 'accepted', 'collecting', 'received', 'completed', 'declined'].includes(status)
+  ) {
+    return c.json({ error: 'That is not a step on the chain.' }, 400)
   }
 
   try {
@@ -827,6 +843,35 @@ adminRoutes.post('/users', async (c) => {
     }
     throw error
   }
+})
+
+/**
+ * Delete an account for good.
+ *
+ * Everything else here is a soft delete on purpose — the audit log and the
+ * donation trail are the dispute record. That reasoning does not cover a test
+ * account that never did anything, and a list full of them is its own problem:
+ * an operator looking for a real organisation should not read past "Test NGO
+ * 4". The function refuses the moment there is any history and names what it
+ * found, so the answer for a real account is still to disable it.
+ */
+adminRoutes.delete('/users/:id', async (c) => {
+  const actor = actorOf(c)
+
+  try {
+    await withActor(actor, (tx) =>
+      tx.query('select app.purge_account($1)', [c.req.param('id')]),
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (/disable it instead|no such account|cannot be deleted/i.test(message)) {
+      return c.json({ error: message }, 409)
+    }
+    throw error
+  }
+
+  log.warn('account deleted permanently', { profile_id: c.req.param('id') })
+  return c.json({ ok: true })
 })
 
 /** Four words from a small, unambiguous list. No l/1/O/0 confusion by design. */

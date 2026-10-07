@@ -6,6 +6,8 @@ export const OFFER_VARIANT: Record<OfferStatus, BadgeProps['variant']> = {
   submitted: 'muted',
   in_review: 'tag',
   accepted: 'success',
+  collecting: 'tag',
+  received: 'success',
   declined: 'destructive',
   completed: 'success',
   withdrawn: 'muted',

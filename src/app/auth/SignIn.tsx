@@ -8,6 +8,7 @@ import { ReturningScene } from '@/components/illustrations'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { homeFor, useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
@@ -74,9 +75,8 @@ export default function SignIn() {
 
         <div className="space-y-1.5">
           <Label htmlFor="password">{t('auth.password')}</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             aria-invalid={!!errors.password}
             {...register('password')}

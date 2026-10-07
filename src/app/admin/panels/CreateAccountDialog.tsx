@@ -22,7 +22,7 @@ type NewRole = 'ngo' | 'volunteer' | 'admin'
 
 const ROLES: { value: NewRole; label: string; hint: string }[] = [
   { value: 'ngo', label: 'Organisation', hint: 'Can claim items straight away' },
-  { value: 'volunteer', label: 'Volunteer', hint: 'Can collect and deliver' },
+  { value: 'volunteer', label: 'Delivery partner', hint: 'Can pick up and deliver' },
   { value: 'admin', label: 'Admin', hint: 'Full access, including this screen' },
 ]
 

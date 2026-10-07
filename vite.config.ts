@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+
+
 export default defineConfig({
   plugins: [
     react(),
@@ -90,7 +92,10 @@ export default defineConfig({
         target: `http://127.0.0.1:${process.env.API_PORT ?? 8787}`,
         changeOrigin: true,
       },
-    },
+    },   
+      host: true,
+      port: 5176,
+
   },
   build: {
     // The quality floor in PLAN.md §8 is 250KB gzipped total JS. Warn well
@@ -98,3 +103,5 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
   },
 })
+
+

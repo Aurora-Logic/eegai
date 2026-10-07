@@ -69,6 +69,10 @@ export const registerSchema = z
     // registering as one requires agreeing to them.
     orgType: z.enum(['ngo', 'hospital']).default('ngo'),
     acceptTerms: z.boolean().optional(),
+    // What the organisation says it handles. Saying is not granting: an admin
+    // still approves the health categories before anything reaches a donor.
+    healthCategories: z.array(z.enum(['blood', 'hair', 'breast_milk'])).default([]),
+    acceptsCategories: z.array(z.string()).default([]),
   })
   .superRefine((value, ctx) => {
     if (value.orgType === 'hospital' && value.role !== 'ngo') {
@@ -125,22 +129,39 @@ export const loginSchema = z.object({
  * Role is absent for the same reason it always has been: guard_role_change
  * refuses it from anyone but an admin.
  */
+/**
+ * An empty box means "not filled in", not "save an empty value".
+ *
+ * The profile screen sends every field it holds, so a donor with no area sent
+ * pincode: '' and was told to enter a 6-digit pincode for a field they cannot
+ * see. Blanking is not how anything here is cleared, so '' becomes undefined
+ * before the rule runs.
+ */
+const blankToUndefined = (value: unknown) =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value
+
 export const profileUpdateSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter a name').max(120).optional(),
-  pincode: z
-    .string()
-    .trim()
-    .regex(/^[1-9][0-9]{5}$/, 'Enter a 6-digit pincode')
-    .optional(),
+  pincode: z.preprocess(
+    blankToUndefined,
+    z
+      .string()
+      .trim()
+      .regex(/^[1-9][0-9]{5}$/, 'Enter a 6-digit pincode')
+      .optional(),
+  ),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
 
   // Organisation-only. Ignored by the route for any other role.
-  address: z.string().trim().max(500).optional(),
-  contactPerson: z.string().trim().max(200).optional(),
-  contactPhone: z.string().trim().max(20).optional(),
+  address: z.preprocess(blankToUndefined, z.string().trim().max(500).optional()),
+  contactPerson: z.preprocess(blankToUndefined, z.string().trim().max(200).optional()),
+  contactPhone: z.preprocess(blankToUndefined, z.string().trim().max(20).optional()),
   isAccepting: z.boolean().optional(),
-  acceptsCategories: z.array(z.string()).min(1, 'Accept at least one category').optional(),
+  // No minimum. A hospital accepts no material at all, and an NGO that only
+  // takes hair should not be forced to tick "furniture" to save its own name —
+  // which is what the old min(1) did to every donor renaming themselves.
+  acceptsCategories: z.array(z.string()).optional(),
 
   // Volunteer-only.
   serviceRadiusKm: z.number().int().min(1).max(50).optional(),

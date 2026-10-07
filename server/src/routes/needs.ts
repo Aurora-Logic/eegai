@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import {
   CONSENT_VERSION,
   donorHealthProfileSchema,
+  bloodOfferSchema,
   hairOfferSchema,
   healthRequestSchema,
   milkOfferSchema,
@@ -38,7 +39,7 @@ needRoutes.use('*', requireAuth)
 
 /** Messages the database raises are written for the person reading them. */
 const EXPECTED =
-  /not approved|not verified|only an institution|no location|consent|closed|blood group|no such request|not yours|only blood|future|hair must|eligibility point|does not accept|already have one|cannot become|say why|not sent to you|only a donor|blood is given|no such offer/i
+  /not approved|not verified|only an institution|no location|consent|closed|blood group|no such request|not yours|future|hair must|eligibility point|does not accept|already have one|cannot become|say why|not sent to you|only a donor|no such offer|register as a blood donor|has not said|at least 6 inches/i
 
 function asClientError(error: unknown) {
   const raw = error instanceof Error ? error.message : ''
@@ -309,7 +310,8 @@ needRoutes.get('/requests/mine', async (c) => {
   const requests = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
       `select hr.id, hr.category, hr.blood_group, hr.urgency, hr.donors_needed,
-              hr.responses_count, hr.not_available_count, hr.radius_km, hr.note, hr.status,
+              hr.responses_count, hr.not_available_count, hr.completed_count,
+              hr.radius_km, hr.note, hr.status,
               hr.expires_at, hr.created_at, hr.closed_at
        from public.health_requests hr
        join public.ngos n on n.id = hr.ngo_id
@@ -338,7 +340,7 @@ needRoutes.get('/requests/:id/responders', async (c) => {
     const responders = await withActor(actor, async (tx) => {
       const { rows } = await tx.query(
         `select profile_id, full_name, phone, age, gender, blood_group,
-                last_blood_donation::text as last_blood_donation, responded_at
+                last_blood_donation::text as last_blood_donation, status, responded_at
          from app.request_responders($1)`,
         [c.req.param('id')],
       )
@@ -348,6 +350,58 @@ needRoutes.get('/requests/:id/responders', async (c) => {
   } catch (error) {
     const message = asClientError(error)
     if (message) return c.json({ error: message }, 403)
+    throw error
+  }
+})
+
+/**
+ * How much of a requirement is actually met.
+ *
+ * Counts only: units required, confirmed donations, people still expected,
+ * and what is left. The responders list is where the hospital gets names, and
+ * the brief is explicit that this figure does not need any.
+ */
+needRoutes.get('/requests/:id/progress', async (c) => {
+  const actor = actorOf(c)
+  const progress = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query('select * from app.request_progress($1)', [
+      c.req.param('id'),
+    ])
+    return rows[0] ?? null
+  })
+  if (!progress) return c.json({ error: 'No such request.' }, 404)
+  return c.json({ progress })
+})
+
+/**
+ * The hospital's record of what happened to one donor: screened, accepted,
+ * donated, confirmed.
+ *
+ * Only the hospital may move it. A donor marking their own donation complete
+ * would make the fulfilment count worthless, which is the number the next
+ * donor decides on.
+ */
+needRoutes.post('/requests/:id/responders/:profileId/status', async (c) => {
+  const actor = actorOf(c)
+  const status = (await c.req.json().catch(() => null))?.status
+
+  if (!['in_review', 'accepted', 'collecting', 'received', 'completed', 'declined'].includes(status)) {
+    return c.json({ error: 'That is not a step on the chain.' }, 400)
+  }
+
+  try {
+    await withActor(actor, (tx) =>
+      tx.query('select app.set_response_status($1, $2, $3::public.offer_status)', [
+        c.req.param('id'),
+        c.req.param('profileId'),
+        status,
+      ]),
+    )
+    log.info('response status set', { requestId: c.get('requestId'), status })
+    return c.json({ ok: true })
+  } catch (error) {
+    const message = asClientError(error)
+    if (message) return c.json({ error: message }, 409)
     throw error
   }
 })
@@ -383,8 +437,8 @@ needRoutes.post('/requests/:id/close', async (c) => {
 needRoutes.get('/partners', async (c) => {
   const actor = actorOf(c)
   const category = c.req.query('category')
-  if (category !== 'hair' && category !== 'breast_milk') {
-    return c.json({ error: 'Ask for hair or breast_milk partners.' }, 400)
+  if (category !== 'hair' && category !== 'breast_milk' && category !== 'blood') {
+    return c.json({ error: 'Ask for blood, hair or breast_milk partners.' }, 400)
   }
 
   const partners = await withActor(actor, async (tx) => {
@@ -420,6 +474,17 @@ needRoutes.post('/offers', async (c) => {
     ngoId = id
     details = rest
     photoPath = photo ?? null
+  } else if (category === 'blood') {
+    // Walking into a hospital that never posted an alert is a way of giving
+    // blood too. The group comes off the donor's own registration, inside the
+    // database, so this body carries nothing medical.
+    const parsed = bloodOfferSchema.safeParse(body)
+    if (!parsed.success) {
+      return c.json({ error: 'Choose a hospital.', issues: parsed.error.flatten() }, 400)
+    }
+    const { ngoId: id, ...rest } = parsed.data
+    ngoId = id
+    details = rest
   } else if (category === 'breast_milk') {
     const parsed = milkOfferSchema.safeParse(body)
     if (!parsed.success) {
@@ -432,7 +497,7 @@ needRoutes.post('/offers', async (c) => {
     ngoId = id
     details = rest
   } else {
-    return c.json({ error: 'Offer hair or breast milk.' }, 400)
+    return c.json({ error: 'Offer blood, hair or breast milk.' }, 400)
   }
 
   try {
@@ -489,8 +554,12 @@ needRoutes.post('/offers/:id/decide', async (c) => {
   const status = body?.status
   const note = typeof body?.note === 'string' ? body.note.slice(0, 500) : null
 
-  if (!['in_review', 'accepted', 'declined', 'completed'].includes(status)) {
-    return c.json({ error: 'Choose in review, accepted, declined or completed.' }, 400)
+  // The whole chain, so an organisation can record collection and receipt
+  // rather than jumping from accepted straight to done.
+  if (
+    !['in_review', 'accepted', 'collecting', 'received', 'completed', 'declined'].includes(status)
+  ) {
+    return c.json({ error: 'That is not a step on the chain.' }, 400)
   }
 
   try {

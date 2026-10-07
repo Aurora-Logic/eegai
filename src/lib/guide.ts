@@ -36,7 +36,7 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     {
       icon: Droplet,
       title: 'Blood: register once',
-      body: 'Give your blood type (required), age, gender, last donation date and whether you are available. Your name, phone and area come from your account.',
+      body: 'Give your blood type (required), age, gender, last donation date and whether you are available. Your name, phone and area come from your account — and your area is never shown to a hospital.',
     },
     {
       icon: Bell,
@@ -45,13 +45,13 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     },
     {
       icon: HeartHandshake,
-      title: 'The hospital rings you',
-      body: 'Only if you said Available. You get its address and number under Where to go. The hospital decides whether you can donate, in person — this app never does.',
+      title: 'The hospital rings you, then confirms it',
+      body: 'Only if you said Available. You get its address and number under Where to go, and as the hospital screens you, takes the donation and confirms it, each step appears there. You never mark your own donation done — the hospital does, which is what makes the count mean anything. You can also offer blood to a hospital that has not asked.',
     },
     {
       icon: Scissors,
       title: 'Hair: fill the form, pick a partner',
-      body: 'Length in inches, clean and dry, tied or braided, natural or treated, and a photo if you like. The partner organisation you choose checks it and tells you what to do next.',
+      body: 'At least 6 inches, clean and dry, tied or braided, natural or treated, and a photo if you like. The partner organisation you choose checks it, accepts it, and marks it received — you see every step.',
     },
     {
       icon: Baby,
@@ -60,8 +60,8 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     },
     {
       icon: Upload,
-      title: 'Material: photograph what you are giving',
-      body: 'Up to five photos, from your phone. Daylight if you can — an organisation decides from these.',
+      title: 'Material: see what is needed, then post it',
+      body: 'Organisations post what they actually need — 40 school bags before June — and that list is on your items screen. Post against one, or post anything else: up to five photos, from your phone, daylight if you can.',
     },
     {
       icon: CheckCheck,
@@ -88,17 +88,17 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     {
       icon: Droplet,
       title: 'Hospitals: post a blood alert',
-      body: 'Once an administrator approves blood for you, post the group, units required and urgency. Every registered blood donor with alerts on is told — you see how many, never who.',
+      body: 'Once an administrator approves blood for you, post the group, units required and urgency. Every registered blood donor with alerts on is told — you see how many, never who. The same screen takes hair and breast milk requirements.',
     },
     {
       icon: HeartHandshake,
-      title: 'Ring the donors who are available',
-      body: 'Each one who taps Available appears with name, phone, age, gender, group and last donation date. Where they live is not something this app will ever show you.',
+      title: 'Ring them, then record what happened',
+      body: 'Each one who taps Available appears with name, phone, age, gender, group and last donation date — never where they live. Move each along as you screen, take and confirm the donation: only a confirmed donation fills the requirement, and closing it tells everybody still expecting to come.',
     },
     {
       icon: Scissors,
-      title: 'Partners: decide hair and milk offers',
-      body: 'Donors choose you and send their answers. Mark an offer as being checked, accept it, or decline with a reason the donor sees — then mark it received.',
+      title: 'Partners: decide the offers donors send you',
+      body: 'Donors choose you and send their answers — blood, hair or breast milk. Move each one along, or decline with a reason the donor sees. It only goes forwards, because the donor has already been told.',
     },
     {
       icon: ShieldCheck,
@@ -107,8 +107,8 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     },
     {
       icon: CheckCheck,
-      title: 'The wall shows what is near you',
-      body: 'Only items in the categories you accept, inside your radius. Open one to see every photo and what the donor confirmed.',
+      title: 'Say what you need, and watch the wall',
+      body: 'Post what you actually need and donors see it while deciding what to give — it reserves nothing, the first claim still wins. The wall shows items in the categories you accept, inside your radius.',
     },
     {
       icon: PackageCheck,

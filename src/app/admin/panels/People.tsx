@@ -24,12 +24,15 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError, api } from '@/lib/api'
+import { ROLE_LABEL } from '@/lib/roles'
+import type { Role } from '@/lib/state-machine'
 
 interface Person {
   id: string
   full_name: string
   phone: string | null
   role: string
+  org_type?: 'ngo' | 'hospital' | null
   pincode: string | null
   is_active: boolean
   created_at: string
@@ -63,8 +66,9 @@ export function People() {
           <SelectContent>
             <SelectItem value="all">Everyone</SelectItem>
             <SelectItem value="donor">Donors</SelectItem>
-            <SelectItem value="ngo">Organisations</SelectItem>
-            <SelectItem value="volunteer">Volunteers</SelectItem>
+            <SelectItem value="hospital">Hospitals</SelectItem>
+            <SelectItem value="ngo">NGOs</SelectItem>
+            <SelectItem value="volunteer">Delivery partners</SelectItem>
             <SelectItem value="admin">Admins</SelectItem>
           </SelectContent>
         </Select>
@@ -84,7 +88,7 @@ export function People() {
               badges={
                 <>
                   <Badge variant={person.role === 'admin' ? 'destructive' : 'tag'}>
-                    {person.role}
+                    {personLabel(person)}
                   </Badge>
                   {!person.is_active ? <Badge variant="destructive">disabled</Badge> : null}
                 </>
@@ -94,6 +98,7 @@ export function People() {
                   <ChangeRole person={person} />
                   <ResetPassword person={person} />
                   <ActiveToggle person={person} />
+                  <DeleteAccount person={person} />
                 </>
               }
             >
@@ -201,6 +206,80 @@ function ActiveToggle({ person }: { person: Person }) {
   )
 }
 
+/**
+ * What to call somebody in the list.
+ *
+ * A hospital and an NGO are two different kinds of organisation to an operator
+ * — different papers, different approvals — even though they share one role in
+ * the database, and `volunteer` is the product's Delivery partner.
+ */
+function personLabel(person: { role: string; org_type?: 'ngo' | 'hospital' | null }) {
+  if (person.role === 'ngo') return person.org_type === 'hospital' ? 'hospital' : 'NGO'
+  return ROLE_LABEL[person.role as Role]?.toLowerCase() ?? person.role
+}
+
+/**
+ * Delete a test account for good.
+ *
+ * Everything else here is a soft delete, because the audit log and the
+ * donation trail are the dispute record. The server refuses the moment an
+ * account has any history and says what it found, so this is only ever the
+ * answer for something that never did anything.
+ */
+function DeleteAccount({ person }: { person: Person }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const purge = useMutation({
+    mutationFn: () => api.delete(`/admin/users/${person.id}`),
+    onSuccess: async () => {
+      setOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Trash2 aria-hidden /> Delete
+      </Button>
+
+      {open ? (
+        <AlertDialog open onOpenChange={(next) => !next && setOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {person.full_name} permanently?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone. It only works for an account with no history at all — if this
+                one has posted, claimed, collected or answered anything, you will be told what, and
+                disabling it is the answer instead.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+              <Button
+                variant="destructive"
+                className="min-h-11"
+                disabled={purge.isPending}
+                onClick={() => purge.mutate()}
+              >
+                {purge.isPending ? 'Deleting…' : 'Delete for good'}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </>
+  )
+}
+
 const ROLES = ['donor', 'ngo', 'volunteer', 'admin'] as const
 
 /**
@@ -255,7 +334,7 @@ function ChangeRole({ person }: { person: Person }) {
               <SelectContent>
                 {ROLES.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {ROLE_LABEL[option]}
                   </SelectItem>
                 ))}
               </SelectContent>

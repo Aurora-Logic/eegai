@@ -33,6 +33,7 @@ export const HEALTH_FLOW: Record<'donor' | 'ngo', FlowStep[]> = {
     { label: 'Available or Not available', who: 'you choose' },
     { label: 'The hospital rings you', who: 'only if you said Available' },
     { label: 'You donate there', who: 'at the hospital — not in this app', handoff: true },
+    { label: 'The hospital confirms it', who: 'and your record says completed' },
   ],
   ngo: [
     { label: 'An admin verifies you', who: 'papers, and the terms you accepted' },
@@ -41,6 +42,7 @@ export const HEALTH_FLOW: Record<'donor' | 'ngo', FlowStep[]> = {
     { label: 'Available donors appear', who: 'name, phone, age, group, last donation' },
     { label: 'You ring them', who: 'you' },
     { label: 'They donate with you', who: 'in person, at your place', handoff: true },
+    { label: 'You confirm each donation', who: 'which is what fills the requirement' },
   ],
 }
 
@@ -51,6 +53,7 @@ export const HAIR_FLOW: FlowStep[] = [
   { label: 'They check it', who: 'the partner decides' },
   { label: 'Accepted', who: 'with instructions for sending it' },
   { label: 'You send or bring it', who: 'as the partner asks' },
+  { label: 'They mark it received', who: 'you see every step' },
   { label: 'They make wigs with it', who: 'the partner — not this app', handoff: true },
 ]
 

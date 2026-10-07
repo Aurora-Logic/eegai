@@ -33,7 +33,7 @@ async function signIn(page: Page, who: typeof DONOR) {
   )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(who.phone)
-  await page.getByLabel('Password').fill(who.password)
+  await page.getByLabel('Password', { exact: true }).fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   // Waited on the URL leaving /sign-in, not on a heading appearing. The first
   // version of this waited for `heading level 1`, which the sign-in page has
@@ -190,16 +190,61 @@ test('hair goes to the partner the donor chose, and comes back accepted', async 
     .filter({ hasText: '8 in' })
     .first()
   await expect(offer.locator('a[href^="tel:"]')).toBeVisible()
-  await offer.getByRole('button', { name: 'Accept' }).click()
-  await expect(offer.getByRole('button', { name: 'Mark received' })).toBeVisible()
-  // Received, so a re-run of this suite starts with nothing of ours waiting.
-  await offer.getByRole('button', { name: 'Mark received' }).click()
+
+  // The chain, one step at a time and in the partner's own words: the card
+  // only ever offers the next step, because the database refuses a step back.
+  for (const step of [
+    'Organisation checking',
+    'Accepted',
+    'Collection or submission',
+    'Received',
+    'Completed',
+  ]) {
+    await offer.getByRole('button', { name: step, exact: true }).click()
+    await expect(offer.getByText(step, { exact: true }).first()).toBeVisible()
+  }
 
   await signIn(page, DONOR)
   await page.goto('/health/hair')
-  await expect(
-    page.getByRole('list', { name: 'Your offers' }).getByText('Received').first(),
-  ).toBeVisible()
+  // The donor sees the whole chain it went through, not just the last word.
+  const mine = page.getByRole('list', { name: 'Your offers' })
+  await expect(mine.getByText('Completed').first()).toBeVisible()
+  await expect(mine.getByText(/Offer sent → Organisation checking/).first()).toBeVisible()
+})
+
+test('the hospital confirms the donation, and only then does it count', async ({ page }) => {
+  await signIn(page, INSTITUTION)
+  await page.goto('/ngo/needs')
+
+  const card = page.getByRole('listitem').filter({ hasText: NOTE })
+  // Saying you are available is not a donation: the requirement is untouched.
+  await expect(card).toContainText('0 completed')
+
+  await card.getByRole('button', { name: /Available donors/ }).click()
+  const dialog = page.getByRole('dialog')
+
+  // The chain, in the words a hospital would use.
+  for (const step of [
+    'Hospital screening',
+    'Eligible — accepted',
+    'Donation at the hospital',
+    'Hospital confirmed',
+    'Donation completed',
+  ]) {
+    await dialog.getByRole('button', { name: step, exact: true }).click()
+    await expect(dialog.getByText(step, { exact: true }).first()).toBeVisible()
+  }
+
+  await expect(dialog).toContainText('1 completed')
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(card).toContainText('1 completed')
+
+  // And the donor is told, with the day it happened.
+  await signIn(page, DONOR)
+  await page.goto('/health/responses')
+  const mine = page.getByRole('listitem').filter({ hasText: 'Kongu Nala Sangam' }).first()
+  await expect(mine.getByText('Donation completed')).toBeVisible()
+  await expect(mine.getByText(/the hospital confirmed your donation on/i)).toBeVisible()
 })
 
 test('breast milk cannot be sent until every eligibility point is ticked', async ({ page }) => {
@@ -226,7 +271,7 @@ test('registering a hospital requires the terms', async ({ page }) => {
 
   await page.getByLabel('Hospital name').fill('Playwright General')
   await page.getByLabel('Phone number').fill('9876543210')
-  await page.getByLabel('Password').fill('password123')
+  await page.getByLabel('Password', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(
     page.getByText('Agree to the terms and conditions to register a hospital.'),

@@ -154,8 +154,16 @@ export function ProductPanel() {
               'It registers as an organisation of type hospital, accepts the terms, and goes through the same verification. Blood is granted per organisation from the Organisations tab.',
             ],
             [
-              'Hair and milk offers are the partner’s to decide',
-              'Only the chosen partner (or an admin) can move an offer, and declining needs a reason the donor sees. Clean-and-dry hair and all seven milk points are enforced in the database.',
+              'An offer is the organisation’s to move, never the donor’s',
+              'Only the chosen organisation (or an admin) moves an offer along — checking, accepted, collection, received, completed — and it can only go forwards. Declining needs a reason the donor sees. Clean-and-dry hair, six inches, and all seven milk points are enforced in the database.',
+            ],
+            [
+              'Both directions, for all three',
+              'An organisation can post what it needs, and a donor can offer without being asked — including blood, to a hospital that never posted an alert.',
+            ],
+            [
+              'A requirement is only met by a confirmed donation',
+              'The hospital marks each donor completed; that count is what fills the requirement, and closing one tells everybody still expecting to go.',
             ],
             [
               'No medical judgements anywhere',

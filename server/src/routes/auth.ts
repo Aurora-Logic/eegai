@@ -95,15 +95,28 @@ authRoutes.post('/register', async (c) => {
     return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
   }
 
-  const { fullName, phone, password, role, email, address, pincode, lat, lng, orgType } =
-    parsed.data
+  const {
+    fullName,
+    phone,
+    password,
+    role,
+    email,
+    address,
+    pincode,
+    lat,
+    lng,
+    orgType,
+    healthCategories,
+    acceptsCategories,
+  } = parsed.data
   const passwordHash = await hashPassword(password)
 
   try {
     const session = await withActor(null, async (tx) => {
       const { rows } = await tx.query(
         `select * from app.register_user(
-           $1, $2, $3, $4::public.user_role, $5, $6, $7, $8, $9, $10::public.org_type)`,
+           $1, $2, $3, $4::public.user_role, $5, $6, $7, $8, $9, $10::public.org_type,
+           $11::public.health_category[], $12::public.donation_category[])`,
         [
           phone,
           passwordHash,
@@ -117,6 +130,10 @@ authRoutes.post('/register', async (c) => {
           // Hospital only when it is an organisation and the terms were agreed;
           // the schema has already refused anything else.
           role === 'ngo' ? orgType : 'ngo',
+          // Asked for, not granted: an admin approves the health categories
+          // before a donor ever sees this organisation.
+          role === 'ngo' ? `{${healthCategories.join(',')}}` : '{}',
+          role === 'ngo' ? `{${acceptsCategories.join(',')}}` : '{}',
         ],
       )
       const created = rows[0]
@@ -229,7 +246,10 @@ authRoutes.get('/me', async (c) => {
       // charity wants the wall. Left-joined and coalesced, so a donor or a
       // volunteer simply gets an empty array rather than a null to guard.
       `select p.id, p.full_name, p.phone, p.role, p.pincode, l.lat, l.lng, p.is_active,
-              coalesce(n.health_categories::text[], '{}') as health_categories
+              coalesce(n.health_categories::text[], '{}') as health_categories,
+              -- A hospital has no goods wall, so the shell has to know which
+              -- kind of organisation this is before it renders anything.
+              n.org_type
        from public.profiles p
        cross join app.my_location() l
        left join public.ngos n on n.profile_id = p.id

@@ -4,8 +4,8 @@ import { KeyRound, Save, UserCog } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -18,8 +18,8 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { ApiError, api } from '@/lib/api'
-import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
+import { ApiError, api, issueText } from '@/lib/api'
+import { AreaPicker } from '@/components/shared/area-picker'
 import { formatDate } from '@/lib/dates'
 import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -99,15 +99,36 @@ export default function Profile() {
     })
   }, [data])
 
+  // Only what this role actually has. The screen holds one draft for every
+  // role, and sending an organisation's fields as a donor is what made renaming
+  // yourself fail: an empty accepts list tripped a rule about a field a donor
+  // has never seen.
+  const payloadFor = (role: string, d: Record<string, unknown>) => {
+    const base = { fullName: d.fullName, pincode: d.pincode, lat: d.lat, lng: d.lng }
+    if (role === 'ngo') {
+      return {
+        ...base,
+        address: d.address,
+        contactPerson: d.contactPerson,
+        contactPhone: d.contactPhone,
+        isAccepting: d.isAccepting,
+        acceptsCategories: d.acceptsCategories,
+      }
+    }
+    if (role === 'volunteer') return { ...base, serviceRadiusKm: d.serviceRadiusKm }
+    return base
+  }
+
   const save = useMutation({
-    mutationFn: () => api.patch('/profile', draft),
+    mutationFn: () => api.patch('/profile', payloadFor(data!.profile.role, draft!)),
     onSuccess: async () => {
       setSaved(true)
       setError(null)
       await queryClient.invalidateQueries({ queryKey: ['profile'] })
       await queryClient.invalidateQueries({ queryKey: ['session'] })
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not save.'),
+    onError: (e) =>
+      setError(issueText(e) ?? (e instanceof ApiError ? e.message : 'That did not save.')),
   })
 
   if (isLoading || !data || !draft) {
@@ -158,16 +179,9 @@ export default function Profile() {
 
             <div className="space-y-1.5">
               <Label>{t('post.area')}</Label>
-              <Combobox
-                options={areaOptions()}
+              <AreaPicker
                 value={String(draft.pincode ?? '')}
-                onChange={(next) => {
-                  const area = AREA_BY_PINCODE.get(next)
-                  set({ pincode: next, lat: area?.lat, lng: area?.lng })
-                }}
-                placeholder={t('post.areaPlaceholder')}
-                searchPlaceholder={t('post.areaSearch')}
-                emptyText={t('post.areaEmpty')}
+                onChange={(next, area) => set({ pincode: next, lat: area?.lat, lng: area?.lng })}
               />
             </div>
 
@@ -239,9 +253,7 @@ export default function Profile() {
                           const next = on
                             ? current.filter((c) => c !== category)
                             : [...current, category]
-                          // Accepting nothing would empty your wall with no
-                          // explanation; the pause switch is what that is for.
-                          if (next.length > 0) set({ acceptsCategories: next })
+                          set({ acceptsCategories: next })
                         }}
                         // The badge is 25px tall; the button around it carries
                         // the tap target so these stay thumbable without the
@@ -389,9 +401,8 @@ function ChangePassword() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="pw-current">Current password</Label>
-          <Input
+          <PasswordInput
             id="pw-current"
-            type="password"
             autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
@@ -399,9 +410,8 @@ function ChangePassword() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pw-next">New password</Label>
-          <Input
+          <PasswordInput
             id="pw-next"
-            type="password"
             autoComplete="new-password"
             value={next}
             onChange={(e) => setNext(e.target.value)}

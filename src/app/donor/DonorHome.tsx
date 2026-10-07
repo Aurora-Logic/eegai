@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Droplet } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
+import { WantedBoard } from '@/components/shared/wanted-board'
 import { GuideCard } from '@/components/shared/guide-card'
 import { HandoverCodes } from '@/components/shared/handover-codes'
 import { Button } from '@/components/ui/button'
@@ -148,6 +149,8 @@ export default function DonorHome() {
         </Wall>
       )}
       <GuideCard className="mt-6" />
+
+      <WantedBoard className="mt-8" />
     </AppShell>
   )
 }

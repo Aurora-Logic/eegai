@@ -5,18 +5,21 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, Boxes, HandHeart, Hospital, Truck } from 'lucide-react'
 import { AuthLayout } from '@/components/shared/auth-layout'
 import { RoleScene } from '@/components/illustrations/roles'
-import { Combobox } from '@/components/ui/combobox'
-import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
+import { AreaPicker } from '@/components/shared/area-picker'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
 import { homeFor, HOME_FOR_ROLE, useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { t, type StringKey } from '@/lib/i18n'
+import { CATEGORIES } from '@/lib/validation/donation'
+import { CATEGORY_LABEL, HEALTH_CATEGORIES } from '@/lib/validation/health'
 import { registerSchema, type RegisterInput } from '@/lib/validation/auth'
 
 /**
@@ -71,6 +74,8 @@ export default function SignUp() {
   })
 
   const [choice, setChoice] = useState<Choice>('donor')
+  const healthCategories = watch('healthCategories') ?? []
+  const acceptsCategories = watch('acceptsCategories') ?? []
   const role = watch('role')
   const hospital = choice === 'hospital'
   const pincode = watch('pincode')
@@ -209,23 +214,92 @@ export default function SignUp() {
                 ) : null}
               </div>
 
+              {/* What they handle. Saying is not granting: an administrator
+                  approves the health categories before a donor ever sees them,
+                  and a hospital is not asked about material at all. */}
+              <fieldset className="space-y-1.5">
+                <legend className="text-sm font-medium">Which donations do you handle?</legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {HEALTH_CATEGORIES.map((category) => {
+                    const on = healthCategories.includes(category)
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        aria-pressed={on}
+                        className="inline-flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        onClick={() =>
+                          setValue(
+                            'healthCategories',
+                            on
+                              ? healthCategories.filter((c) => c !== category)
+                              : [...healthCategories, category],
+                          )
+                        }
+                      >
+                        <Badge variant={on ? 'tag' : 'outline'} className={cn(!on && 'opacity-60')}>
+                          {CATEGORY_LABEL[category]}
+                        </Badge>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  An administrator approves these before you can post or receive anything.
+                </p>
+              </fieldset>
+
+              {!hospital ? (
+                <fieldset className="space-y-1.5">
+                  <legend className="text-sm font-medium">
+                    Material donations you accept (optional)
+                  </legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CATEGORIES.map((category) => {
+                      const on = acceptsCategories.includes(category)
+                      return (
+                        <button
+                          key={category}
+                          type="button"
+                          aria-pressed={on}
+                          className="inline-flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          onClick={() =>
+                            setValue(
+                              'acceptsCategories',
+                              on
+                                ? acceptsCategories.filter((c) => c !== category)
+                                : [...acceptsCategories, category],
+                            )
+                          }
+                        >
+                          <Badge
+                            variant={on ? 'tag' : 'outline'}
+                            className={cn(!on && 'opacity-60')}
+                          >
+                            {t(`category.${category}` as StringKey)}
+                          </Badge>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Leave this empty if you do not take material donations. You can change it later.
+                  </p>
+                </fieldset>
+              ) : null}
+
               <div className="space-y-1.5">
                 <Label htmlFor="pincode">{t('post.area')}</Label>
-                <Combobox
-                  options={areaOptions()}
+                <AreaPicker
                   value={pincode ?? ''}
-                  onChange={(next) => {
+                  onChange={(next, area) => {
                     // The pincode carries the coordinates, so both are set
                     // together — a pincode without a location would put the
                     // organisation back in the failing-open case.
                     setValue('pincode', next, { shouldValidate: true })
-                    const area = AREA_BY_PINCODE.get(next)
                     setValue('lat', area?.lat)
                     setValue('lng', area?.lng)
                   }}
-                  placeholder={t('post.areaPlaceholder')}
-                  searchPlaceholder={t('post.areaSearch')}
-                  emptyText={t('post.areaEmpty')}
                 />
                 {errors.pincode ? (
                   <p className="text-sm text-destructive">{errors.pincode.message}</p>
@@ -264,12 +338,7 @@ export default function SignUp() {
 
         <div className="space-y-1.5">
           <Label htmlFor="password">{t('auth.password')}</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            {...register('password')}
-          />
+          <PasswordInput id="password" autoComplete="new-password" {...register('password')} />
           <p className="text-sm text-muted-foreground">{t('auth.passwordHint')}</p>
           {errors.password ? (
             <p className="text-sm text-destructive">{errors.password.message}</p>
