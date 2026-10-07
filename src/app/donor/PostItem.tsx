@@ -8,7 +8,6 @@ import { PhotoGrid } from '@/components/shared/photo-grid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dropzone } from '@/components/ui/dropzone'
-import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -19,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
+import { AreaPicker } from '@/components/shared/area-picker'
 import { compressPhoto } from '@/lib/compress'
 import { api, ApiError } from '@/lib/api'
 import { t, type StringKey } from '@/lib/i18n'
@@ -332,22 +331,14 @@ export default function PostItem() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pincode">{t('post.area')}</Label>
-            <Combobox
+            <AreaPicker
               id="pincode"
-              options={areaOptions()}
               value={draft.pincode || undefined}
               // Picking an area also fixes the coordinates, which is what the
               // radius maths runs on. A typed pincode gave us neither.
-              onChange={(pincode) => {
-                const area = AREA_BY_PINCODE.get(pincode)
-                patch({
-                  pincode,
-                  ...(area ? { lat: area.lat, lng: area.lng } : {}),
-                })
-              }}
-              placeholder={t('post.areaPlaceholder')}
-              searchPlaceholder={t('post.areaSearch')}
-              emptyText={t('post.areaEmpty')}
+              onChange={(pincode, area) =>
+                patch({ pincode, ...(area ? { lat: area.lat, lng: area.lng } : {}) })
+              }
             />
             <p className="text-sm text-muted-foreground">{t('post.areaHint')}</p>
           </div>

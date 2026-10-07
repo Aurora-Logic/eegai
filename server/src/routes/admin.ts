@@ -337,11 +337,20 @@ adminRoutes.get('/users', async (c) => {
 
   const rows = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
+      // A hospital is an organisation with org_type = 'hospital', and an
+      // operator looking for one should not have to open every NGO to find it,
+      // so 'hospital' and 'ngo' are separate filters over the same role.
       `select p.id, p.full_name, p.phone, p.role, p.pincode, p.is_active, p.created_at,
-              u.last_login_at
+              n.org_type, u.last_login_at
        from public.profiles p
        join public.users u on u.id = p.user_id
-       where ($1 = 'all' or p.role = $1::public.user_role)
+       left join public.ngos n on n.profile_id = p.id
+       where case $1
+               when 'all' then true
+               when 'hospital' then p.role = 'ngo' and n.org_type = 'hospital'
+               when 'ngo' then p.role = 'ngo' and coalesce(n.org_type, 'ngo') = 'ngo'
+               else p.role = $1::public.user_role
+             end
        order by p.created_at desc
        limit 500`,
       [role],
@@ -386,10 +395,10 @@ const ngoPatchSchema = z.object({
     .array(z.enum(HEALTH_CATEGORIES as unknown as [string, ...string[]]))
     .optional(),
   visitInstructions: z.string().trim().max(500).nullable().optional(),
-  acceptsCategories: z
-    .array(z.enum(CATEGORIES as [string, ...string[]]))
-    .min(1)
-    .optional(),
+  // No minimum: a hospital accepts no material at all, and an NGO that only
+  // takes hair should not have to tick a material category to be saved.
+  acceptsCategories: z.array(z.enum(CATEGORIES as [string, ...string[]])).optional(),
+  orgType: z.enum(['ngo', 'hospital']).optional(),
   contactPerson: z.string().trim().max(200).nullable().optional(),
   contactPhone: z.string().trim().max(20).nullable().optional(),
   isAccepting: z.boolean().optional(),
@@ -410,6 +419,7 @@ const NGO_COLUMNS: Record<string, string> = {
   isAccepting: 'is_accepting',
   healthCategories: 'health_categories',
   visitInstructions: 'visit_instructions',
+  orgType: 'org_type',
 }
 
 adminRoutes.patch('/ngos/:id', async (c) => {
@@ -437,7 +447,9 @@ adminRoutes.patch('/ngos/:id', async (c) => {
         ? `${column} = $${values.length}::public.donation_category[]`
         : key === 'healthCategories'
           ? `${column} = $${values.length}::public.health_category[]`
-          : `${column} = $${values.length}`,
+          : key === 'orgType'
+            ? `${column} = $${values.length}::public.org_type`
+            : `${column} = $${values.length}`,
     )
   }
   if (sets.length === 0) return c.json({ error: 'Nothing to change.' }, 400)

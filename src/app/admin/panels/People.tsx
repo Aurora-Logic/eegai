@@ -24,12 +24,15 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError, api } from '@/lib/api'
+import { ROLE_LABEL } from '@/lib/roles'
+import type { Role } from '@/lib/state-machine'
 
 interface Person {
   id: string
   full_name: string
   phone: string | null
   role: string
+  org_type?: 'ngo' | 'hospital' | null
   pincode: string | null
   is_active: boolean
   created_at: string
@@ -63,8 +66,9 @@ export function People() {
           <SelectContent>
             <SelectItem value="all">Everyone</SelectItem>
             <SelectItem value="donor">Donors</SelectItem>
-            <SelectItem value="ngo">Organisations</SelectItem>
-            <SelectItem value="volunteer">Volunteers</SelectItem>
+            <SelectItem value="hospital">Hospitals</SelectItem>
+            <SelectItem value="ngo">NGOs</SelectItem>
+            <SelectItem value="volunteer">Delivery partners</SelectItem>
             <SelectItem value="admin">Admins</SelectItem>
           </SelectContent>
         </Select>
@@ -84,7 +88,7 @@ export function People() {
               badges={
                 <>
                   <Badge variant={person.role === 'admin' ? 'destructive' : 'tag'}>
-                    {person.role}
+                    {personLabel(person)}
                   </Badge>
                   {!person.is_active ? <Badge variant="destructive">disabled</Badge> : null}
                 </>
@@ -201,6 +205,18 @@ function ActiveToggle({ person }: { person: Person }) {
   )
 }
 
+/**
+ * What to call somebody in the list.
+ *
+ * A hospital and an NGO are two different kinds of organisation to an operator
+ * — different papers, different approvals — even though they share one role in
+ * the database, and `volunteer` is the product's Delivery partner.
+ */
+function personLabel(person: { role: string; org_type?: 'ngo' | 'hospital' | null }) {
+  if (person.role === 'ngo') return person.org_type === 'hospital' ? 'hospital' : 'NGO'
+  return ROLE_LABEL[person.role as Role]?.toLowerCase() ?? person.role
+}
+
 const ROLES = ['donor', 'ngo', 'volunteer', 'admin'] as const
 
 /**
@@ -255,7 +271,7 @@ function ChangeRole({ person }: { person: Person }) {
               <SelectContent>
                 {ROLES.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {ROLE_LABEL[option]}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -113,8 +113,18 @@ export type HealthRequestInput = z.infer<typeof healthRequestSchema>
  * spec says "must" for that one and "may not be accepted, depending on the
  * partner organisation" for the rest, which makes them the organisation's call.
  */
+/**
+ * The floor for a hair offer, refused below rather than warned about.
+ *
+ * Partners prefer 10–12 inches, but 6 is the length below which nothing can be
+ * made at all, so it is the one hair rule the app enforces instead of leaving
+ * to the partner. Checked in the database too.
+ */
+export const HAIR_MIN_INCHES = 6
+
 export const HAIR_CRITERIA = [
-  'Minimum length: preferably 10–12 inches, depending on the partner organisation.',
+  'Minimum length: 6 inches. Below this it cannot be accepted.',
+  'Partners usually prefer 10–12 inches, depending on the organisation.',
   'Hair must be clean and completely dry.',
   'Secure it in a ponytail or braid with rubber bands before cutting.',
   'Cut above the upper rubber band so the hair stays bundled.',
@@ -127,7 +137,7 @@ export const hairOfferSchema = z.object({
   ngoId: z.string().uuid('Choose a partner organisation'),
   lengthInches: z.coerce
     .number({ invalid_type_error: 'Enter the length in inches' })
-    .min(1, 'Enter the length in inches')
+    .min(HAIR_MIN_INCHES, `Hair must be at least ${HAIR_MIN_INCHES} inches to be accepted`)
     .max(60, 'That is longer than 60 inches'),
   cleanAndDry: z.literal(true, {
     errorMap: () => ({ message: 'Hair must be clean and completely dry' }),
@@ -151,7 +161,11 @@ export function hairWarnings(v: {
   chemicallyTreated?: boolean | null
 }): string[] {
   const out: string[] = []
-  if (typeof v.lengthInches === 'number' && v.lengthInches > 0 && v.lengthInches < 10) {
+  if (
+    typeof v.lengthInches === 'number' &&
+    v.lengthInches >= HAIR_MIN_INCHES &&
+    v.lengthInches < 10
+  ) {
     out.push('Most partners look for at least 10–12 inches.')
   }
   if (v.tied === false)

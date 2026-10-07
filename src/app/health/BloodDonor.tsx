@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { useSession } from '@/hooks/use-session'
 import { ApiError } from '@/lib/api'
-import { AREA_BY_PINCODE } from '@/lib/coimbatore'
+import { AREA_BY_PINCODE } from '@/lib/areas'
 import { formatRelative } from '@/lib/dates'
 import { HEALTH_FLOW } from '@/lib/flows'
 import { healthApi, profileBody, type NearbyRequest } from '@/lib/health-client'

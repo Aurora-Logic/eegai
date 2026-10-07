@@ -41,13 +41,16 @@ export function Combobox({
   options: ComboboxOption[]
   value: string | undefined
   onChange: (value: string) => void
-  placeholder?: string
-  searchPlaceholder?: string
-  emptyText?: string
-  id?: string
-  className?: string
-  disabled?: boolean
-  'aria-invalid'?: boolean
+  // `| undefined` explicitly: exactOptionalPropertyTypes distinguishes absent
+  // from present-and-undefined, and callers forward optional props as the
+  // latter.
+  placeholder?: string | undefined
+  searchPlaceholder?: string | undefined
+  emptyText?: string | undefined
+  id?: string | undefined
+  className?: string | undefined
+  disabled?: boolean | undefined
+  'aria-invalid'?: boolean | undefined
 }) {
   const [open, setOpen] = React.useState(false)
   const selected = options.find((option) => option.value === value)

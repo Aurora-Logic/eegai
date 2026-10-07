@@ -121,6 +121,27 @@ export const api = {
   },
 }
 
+/**
+ * What actually failed, in words, from a 400 carrying zod's flattened issues.
+ *
+ * "Check the form." on a form whose offending field is not even on screen is a
+ * dead end — the profile screen showed exactly that for a year because it threw
+ * the issues away. Field names are not shown: the message is written for
+ * somebody looking at the form, not at the schema.
+ */
+export function issueText(error: unknown): string | null {
+  if (!(error instanceof ApiError) || !error.issues) return null
+  const issues = error.issues as {
+    formErrors?: string[]
+    fieldErrors?: Record<string, string[] | undefined>
+  }
+  const messages = [
+    ...(issues.formErrors ?? []),
+    ...Object.values(issues.fieldErrors ?? {}).flatMap((list) => list ?? []),
+  ]
+  return messages.length > 0 ? messages.join(' ') : null
+}
+
 /** Uploaded photos are served through the authenticated file route. */
 export function photoUrl(storagePath: string): string {
   return `/api/files/${storagePath}`
