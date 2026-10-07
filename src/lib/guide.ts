@@ -36,7 +36,7 @@ export const GUIDE: Record<Role, GuideStep[]> = {
     {
       icon: Droplet,
       title: 'Blood: register once',
-      body: 'Give your blood type (required), age, gender, last donation date and whether you are available. Your name, phone and area come from your account.',
+      body: 'Give your blood type (required), age, gender, last donation date and whether you are available. Your name, phone and area come from your account — and your area is never shown to a hospital.',
     },
     {
       icon: Bell,

@@ -40,7 +40,7 @@ interface DonationType {
 /** The spec's key notes, said once, on the screen a donor starts from. */
 const KEY_NOTES = [
   'Every hospital and organisation is verified by an admin.',
-  'Location is used to match you with who is near.',
+  'Your area is used to find who is near you. It is never shown to them.',
   'Your contact details are shared only after you agree.',
   'EEGAI connects you. Screening is done by the organisation.',
 ]

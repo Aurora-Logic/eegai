@@ -275,10 +275,15 @@ function Registration({ registered }: { registered: boolean }) {
         />
       </label>
 
-      {/* The spec's note, in the place somebody reads it: we store these and
-          show them to a hospital, and decide nothing from them. */}
+      {/* Who sees what, on the screen where the details are handed over. The
+          form lists the location beside everything a hospital does receive,
+          and without this line it read as though the hospital got that too —
+          which is how the TypeSafe copy check flagged it. */}
       <p className="text-xs text-muted-foreground">
-        The hospital decides whether you can donate, in person. EEGAI does not screen anybody.
+        When you tap Available, that hospital sees your name, phone, age, gender, blood group
+        and last donation date. Your location is never shown to anybody — it is only used to
+        tell you how far away a hospital is. The hospital decides whether you can donate, in
+        person; EEGAI does not screen anybody.
       </p>
 
       {error ? (
