@@ -212,6 +212,41 @@ test('hair goes to the partner the donor chose, and comes back accepted', async 
   await expect(mine.getByText(/Offer sent → Organisation checking/).first()).toBeVisible()
 })
 
+test('the hospital confirms the donation, and only then does it count', async ({ page }) => {
+  await signIn(page, INSTITUTION)
+  await page.goto('/ngo/needs')
+
+  const card = page.getByRole('listitem').filter({ hasText: NOTE })
+  // Saying you are available is not a donation: the requirement is untouched.
+  await expect(card).toContainText('0 completed')
+
+  await card.getByRole('button', { name: /Available donors/ }).click()
+  const dialog = page.getByRole('dialog')
+
+  // The chain, in the words a hospital would use.
+  for (const step of [
+    'Hospital screening',
+    'Eligible — accepted',
+    'Donation at the hospital',
+    'Hospital confirmed',
+    'Donation completed',
+  ]) {
+    await dialog.getByRole('button', { name: step, exact: true }).click()
+    await expect(dialog.getByText(step, { exact: true }).first()).toBeVisible()
+  }
+
+  await expect(dialog).toContainText('1 completed')
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(card).toContainText('1 completed')
+
+  // And the donor is told, with the day it happened.
+  await signIn(page, DONOR)
+  await page.goto('/health/responses')
+  const mine = page.getByRole('listitem').filter({ hasText: 'Kongu Nala Sangam' }).first()
+  await expect(mine.getByText('Donation completed')).toBeVisible()
+  await expect(mine.getByText(/the hospital confirmed your donation on/i)).toBeVisible()
+})
+
 test('breast milk cannot be sent until every eligibility point is ticked', async ({ page }) => {
   await signIn(page, DONOR)
   await ensureConsent(page)

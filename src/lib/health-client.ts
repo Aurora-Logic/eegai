@@ -62,6 +62,8 @@ export interface MyResponse {
   available: boolean
   /** The hospital's record of this donation, not the request's status. */
   donation_status: OfferStatus
+  /** When the hospital last moved it along; null until it does. */
+  donation_status_at: string | null
 }
 
 export interface OwnRequest {

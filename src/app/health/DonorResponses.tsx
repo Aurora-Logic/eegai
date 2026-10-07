@@ -20,6 +20,15 @@ import { OFFER_VARIANT } from '@/lib/offer-status'
  * the largest things here and the phone number is a tel: link — somebody
  * standing outside a hospital gate should be one tap from the desk.
  */
+/** A plain day, for a line somebody reads once and remembers. */
+function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export default function DonorResponses() {
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({
@@ -93,7 +102,10 @@ export default function DonorResponses() {
                 you said available {formatRelative(r.responded_at)}
               </p>
               {r.donation_status === 'completed' ? (
-                <p className="mt-1 text-sm">Thank you — the hospital has confirmed it.</p>
+                <p className="mt-1 text-sm">
+                  Thank you — the hospital confirmed your donation
+                  {r.donation_status_at ? ` on ${formatDay(r.donation_status_at)}` : ''}.
+                </p>
               ) : null}
 
               {/* Changing your mind is better than not turning up, so it is a
