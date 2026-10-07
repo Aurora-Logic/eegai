@@ -397,6 +397,9 @@ begin
   update public.ngos
   set health_categories = '{blood,breast_milk}'::public.health_category[],
       org_type = 'hospital',
+      -- A hospital has no goods wall (migration 030), so it accepts no
+      -- material however generous the generated defaults above were.
+      accepts_categories = '{}'::public.donation_category[],
       terms_accepted_at = now(),
       visit_instructions = 'Reception, Block B. Bring photo ID and eat something first.'
   where id = (

@@ -24,7 +24,7 @@ async function signInAsDonor(page: import('@playwright/test').Page) {
   )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(DONOR.phone)
-  await page.getByLabel('Password').fill(DONOR.password)
+  await page.getByLabel('Password', { exact: true }).fill(DONOR.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   // Waited on the URL leaving /sign-in. Navigating before the session lands
   // bounces off ProtectedRoute, and the failure then reads as a missing
@@ -70,7 +70,7 @@ test('a donor posts an item through the whole wizard', async ({ page, baseURL })
   await page.getByLabel('What is it?').fill('Winter jackets')
 
   await page.getByLabel('Category').click()
-  await page.getByRole('option', { name: 'Clothes' }).click()
+  await page.getByRole('option', { name: 'Clothing' }).click()
 
   await page.getByLabel('Condition').click()
   await page.getByRole('option', { name: 'Like new' }).click()
@@ -78,9 +78,10 @@ test('a donor posts an item through the whole wizard', async ({ page, baseURL })
   await page.getByRole('button', { name: 'Next' }).click()
 
   // Step 3 — the gates. All four must be yes.
+  // Clothing asks three questions now; each category has its own set.
   const yesButtons = page.getByRole('button', { name: 'Yes' })
   const gateCount = await yesButtons.count()
-  expect(gateCount).toBe(4)
+  expect(gateCount).toBe(3)
   for (let i = 0; i < gateCount; i++) await yesButtons.nth(i).click()
   await page.getByRole('button', { name: 'Next' }).click()
 

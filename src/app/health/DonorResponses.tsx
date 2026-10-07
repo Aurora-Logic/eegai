@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatRelative } from '@/lib/dates'
 import { healthApi } from '@/lib/health-client'
-import { CATEGORY_LABEL } from '@/lib/validation/health'
+import { CATEGORY_LABEL, OFFER_STATUS_LABEL } from '@/lib/validation/health'
+import { OFFER_VARIANT } from '@/lib/offer-status'
 
 /**
  * What a donor said yes to, and where to go.
@@ -83,9 +84,17 @@ export default function DonorResponses() {
                 <p className="mt-2 text-sm text-muted-foreground">{r.visit_instructions}</p>
               ) : null}
 
-              <p className="mt-2 font-mono text-xs text-muted-foreground">
+              <p className="mt-2">
+                <Badge variant={OFFER_VARIANT[r.donation_status]}>
+                  {OFFER_STATUS_LABEL[r.category][r.donation_status]}
+                </Badge>
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
                 you said available {formatRelative(r.responded_at)}
               </p>
+              {r.donation_status === 'completed' ? (
+                <p className="mt-1 text-sm">Thank you — the hospital has confirmed it.</p>
+              ) : null}
 
               {/* Changing your mind is better than not turning up, so it is a
                   plain button rather than something to hunt for. */}

@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatRelative } from '@/lib/dates'
 import { OFFER_VARIANT } from '@/lib/offer-status'
 import { healthApi, type OfferCategory } from '@/lib/health-client'
-import { OFFER_STATUS_LABEL } from '@/lib/validation/health'
+import { OFFER_CHAIN, OFFER_STATUS_LABEL, offerRank } from '@/lib/validation/health'
 
 /**
  * The donor's own offers of one kind, newest first.
@@ -42,6 +42,13 @@ export function OfferList({ category }: { category: OfferCategory }) {
             <Badge variant={OFFER_VARIANT[o.status]}>
               {OFFER_STATUS_LABEL[category][o.status]}
             </Badge>
+          </p>
+          {/* Where it has got to, in the words of this kind of donation. The
+              organisation sets this; the donor cannot. */}
+          <p className="mt-2 text-xs text-muted-foreground">
+            {OFFER_CHAIN.filter((step) => offerRank(step) <= offerRank(o.status))
+              .map((step) => OFFER_STATUS_LABEL[category][step])
+              .join(' → ')}
           </p>
           {o.org_note ? <p className="mt-2 text-sm">“{o.org_note}”</p> : null}
           {o.address ? (

@@ -98,6 +98,7 @@ export function People() {
                   <ChangeRole person={person} />
                   <ResetPassword person={person} />
                   <ActiveToggle person={person} />
+                  <DeleteAccount person={person} />
                 </>
               }
             >
@@ -215,6 +216,68 @@ function ActiveToggle({ person }: { person: Person }) {
 function personLabel(person: { role: string; org_type?: 'ngo' | 'hospital' | null }) {
   if (person.role === 'ngo') return person.org_type === 'hospital' ? 'hospital' : 'NGO'
   return ROLE_LABEL[person.role as Role]?.toLowerCase() ?? person.role
+}
+
+/**
+ * Delete a test account for good.
+ *
+ * Everything else here is a soft delete, because the audit log and the
+ * donation trail are the dispute record. The server refuses the moment an
+ * account has any history and says what it found, so this is only ever the
+ * answer for something that never did anything.
+ */
+function DeleteAccount({ person }: { person: Person }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const purge = useMutation({
+    mutationFn: () => api.delete(`/admin/users/${person.id}`),
+    onSuccess: async () => {
+      setOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Trash2 aria-hidden /> Delete
+      </Button>
+
+      {open ? (
+        <AlertDialog open onOpenChange={(next) => !next && setOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {person.full_name} permanently?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone. It only works for an account with no history at all — if this
+                one has posted, claimed, collected or answered anything, you will be told what, and
+                disabling it is the answer instead.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+              <Button
+                variant="destructive"
+                className="min-h-11"
+                disabled={purge.isPending}
+                onClick={() => purge.mutate()}
+              >
+                {purge.isPending ? 'Deleting…' : 'Delete for good'}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </>
+  )
 }
 
 const ROLES = ['donor', 'ngo', 'volunteer', 'admin'] as const

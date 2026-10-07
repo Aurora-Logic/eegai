@@ -80,25 +80,32 @@ export const donorHealthProfileSchema = z
   })
 
 /**
- * A blood alert. Only blood: hair and breast milk are offered by donors now,
- * so an institution has nothing to request for them.
+ * What an organisation needs: blood, hair or breast milk.
+ *
+ * Both directions exist at once. An organisation may say it needs hair, and a
+ * donor may offer hair without being asked — the first is this, the second is
+ * an offer. Only blood has to name a group: "we need blood" would page every
+ * donor in the city for a requirement most of them cannot meet.
  *
  * "Units required" is carried in donorsNeeded — one donor, one unit — so the
- * column the rest of the lane already counts against is the one the spec's
+ * column the rest of the lane already counts against is the one the
  * notification shows.
  */
-export const healthRequestSchema = z.object({
-  category: z.literal('blood', {
-    errorMap: () => ({ message: 'Only blood alerts can be posted' }),
-  }),
-  bloodGroup: z.enum(BLOOD_GROUPS, {
-    errorMap: () => ({ message: 'Choose the blood group you need' }),
-  }),
-  urgency: z.enum(URGENCIES).default('routine'),
-  donorsNeeded: z.coerce.number().int().min(1).max(500),
-  note: z.string().trim().max(500).optional(),
-  expiresInHours: z.coerce.number().int().min(1).max(720).default(72),
-})
+export const healthRequestSchema = z
+  .object({
+    category: z.enum(HEALTH_CATEGORIES, {
+      errorMap: () => ({ message: 'Choose what you need' }),
+    }),
+    bloodGroup: z.enum(BLOOD_GROUPS).nullable().optional(),
+    urgency: z.enum(URGENCIES).default('routine'),
+    donorsNeeded: z.coerce.number().int().min(1).max(500),
+    note: z.string().trim().max(500).optional(),
+    expiresInHours: z.coerce.number().int().min(1).max(720).default(72),
+  })
+  .refine((v) => v.category !== 'blood' || Boolean(v.bloodGroup), {
+    message: 'Choose the blood group you need',
+    path: ['bloodGroup'],
+  })
 
 export type HealthRequestInput = z.infer<typeof healthRequestSchema>
 
@@ -221,32 +228,83 @@ export const OFFER_STATUSES = [
   'submitted',
   'in_review',
   'accepted',
-  'declined',
+  'collecting',
+  'received',
   'completed',
+  'declined',
   'withdrawn',
 ] as const
 export type OfferStatus = (typeof OFFER_STATUSES)[number]
+
+/**
+ * The order the organisation moves through. Declined and withdrawn are off it.
+ *
+ * Mirrors app.offer_rank in the database, which is what actually refuses a
+ * backwards step.
+ */
+export const OFFER_CHAIN = [
+  'submitted',
+  'in_review',
+  'accepted',
+  'collecting',
+  'received',
+  'completed',
+] as const
+
+export function offerRank(status: OfferStatus): number {
+  const index = OFFER_CHAIN.indexOf(status as (typeof OFFER_CHAIN)[number])
+  return index < 0 ? 0 : index + 1
+}
+
+/** What the organisation's next step is called, or null at the end. */
+export function nextStatus(status: OfferStatus): OfferStatus | null {
+  const index = OFFER_CHAIN.indexOf(status as (typeof OFFER_CHAIN)[number])
+  if (index < 0 || index >= OFFER_CHAIN.length - 1) return null
+  return OFFER_CHAIN[index + 1] as OfferStatus
+}
 
 /**
  * One set of states, two vocabularies. A milk centre screens and a donation
  * follows; a hair partner checks and receives. Same machine, the words each
  * side would actually use.
  */
-export const OFFER_STATUS_LABEL: Record<'hair' | 'breast_milk', Record<OfferStatus, string>> = {
+export const OFFER_STATUS_LABEL: Record<HealthCategory, Record<OfferStatus, string>> = {
   hair: {
-    submitted: 'Sent',
-    in_review: 'Being checked',
+    submitted: 'Offer sent',
+    in_review: 'Organisation checking',
     accepted: 'Accepted',
+    collecting: 'Collection or submission',
+    received: 'Received',
+    completed: 'Completed',
     declined: 'Not accepted',
-    completed: 'Received',
     withdrawn: 'Withdrawn',
   },
   breast_milk: {
-    submitted: 'Sent to the centre',
-    in_review: 'Being screened',
-    accepted: 'Cleared to donate',
+    submitted: 'Offer sent',
+    in_review: 'Screening in progress',
+    accepted: 'Screening completed — eligible',
+    collecting: 'Donation at the centre',
+    received: 'Received',
+    completed: 'Completed',
     declined: 'Not this time',
-    completed: 'Donated',
+    withdrawn: 'Withdrawn',
+  },
+  // The brief is explicit that a donor is told "donation completed" and
+  // "hospital confirmed" rather than "received" — nobody receives a person.
+  blood: {
+    submitted: 'Available — offer sent',
+    in_review: 'Hospital screening',
+    accepted: 'Eligible — accepted',
+    collecting: 'Donation at the hospital',
+    received: 'Hospital confirmed',
+    completed: 'Donation completed',
+    declined: 'Not this time',
     withdrawn: 'Withdrawn',
   },
 }
+
+/** A donor offering blood to a hospital of their choosing, outside any alert. */
+export const bloodOfferSchema = z.object({
+  ngoId: z.string().uuid('Choose a hospital or blood centre'),
+  note: z.string().trim().max(500).optional(),
+})

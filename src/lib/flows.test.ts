@@ -27,12 +27,19 @@ describe('the diagram in the manual', () => {
     expect(GOODS_FLOW).toHaveLength(GOODS_SPINE.length)
   })
 
-  it('ends every health journey outside the app', () => {
-    // Brief §6: the donation itself is the institution's, never ours. If the
-    // last step ever stops saying so, the diagram is claiming something the
-    // product must not claim.
+  it('puts the donation itself outside the app, in every health journey', () => {
+    // Brief §6: the donation is the institution's, never ours. It used to be
+    // the last step; now an organisation confirms afterwards — which is itself
+    // in the app — so what must hold is that each journey hands off exactly
+    // once, and that nothing after the handoff claims the app did the donating.
     for (const steps of [HEALTH_FLOW.donor, HEALTH_FLOW.ngo, HAIR_FLOW, MILK_FLOW, PARTNER_FLOW]) {
-      expect(steps.at(-1)?.handoff).toBe(true)
+      const handoffs = steps.filter((step) => step.handoff)
+      expect(handoffs).toHaveLength(1)
+
+      const after = steps.slice(steps.findIndex((step) => step.handoff) + 1)
+      for (const step of after) {
+        expect(`${step.label} ${step.who}`).toMatch(/confirm|record|receiv|you see/i)
+      }
     }
   })
 

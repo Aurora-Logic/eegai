@@ -20,9 +20,9 @@ beforeAll(async () => {
   donor = f.donors[0]!
   admin = f.admins[0]!
 
-  // Both rivals must accept 'clothes', or RLS hides the item from one of them
+  // Both rivals must accept 'clothing', or RLS hides the item from one of them
   // and the concurrency test passes without ever staging a real race.
-  const rivals = f.ngosAccepting('clothes')
+  const rivals = f.ngosAccepting('clothing')
   expect(rivals.length).toBeGreaterThanOrEqual(2)
   ngoA = rivals[0]!
   ngoB = rivals[1]!
@@ -31,7 +31,7 @@ beforeAll(async () => {
 afterAll(closePools)
 
 /** Creates a fresh posted donation owned by `donor`, in a category both NGOs take. */
-async function seedPosted(category = 'clothes'): Promise<string> {
+async function seedPosted(category = 'clothing'): Promise<string> {
   const { rows } = await adminPool.query(
     `insert into public.donations
        (donor_id, title, category, quantity, condition, pickup_address, pincode, lat, lng, status)
@@ -66,9 +66,9 @@ describe('transition guard', () => {
   it('will not let an NGO claim an item outside its categories', async () => {
     const f = await loadFixtures()
     const bookOnly = f.ngos.find(
-      (n) => n.acceptsCategories?.includes('books') && !n.acceptsCategories.includes('clothes'),
+      (n) => n.acceptsCategories?.includes('books') && !n.acceptsCategories.includes('clothing'),
     )!
-    const id = await seedPosted('clothes')
+    const id = await seedPosted('clothing')
 
     const result = await asActor({ userId: bookOnly.userId, role: 'ngo' }, async (tx) => {
       const { rows } = await tx.query('select * from app.claim_donation($1, $2)', [

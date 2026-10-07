@@ -17,7 +17,7 @@ async function signIn(page: import('@playwright/test').Page, who: typeof ADMIN) 
   )
   await page.goto('/sign-in')
   await page.getByLabel('Phone number').fill(who.phone)
-  await page.getByLabel('Password').fill(who.password)
+  await page.getByLabel('Password', { exact: true }).fill(who.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).not.toHaveURL(/sign-in/)
 }

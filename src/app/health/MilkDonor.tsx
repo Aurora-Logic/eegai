@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/shared/app-shell'
 import { FlowDiagram } from '@/components/shared/flow-diagram'
 import { ConsentGate } from '@/components/health/consent-gate'
+import { Requirements } from '@/components/health/requirements'
 import { OfferList } from '@/components/health/offer-list'
 import { PartnerSelect } from '@/components/health/partner-select'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export default function MilkDonor() {
       <ConsentGate>
         <div className="space-y-6">
           <FlowDiagram title="How it works" steps={MILK_FLOW} />
+          <Requirements category="breast_milk" />
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <MilkForm />
             <section className="space-y-3">

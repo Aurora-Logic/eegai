@@ -85,6 +85,7 @@ adminRoutes.get('/ngos', async (c) => {
               n.health_categories::text[] as health_categories,
               n.visit_instructions,
               n.org_type, n.terms_accepted_at,
+              n.requested_health_categories::text[] as requested_health_categories,
               n.is_accepting,
               n.contact_person, n.contact_phone,
               n.created_at,
@@ -573,8 +574,12 @@ adminRoutes.post('/health-offers/:id/decide', async (c) => {
   const status = body?.status
   const note = typeof body?.note === 'string' ? body.note.slice(0, 500) : null
 
-  if (!['in_review', 'accepted', 'declined', 'completed'].includes(status)) {
-    return c.json({ error: 'Choose in review, accepted, declined or completed.' }, 400)
+  // The whole chain, so an organisation can record collection and receipt
+  // rather than jumping from accepted straight to done.
+  if (
+    !['in_review', 'accepted', 'collecting', 'received', 'completed', 'declined'].includes(status)
+  ) {
+    return c.json({ error: 'That is not a step on the chain.' }, 400)
   }
 
   try {
@@ -838,6 +843,35 @@ adminRoutes.post('/users', async (c) => {
     }
     throw error
   }
+})
+
+/**
+ * Delete an account for good.
+ *
+ * Everything else here is a soft delete on purpose — the audit log and the
+ * donation trail are the dispute record. That reasoning does not cover a test
+ * account that never did anything, and a list full of them is its own problem:
+ * an operator looking for a real organisation should not read past "Test NGO
+ * 4". The function refuses the moment there is any history and names what it
+ * found, so the answer for a real account is still to disable it.
+ */
+adminRoutes.delete('/users/:id', async (c) => {
+  const actor = actorOf(c)
+
+  try {
+    await withActor(actor, (tx) =>
+      tx.query('select app.purge_account($1)', [c.req.param('id')]),
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (/disable it instead|no such account|cannot be deleted/i.test(message)) {
+      return c.json({ error: message }, 409)
+    }
+    throw error
+  }
+
+  log.warn('account deleted permanently', { profile_id: c.req.param('id') })
+  return c.json({ ok: true })
 })
 
 /** Four words from a small, unambiguous list. No l/1/O/0 confusion by design. */

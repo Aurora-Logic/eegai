@@ -60,6 +60,8 @@ export interface MyResponse {
   responded_at: string
   withdrawn_at: string | null
   available: boolean
+  /** The hospital's record of this donation, not the request's status. */
+  donation_status: OfferStatus
 }
 
 export interface OwnRequest {
@@ -70,6 +72,7 @@ export interface OwnRequest {
   donors_needed: number
   responses_count: number
   not_available_count: number
+  completed_count: number
   radius_km: number
   note: string | null
   status: string
@@ -95,7 +98,16 @@ export interface Responder {
   gender: Gender | null
   blood_group: BloodGroup | null
   last_blood_donation: string | null
+  /** Where the hospital has got to with this donor. */
+  status: OfferStatus
   responded_at: string
+}
+
+export interface Progress {
+  units_required: number
+  completed: number
+  pending: number
+  remaining: number
 }
 
 export interface Partner {
@@ -107,7 +119,7 @@ export interface Partner {
   visit_instructions: string | null
 }
 
-export type OfferCategory = 'hair' | 'breast_milk'
+export type OfferCategory = HealthCategory
 
 export interface Offer {
   offer_id: string
@@ -153,9 +165,12 @@ export const healthApi = {
     api.get<{ requests: OwnRequest[]; standing: Standing | null }>('/needs/requests/mine'),
   responders: (id: string) =>
     api.get<{ responders: Responder[] }>(`/needs/requests/${id}/responders`),
+  progress: (id: string) => api.get<{ progress: Progress }>(`/needs/requests/${id}/progress`),
+  setResponderStatus: (requestId: string, profileId: string, status: OfferStatus) =>
+    api.post(`/needs/requests/${requestId}/responders/${profileId}/status`, { status }),
   close: (id: string, status: string) => api.post(`/needs/requests/${id}/close`, { status }),
 
-  partners: (category: OfferCategory) =>
+  partners: (category: HealthCategory) =>
     api.get<{ partners: Partner[] }>(`/needs/partners?category=${category}`),
   submitOffer: (body: unknown) => api.post<{ id: string }>('/needs/offers', body),
   myOffers: () => api.get<{ offers: Offer[] }>('/needs/offers/mine'),

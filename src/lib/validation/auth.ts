@@ -69,6 +69,10 @@ export const registerSchema = z
     // registering as one requires agreeing to them.
     orgType: z.enum(['ngo', 'hospital']).default('ngo'),
     acceptTerms: z.boolean().optional(),
+    // What the organisation says it handles. Saying is not granting: an admin
+    // still approves the health categories before anything reaches a donor.
+    healthCategories: z.array(z.enum(['blood', 'hair', 'breast_milk'])).default([]),
+    acceptsCategories: z.array(z.string()).default([]),
   })
   .superRefine((value, ctx) => {
     if (value.orgType === 'hospital' && value.role !== 'ngo') {

@@ -35,10 +35,12 @@ import {
   GENDER_LABEL,
   MILK_ELIGIBILITY,
   OFFER_STATUS_LABEL,
+  nextStatus,
   URGENCIES,
   URGENCY_LABEL,
   healthRequestSchema,
   type BloodGroup,
+  type HealthCategory,
   type OfferStatus,
   type Urgency,
 } from '@/lib/validation/health'
@@ -92,8 +94,8 @@ export default function InstitutionNeeds() {
               : 'An administrator approves hair or breast-milk offers per organisation. Ring us if you are a partner and this looks wrong.',
           }
         : null
-  const cannotPost = blood && standing && !standing.has_location
-  const canPost = !blocker && blood && !cannotPost
+  const cannotPost = Boolean(standing && !standing.has_location)
+  const canPost = !blocker && categories.length > 0 && !cannotPost
 
   return (
     <AppShell
@@ -106,7 +108,7 @@ export default function InstitutionNeeds() {
       actions={
         canPost ? (
           <Button onClick={() => setPosting(true)}>
-            <Megaphone aria-hidden /> Post a blood alert
+            <Megaphone aria-hidden /> {blood ? 'Post a blood alert' : 'Say what you need'}
           </Button>
         ) : null
       }
@@ -160,10 +162,18 @@ export default function InstitutionNeeds() {
       <GuideCard className="mt-6" />
       <Disclosure className="mt-4" />
 
-      {posting ? <PostDialog onClose={() => setPosting(false)} /> : null}
+      {posting ? (
+        <PostDialog categories={categories as HealthCategory[]} onClose={() => setPosting(false)} />
+      ) : null}
       {viewing ? <RespondersDialog request={viewing} onClose={() => setViewing(null)} /> : null}
     </AppShell>
   )
+}
+
+/** "units" for blood, "donors" for anything a person is not measured in. */
+function unitWord(r: OwnRequest) {
+  if (r.category !== 'blood') return r.donors_needed === 1 ? 'donor' : 'donors'
+  return r.donors_needed === 1 ? 'unit' : 'units'
 }
 
 function Section({
@@ -198,11 +208,18 @@ function Section({
               {r.status !== 'open' ? <Badge variant="muted">{r.status}</Badge> : null}
             </p>
 
+            {/* The brief's own line: required, done, still expected, left. */}
             <p className="mt-1 text-sm">
-              <strong>{r.responses_count}</strong> available of {r.donors_needed}{' '}
-              {r.donors_needed === 1 ? 'unit' : 'units'} required
-              {r.not_available_count > 0 ? ` · ${r.not_available_count} not available` : ''}
+              <strong>{r.donors_needed}</strong> {unitWord(r)} required ·{' '}
+              <strong>{r.completed_count}</strong> completed ·{' '}
+              {Math.max(0, r.responses_count - r.completed_count)} pending ·{' '}
+              {Math.max(0, r.donors_needed - r.completed_count)} remaining
             </p>
+            {r.not_available_count > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {r.not_available_count} said they are not available.
+              </p>
+            ) : null}
             <p className="font-mono text-xs text-muted-foreground">
               asked {formatRelative(r.created_at)}
               {r.status === 'open' ? ` · closes ${formatRelative(r.expires_at)}` : ''}
@@ -241,8 +258,17 @@ function Section({
   )
 }
 
-function PostDialog({ onClose }: { onClose: () => void }) {
+function PostDialog({
+  categories,
+  onClose,
+}: {
+  categories: HealthCategory[]
+  onClose: () => void
+}) {
   const queryClient = useQueryClient()
+  const [category, setCategory] = useState<HealthCategory>(
+    categories.includes('blood') ? 'blood' : (categories[0] ?? 'blood'),
+  )
   const [bloodGroup, setBloodGroup] = useState<BloodGroup | ''>('')
   const [urgency, setUrgency] = useState<Urgency>('urgent')
   const [units, setUnits] = useState('1')
@@ -253,8 +279,8 @@ function PostDialog({ onClose }: { onClose: () => void }) {
   const post = useMutation({
     mutationFn: () => {
       const parsed = healthRequestSchema.safeParse({
-        category: 'blood',
-        bloodGroup: bloodGroup || undefined,
+        category,
+        bloodGroup: category === 'blood' ? bloodGroup || undefined : null,
         urgency,
         donorsNeeded: units,
         note: note.trim() || undefined,
@@ -274,10 +300,16 @@ function PostDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{notified === null ? 'Post a blood alert' : 'Alert sent'}</DialogTitle>
+          <DialogTitle>
+            {notified === null
+              ? category === 'blood'
+                ? 'Post a blood alert'
+                : 'Say what you need'
+              : 'Alert sent'}
+          </DialogTitle>
           <DialogDescription>
             {notified === null
-              ? 'Every registered blood donor who is available is told. The ones who can come appear here with their number.'
+              ? 'Every registered donor who offers this and is available is told. The ones who can come appear here with their number.'
               : // The count, and nothing else. Brief §5: the institution never
                 // learns who was told.
                 `${notified} ${notified === 1 ? 'donor was' : 'donors were'} alerted.`}
@@ -290,24 +322,46 @@ function PostDialog({ onClose }: { onClose: () => void }) {
           </Button>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            {categories.length > 1 ? (
               <div className="space-y-1.5">
-                <Label htmlFor="need-group">Blood group</Label>
-                <Select value={bloodGroup} onValueChange={(v) => setBloodGroup(v as BloodGroup)}>
-                  <SelectTrigger id="need-group">
-                    <SelectValue placeholder="Choose" />
+                <Label htmlFor="need-category">What you need</Label>
+                <Select value={category} onValueChange={(v) => setCategory(v as HealthCategory)}>
+                  <SelectTrigger id="need-category">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BLOOD_GROUPS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {CATEGORY_LABEL[cat]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-3">
+              {category === 'blood' ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="need-group">Blood group</Label>
+                  <Select value={bloodGroup} onValueChange={(v) => setBloodGroup(v as BloodGroup)}>
+                    <SelectTrigger id="need-group">
+                      <SelectValue placeholder="Choose" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BLOOD_GROUPS.map((g) => (
+                        <SelectItem key={g} value={g}>
+                          {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               <div className="space-y-1.5">
-                <Label htmlFor="need-count">Units required</Label>
+                <Label htmlFor="need-count">
+                  {category === 'blood' ? 'Units required' : 'How many donors'}
+                </Label>
                 <Input
                   id="need-count"
                   type="number"
@@ -355,7 +409,7 @@ function PostDialog({ onClose }: { onClose: () => void }) {
 
             <Button
               className="min-h-11 w-full"
-              disabled={post.isPending || !bloodGroup}
+              disabled={post.isPending || (category === 'blood' && !bloodGroup)}
               onClick={() => post.mutate()}
             >
               {post.isPending ? 'Sending…' : 'Send the alert'}
@@ -375,12 +429,29 @@ function PostDialog({ onClose }: { onClose: () => void }) {
  * screen could not show a location even if somebody added the markup.
  */
 function RespondersDialog({ request, onClose }: { request: OwnRequest; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
   const { data, isLoading } = useQuery({
     queryKey: ['health', 'responders', request.id],
     queryFn: () => healthApi.responders(request.id),
   })
+  const progress = useQuery({
+    queryKey: ['health', 'progress', request.id],
+    queryFn: () => healthApi.progress(request.id),
+  })
+
+  const move = useMutation({
+    mutationFn: (v: { profileId: string; status: OfferStatus }) =>
+      healthApi.setResponderStatus(request.id, v.profileId, v.status),
+    onSuccess: async () => {
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['health'] })
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
+  })
 
   const responders = data?.responders ?? []
+  const p = progress.data?.progress
 
   return (
     <Dialog open onOpenChange={(next) => !next && onClose()}>
@@ -388,12 +459,27 @@ function RespondersDialog({ request, onClose }: { request: OwnRequest; onClose: 
         <DialogHeader>
           <DialogTitle>Available donors</DialogTitle>
           <DialogDescription>
-            {request.blood_group} · ring them to arrange a time.
-            {request.not_available_count > 0
-              ? ` ${request.not_available_count} said not available.`
-              : ''}
+            {request.blood_group ? `${request.blood_group} · ` : ''}ring them to arrange a time,
+            then record what happened. Only you can mark a donation completed.
           </DialogDescription>
         </DialogHeader>
+
+        {request.not_available_count > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {request.not_available_count} said not available.
+          </p>
+        ) : null}
+        {p ? (
+          <p className="hairline rounded-sm bg-card p-3 text-sm">
+            <strong>{p.units_required}</strong> required · <strong>{p.completed}</strong> completed
+            · {p.pending} pending · {p.remaining} remaining
+          </p>
+        ) : null}
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
 
         {isLoading ? (
           <Skeleton className="h-24 w-full" />
@@ -433,6 +519,40 @@ function RespondersDialog({ request, onClose }: { request: OwnRequest; onClose: 
                 <p className="font-mono text-xs text-muted-foreground">
                   available since {formatRelative(r.responded_at)}
                 </p>
+
+                <p className="mt-2">
+                  <Badge variant={OFFER_VARIANT[r.status]}>
+                    {OFFER_STATUS_LABEL[request.category][r.status]}
+                  </Badge>
+                </p>
+
+                {/* One step at a time, forwards. The database refuses a step
+                    backwards, so offering one here would only produce an error
+                    the operator cannot act on. */}
+                {nextStatus(r.status) ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={move.isPending}
+                      onClick={() =>
+                        move.mutate({
+                          profileId: r.profile_id,
+                          status: nextStatus(r.status) as OfferStatus,
+                        })
+                      }
+                    >
+                      {OFFER_STATUS_LABEL[request.category][nextStatus(r.status) as OfferStatus]}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={move.isPending}
+                      onClick={() => move.mutate({ profileId: r.profile_id, status: 'declined' })}
+                    >
+                      Could not donate
+                    </Button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -479,12 +599,20 @@ function IncomingOffers() {
   })
 
   const offers = data?.offers ?? []
-  const waiting = offers.filter((o) => ['submitted', 'in_review', 'accepted'].includes(o.status))
+  // Anything still on the chain needs the organisation, including collection
+  // and receipt. Filing those under "finished" left a partner with no way to
+  // mark an offer received, which the browser test caught.
+  const waiting = offers.filter((o) =>
+    ['submitted', 'in_review', 'accepted', 'collecting', 'received'].includes(o.status),
+  )
   const done = offers.filter((o) => !waiting.includes(o))
 
   return (
     <section className="space-y-3">
       <h2 className="font-display text-display-md">Offers from donors</h2>
+      <p className="text-sm text-muted-foreground">
+        Sent to you by a donor who chose you. You move each one along; the donor sees every step.
+      </p>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -495,7 +623,7 @@ function IncomingOffers() {
       ) : offers.length === 0 ? (
         <EmptyState
           title="No offers yet"
-          hint="When a donor chooses you for hair or breast milk, it arrives here with their answers and number."
+          hint="When a donor offers you blood, hair or breast milk, it arrives here with their answers and number."
         />
       ) : (
         <>
@@ -555,6 +683,7 @@ function OfferCard({
 }) {
   const d = offer.details
   const hair = offer.category === 'hair'
+  const next = nextStatus(offer.status)
 
   return (
     <li className="hairline rounded-sm bg-card p-4">
@@ -574,7 +703,12 @@ function OfferCard({
         </a>
       ) : null}
 
-      {hair ? (
+      {offer.category === 'blood' ? (
+        <p className="mt-2 text-sm">
+          Blood group <strong>{String(d['bloodGroup'] ?? '—')}</strong>
+          {d['note'] ? ` · ${String(d['note'])}` : ''}
+        </p>
+      ) : hair ? (
         <div className="mt-2 flex flex-wrap items-start gap-3">
           {offer.photo_path ? (
             <a href={photoUrl(offer.photo_path)} target="_blank" rel="noreferrer">
@@ -612,22 +746,14 @@ function OfferCard({
         sent {formatRelative(offer.created_at)}
       </p>
 
-      {onMove ? (
+      {/* The next step, in the words of this kind of donation, and nothing
+          else: the database refuses a jump backwards, so a button for one
+          would only produce an error nobody can act on. */}
+      {onMove && next ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          {offer.status === 'submitted' ? (
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => onMove('in_review')}>
-              {hair ? 'Checking it' : 'Screening'}
-            </Button>
-          ) : null}
-          {offer.status !== 'accepted' ? (
-            <Button size="sm" disabled={busy} onClick={() => onMove('accepted')}>
-              {hair ? 'Accept' : 'Cleared to donate'}
-            </Button>
-          ) : (
-            <Button size="sm" disabled={busy} onClick={() => onMove('completed')}>
-              {hair ? 'Mark received' : 'Mark donated'}
-            </Button>
-          )}
+          <Button size="sm" disabled={busy} onClick={() => onMove(next)}>
+            {OFFER_STATUS_LABEL[offer.category][next]}
+          </Button>
           <Button variant="outline" size="sm" disabled={busy} onClick={onDecline}>
             Decline
           </Button>
