@@ -51,9 +51,16 @@ set accepts_categories = (
 );
 
 -- A hospital accepts no material at all, and an NGO that only takes hair
--- should not have to claim it takes furniture. The default stays for ordinary
--- signups; what changes is that empty is now a legitimate state (the form-level
--- "at least one" rule is gone in the same change).
+-- should not have to claim it takes furniture, so empty becomes a legitimate
+-- state — for the column default, the form, and the table constraint from 004.
+--
+-- The constraint has to go *here*, before the update below empties the
+-- hospitals' lists. It used to be dropped in 033, three files later, which
+-- passed every local reset (migrations run on an empty database, so there was
+-- no hospital to trip it) and failed the first production deploy, where
+-- hospitals registered through the live sign-up already existed.
+alter table public.ngos drop constraint if exists ngos_categories_present;
+
 alter table public.ngos
   alter column accepts_categories set default '{}'::public.donation_category[];
 

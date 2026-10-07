@@ -20,8 +20,13 @@ beforeAll(async () => {
   const f = await loadFixtures()
   donorA = f.donors[0]!
   donorB = f.donors[1]!
-  ngoA = f.ngos[0]!
-  ngoB = f.ngos[1]!
+  // Organisations with a wall, picked by what they are rather than by position.
+  // The first one alphabetically is the seeded hospital, which accepts no
+  // material and so sees no items — and this suite passed only while a stale
+  // test database still had the hospital accepting all six old categories.
+  const withWall = f.ngos.filter((n) => (n.acceptsCategories?.length ?? 0) > 0)
+  ngoA = withWall[0]!
+  ngoB = withWall[1]!
   volunteer = f.volunteers[0]!
   admin = f.admins[0]!
 })

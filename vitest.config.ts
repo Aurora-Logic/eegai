@@ -15,6 +15,8 @@ export default defineConfig({
     // `// @vitest-environment node` pragma at the top of the file.
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // A fresh test database every run — see server/tests/global-setup.ts.
+    globalSetup: ['./server/tests/global-setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.{test,spec}.ts'],
     css: false,
     // The RLS and state-machine suites share one seeded database and assert on

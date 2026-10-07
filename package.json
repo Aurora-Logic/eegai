@@ -26,6 +26,7 @@
     "db:seed": "node scripts/db.mjs seed",
     "db:reset": "node scripts/db.mjs reset",
     "db:reset:test": "node scripts/db.mjs reset:test",
+    "db:check-upgrade": "node scripts/check-upgrade.mjs",
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

@@ -10,11 +10,6 @@
 -- A hospital is asked for neither material category — it has no wall.
 -- ===========================================================================
 
--- A hospital accepts no material, and an NGO that only takes hair should not
--- have to claim it takes furniture. 004 required at least one category; 030
--- made empty the default, and this is the constraint that still refused it.
-alter table public.ngos drop constraint if exists ngos_categories_present;
-
 drop function if exists app.register_user(
   text, text, text, public.user_role, text, text, text,
   double precision, double precision, public.org_type);
