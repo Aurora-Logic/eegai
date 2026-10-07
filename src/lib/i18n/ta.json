@@ -185,5 +185,8 @@
   "category.sports": "விளையாட்டுப் பொருட்கள்",
   "category.toys_games": "பொம்மைகள் & விளையாட்டுகள்",
   "category.cleaning": "சுத்தம் செய்யும் பொருட்கள்",
-  "category.baby_child": "குழந்தை பராமரிப்பு"
+  "category.baby_child": "குழந்தை பராமரிப்பு",
+  "landing.pickTitle": "நீங்கள் என்ன கொடுக்க முடியும் என்பதைத் தேர்வு செய்யுங்கள்",
+  "landing.pickHint": "ஒன்றைத் தட்டினால் என்ன நடக்கும் என்பதைப் பாருங்கள்.",
+  "landing.whoTitle": "யாருக்காக"
 }

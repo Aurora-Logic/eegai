@@ -185,5 +185,8 @@
   "category.sports": "खेल का सामान",
   "category.toys_games": "खिलौने और खेल",
   "category.cleaning": "सफ़ाई का सामान",
-  "category.baby_child": "शिशु और बाल देखभाल"
+  "category.baby_child": "शिशु और बाल देखभाल",
+  "landing.pickTitle": "चुनिए कि आप क्या दे सकते हैं",
+  "landing.pickHint": "किसी एक को दबाएँ और देखें कि आगे क्या होता है।",
+  "landing.whoTitle": "यह किसके लिए है"
 }

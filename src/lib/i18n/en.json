@@ -185,5 +185,8 @@
   "category.sports": "Sports",
   "category.toys_games": "Toys and games",
   "category.cleaning": "Cleaning supplies",
-  "category.baby_child": "Baby and child care"
+  "category.baby_child": "Baby and child care",
+  "landing.pickTitle": "Pick what you could give",
+  "landing.pickHint": "Tap one to see exactly what happens.",
+  "landing.whoTitle": "Who it is for"
 }

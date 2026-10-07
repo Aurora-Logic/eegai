@@ -1,48 +1,43 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Baby,
   Boxes,
-  CheckCheck,
-  Droplet,
-  EyeOff,
   HandHeart,
   Hospital,
   KeyRound,
   MapPin,
   Network,
-  Package,
-  Scissors,
-  ShieldCheck,
-  Stethoscope,
   Truck,
   UserRoundCheck,
 } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
-import { FlowDiagram } from '@/components/shared/flow-diagram'
+import {
+  GIVING_KINDS,
+  GivingJourney,
+  GivingWall,
+  type GivingKind,
+} from '@/components/landing/giving-wall'
 import { Button } from '@/components/ui/button'
 import { Disclosure } from '@/components/health/disclosure'
-import { GOODS_FLOW, HAIR_FLOW, HEALTH_FLOW, MILK_FLOW } from '@/lib/flows'
 import { t } from '@/lib/i18n'
 import type { StringKey } from '@/lib/i18n'
 
 /**
  * The front door.
  *
- * Rebuilt around the motto and the health lane. The previous version opened
- * with a drawing of a brick wall and then explained, in detail and in order, a
- * product that is now the second of two — somebody arriving to give blood read
- * three cards about photographing a sofa before reaching anything that applied
- * to them.
+ * Built around the one thing this product is named for. EEGAI is a wall people
+ * hang things on, so the page opens with a wall: four bricks, one per kind of
+ * donation, laid in a running bond with mortar gaps and ink hairlines. It is
+ * not a drawing of the idea — it is how the page works. Press a brick and the
+ * journey below becomes that journey.
  *
- * The motto is the thesis and is set large enough to be one. Under it the four
- * roles and the four donation types from the donor-module spec, its key notes,
- * then each journey drawn with arrows — the same component and the same data
- * the in-app manual renders, so what this page promises and what the app later
- * explains cannot drift apart.
+ * That is also what fixed the page. It used to print four flow diagrams one
+ * after another, under a grid of four cards saying the same four words, under
+ * two more lists; the whole thing read as a document. Now the four appear once,
+ * as objects, and only the journey somebody actually asked for is drawn.
  *
- * There is no hero illustration any more. The old one drew the goods wall, and
- * a drawing of the health lane would be new artwork rather than a
- * rearrangement; a bad one is worse than none. The type carries it.
+ * The eyebrow labels are set in the mono face, in the manner of the stamp on a
+ * kraft parcel — the same vocabulary the goods lane uses on every label.
  */
 
 /** The spec's home page: four roles, Hospital carrying its terms. */
@@ -53,47 +48,39 @@ const ROLES: { icon: typeof Hospital; label: StringKey; body: StringKey; terms?:
   { icon: Truck, label: 'auth.roleVolunteer', body: 'landing.roleDeliveryBody' },
 ]
 
-const TYPES: { icon: typeof Droplet; label: StringKey; body: StringKey }[] = [
-  { icon: Droplet, label: 'landing.typeBlood', body: 'landing.typeBloodBody' },
-  { icon: Scissors, label: 'landing.typeHair', body: 'landing.typeHairBody' },
-  { icon: Baby, label: 'landing.typeMilk', body: 'landing.typeMilkBody' },
-  { icon: Package, label: 'landing.typeMaterial', body: 'landing.typeMaterialBody' },
-]
-
-const NOTES: { icon: typeof Droplet; label: StringKey }[] = [
+/**
+ * What the product promises, and what it will not do.
+ *
+ * The strongest thing this page can say to somebody deciding whether to hand
+ * over a phone number, so it is set as four stamped promises rather than two
+ * bulleted lists of prose.
+ */
+const PROMISES: { icon: typeof MapPin; label: StringKey }[] = [
   { icon: UserRoundCheck, label: 'landing.note1' },
-  { icon: MapPin, label: 'landing.note2' },
-  { icon: KeyRound, label: 'landing.note3' },
+  { icon: MapPin, label: 'landing.privacyLocation' },
+  { icon: KeyRound, label: 'landing.privacyContact' },
   { icon: Network, label: 'landing.note4' },
 ]
 
-const FLOWS: { title: StringKey; steps: typeof GOODS_FLOW }[] = [
-  { title: 'landing.flowBlood', steps: HEALTH_FLOW.donor },
-  { title: 'landing.flowHair', steps: HAIR_FLOW },
-  { title: 'landing.flowMilk', steps: MILK_FLOW },
-  { title: 'landing.flowMaterial', steps: GOODS_FLOW },
-]
-
 /**
- * Brief §5's rules, as promises rather than clauses.
+ * A section's title, set like the stamp on a kraft parcel.
  *
- * They are the strongest thing this product can say to somebody deciding
- * whether to hand over a phone number, and a privacy policy is not where that
- * person is looking.
+ * A real heading underneath: the stamp styling is for the eye, and a screen
+ * reader navigating by headings should find every section, not just the motto.
  */
-const PROMISES: { icon: typeof EyeOff; label: StringKey }[] = [
-  { icon: EyeOff, label: 'landing.privacyLocation' },
-  { icon: KeyRound, label: 'landing.privacyContact' },
-  { icon: Stethoscope, label: 'landing.privacyMedical' },
-]
-
-const TRUST: { icon: typeof ShieldCheck; label: StringKey }[] = [
-  { icon: ShieldCheck, label: 'landing.trustVerified' },
-  { icon: KeyRound, label: 'landing.trustOtp' },
-  { icon: CheckCheck, label: 'landing.trustTrail' },
-]
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-mono text-xs font-normal uppercase tracking-[0.18em] text-muted-foreground">
+      {children}
+    </h2>
+  )
+}
 
 export default function Landing() {
+  // The wall and the journey are one interaction, so the choice lives here and
+  // the journey is drawn at full width underneath both columns.
+  const [kind, setKind] = useState<GivingKind>(GIVING_KINDS[0] as GivingKind)
+
   return (
     <div className="plaster-ground min-h-dvh">
       <header className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 pt-6">
@@ -106,36 +93,47 @@ export default function Landing() {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 pb-16 pt-10">
-        {/* ---- the motto, with nothing competing with it ---- */}
-        <section>
-          <h1 className="max-w-[16ch] text-balance font-display text-display-xl leading-[1.05]">
-            {t('app.tagline')}
-          </h1>
-          <p className="mt-5 max-w-[46ch] text-pretty text-lg text-muted-foreground">
-            {t('landing.heroLede')}
-          </p>
+        {/* ---- the motto, and the wall it opens ---- */}
+        <section className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12">
+          <div className="lg:pt-2">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              {t('landing.cityNote')}
+            </p>
+            <h1 className="mt-4 max-w-[14ch] text-balance font-display text-display-lg leading-[1.02] sm:text-display-xl">
+              {t('app.tagline')}
+            </h1>
+            <p className="mt-5 max-w-[42ch] text-pretty text-lg text-muted-foreground">
+              {t('landing.heroLede')}
+            </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg" className="min-h-12">
-              <Link to="/sign-up">{t('auth.createAccount')}</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="min-h-12">
-              <Link to="/sign-in">{t('auth.signIn')}</Link>
-            </Button>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg" className="min-h-12">
+                <Link to="/sign-up">{t('auth.createAccount')}</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="min-h-12">
+                <Link to="/sign-in">{t('auth.signIn')}</Link>
+              </Button>
+            </div>
           </div>
 
-          <p className="mt-4 text-sm text-muted-foreground">{t('landing.cityNote')}</p>
+          <div>
+            <Eyebrow>{t('landing.pickTitle')}</Eyebrow>
+            <p className="mt-1 text-sm text-muted-foreground">{t('landing.pickHint')}</p>
+            <GivingWall chosen={kind} onChoose={setKind} className="mt-4" />
+          </div>
         </section>
 
+        <GivingJourney chosen={kind} className="mt-10" />
+
         {/* ---- the four roles ---- */}
-        <section className="mt-14 border-t border-border pt-10">
-          <h2 className="font-display text-display-md">{t('landing.rolesTitle')}</h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-16 border-t border-border pt-10">
+          <Eyebrow>{t('landing.whoTitle')}</Eyebrow>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {ROLES.map(({ icon: Icon, label, body, terms }) => (
-              <li key={label} className="hairline flex flex-col rounded-sm bg-card p-5">
-                <Icon className="size-6 text-primary" aria-hidden />
-                <p className="mt-3 font-display text-display-sm">{t(label)}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{t(body)}</p>
+              <li key={label} className="hairline flex flex-col rounded-sm bg-card p-4">
+                <Icon className="size-5 text-primary" aria-hidden />
+                <p className="mt-3 font-display text-display-sm leading-none">{t(label)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t(body)}</p>
                 {terms ? (
                   <Link to="/terms" className="mt-auto pt-3 text-xs underline underline-offset-4">
                     {t('auth.termsApply')}
@@ -146,85 +144,30 @@ export default function Landing() {
           </ul>
         </section>
 
-        {/* ---- what a donor can give ---- */}
-        <section className="mt-14 border-t border-border pt-10">
-          <h2 className="font-display text-display-md">{t('landing.typesTitle')}</h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-            {TYPES.map(({ icon: Icon, label, body }, index) => (
-              <li
-                key={label}
-                className={
-                  index === 0
-                    ? 'hairline flex gap-4 rounded-sm bg-card p-5 ring-1 ring-primary/30'
-                    : 'hairline flex gap-4 rounded-sm bg-card p-5'
-                }
-              >
-                <span className="grid size-12 shrink-0 place-items-center rounded-sm bg-primary/10 text-primary">
-                  <Icon className="size-6" aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-display text-display-sm">{t(label)}</span>
-                  <span className="mt-1 block text-sm text-muted-foreground">{t(body)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* ---- the spec's key notes ---- */}
-        <section className="mt-14 border-t border-border pt-10">
-          <h2 className="font-display text-display-md">{t('landing.notesTitle')}</h2>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-            {NOTES.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-start gap-3 text-sm">
-                <Icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-                {t(label)}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* ---- each journey, drawn ---- */}
-        <section className="mt-14 border-t border-border pt-10">
-          <div className="mb-4">
-            <h2 className="font-display text-display-md">{t('landing.howTitle')}</h2>
-            <p className="mt-1 text-muted-foreground">{t('landing.howLede')}</p>
-          </div>
-
-          <div className="space-y-8">
-            {FLOWS.map((flow) => (
-              <FlowDiagram key={flow.title} title={t(flow.title)} steps={flow.steps} />
-            ))}
-          </div>
-        </section>
-
-        {/* ---- what we never do ---- */}
-        <section className="mt-14 border-t border-border pt-10">
-          <h2 className="font-display text-display-md">{t('landing.privacyTitle')}</h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-3">
+        {/* ---- what is promised, and what is never done ---- */}
+        <section className="mt-16 border-t border-border pt-10">
+          <Eyebrow>{t('landing.notesTitle')}</Eyebrow>
+          <ul className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
             {PROMISES.map(({ icon: Icon, label }) => (
-              <li key={label} className="hairline rounded-sm bg-card p-5">
-                <Icon className="size-5 text-primary" aria-hidden />
-                <p className="mt-2 text-sm text-muted-foreground">{t(label)}</p>
+              <li key={label} className="flex gap-3">
+                <Icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+                <span className="text-pretty text-sm">{t(label)}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="mt-12 grid gap-3 sm:grid-cols-3">
-          {TRUST.map(({ icon: Icon, label }) => (
-            <p key={label} className="flex items-start gap-2 text-sm">
-              <Icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-              {t(label)}
-            </p>
-          ))}
+        {/* ---- the closing line, and the way in ---- */}
+        <section className="mt-16 border-t border-border pt-10">
+          <p className="max-w-[28ch] text-balance font-display text-display-md leading-[1.1]">
+            {t('landing.closing')}
+          </p>
+          <Button asChild size="lg" className="mt-6 min-h-12">
+            <Link to="/sign-up">{t('auth.createAccount')}</Link>
+          </Button>
         </section>
 
-        <Disclosure className="mt-8" />
-
-        <p className="mt-12 text-pretty border-t border-border pt-8 font-display text-display-sm">
-          {t('landing.closing')}
-        </p>
+        <Disclosure className="mt-12" />
       </main>
 
       <footer className="border-t border-border">
