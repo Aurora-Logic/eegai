@@ -87,7 +87,7 @@ test('a donor posts an item through the whole wizard', async ({ page, baseURL })
 
   // Step 4 — pickup. The area is a searchable combobox, not a typed pincode.
   await page.getByLabel('Pickup address').fill('12 Race Course Road')
-  await page.getByRole('combobox', { name: /Which part of Coimbatore/ }).click()
+  await page.getByRole('combobox', { name: /Which area are you in/ }).click()
   await page.getByPlaceholder('Search by area or pincode').fill('Race')
   await page.getByRole('option', { name: /Race Course/ }).click()
   await page.getByRole('button', { name: 'Next' }).click()
