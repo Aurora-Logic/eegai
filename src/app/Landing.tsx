@@ -1,18 +1,27 @@
 import { Link } from 'react-router-dom'
 import {
+  Baby,
+  Boxes,
   CheckCheck,
   Droplet,
   EyeOff,
+  HandHeart,
+  Hospital,
   KeyRound,
+  MapPin,
+  Network,
   Package,
+  Scissors,
   ShieldCheck,
   Stethoscope,
+  Truck,
+  UserRoundCheck,
 } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { FlowDiagram } from '@/components/shared/flow-diagram'
 import { Button } from '@/components/ui/button'
 import { Disclosure } from '@/components/health/disclosure'
-import { HEALTH_FLOW } from '@/lib/flows'
+import { GOODS_FLOW, HAIR_FLOW, HEALTH_FLOW, MILK_FLOW } from '@/lib/flows'
 import { t } from '@/lib/i18n'
 import type { StringKey } from '@/lib/i18n'
 
@@ -25,18 +34,45 @@ import type { StringKey } from '@/lib/i18n'
  * three cards about photographing a sofa before reaching anything that applied
  * to them.
  *
- * The motto is the thesis and is set large enough to be one. Under it the two
- * lanes, then the journey drawn with arrows — the same component the in-app
- * manual renders, so what this page promises and what the app later explains
- * cannot drift apart.
+ * The motto is the thesis and is set large enough to be one. Under it the four
+ * roles and the four donation types from the donor-module spec, its key notes,
+ * then each journey drawn with arrows — the same component and the same data
+ * the in-app manual renders, so what this page promises and what the app later
+ * explains cannot drift apart.
  *
  * There is no hero illustration any more. The old one drew the goods wall, and
  * a drawing of the health lane would be new artwork rather than a
  * rearrangement; a bad one is worse than none. The type carries it.
  */
 
-/** The goods lane, compressed to one line per step. */
-const GOODS_STEPS: StringKey[] = ['landing.goodsStep1', 'landing.goodsStep2', 'landing.goodsStep3']
+/** The spec's home page: four roles, Hospital carrying its terms. */
+const ROLES: { icon: typeof Hospital; label: StringKey; body: StringKey; terms?: boolean }[] = [
+  { icon: Hospital, label: 'auth.roleHospital', body: 'landing.roleHospitalBody', terms: true },
+  { icon: Boxes, label: 'auth.roleNgo', body: 'landing.roleNgoBody' },
+  { icon: HandHeart, label: 'auth.roleDonor', body: 'landing.roleDonorBody' },
+  { icon: Truck, label: 'auth.roleVolunteer', body: 'landing.roleDeliveryBody' },
+]
+
+const TYPES: { icon: typeof Droplet; label: StringKey; body: StringKey }[] = [
+  { icon: Droplet, label: 'landing.typeBlood', body: 'landing.typeBloodBody' },
+  { icon: Scissors, label: 'landing.typeHair', body: 'landing.typeHairBody' },
+  { icon: Baby, label: 'landing.typeMilk', body: 'landing.typeMilkBody' },
+  { icon: Package, label: 'landing.typeMaterial', body: 'landing.typeMaterialBody' },
+]
+
+const NOTES: { icon: typeof Droplet; label: StringKey }[] = [
+  { icon: UserRoundCheck, label: 'landing.note1' },
+  { icon: MapPin, label: 'landing.note2' },
+  { icon: KeyRound, label: 'landing.note3' },
+  { icon: Network, label: 'landing.note4' },
+]
+
+const FLOWS: { title: StringKey; steps: typeof GOODS_FLOW }[] = [
+  { title: 'landing.flowBlood', steps: HEALTH_FLOW.donor },
+  { title: 'landing.flowHair', steps: HAIR_FLOW },
+  { title: 'landing.flowMilk', steps: MILK_FLOW },
+  { title: 'landing.flowMaterial', steps: GOODS_FLOW },
+]
 
 /**
  * Brief §5's rules, as promises rather than clauses.
@@ -91,47 +127,75 @@ export default function Landing() {
           <p className="mt-4 text-sm text-muted-foreground">{t('landing.cityNote')}</p>
         </section>
 
-        {/* ---- the two lanes, health first ---- */}
+        {/* ---- the four roles ---- */}
         <section className="mt-14 border-t border-border pt-10">
-          <h2 className="font-display text-display-md">{t('landing.lanesTitle')}</h2>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="hairline rounded-sm bg-card p-5 ring-1 ring-primary/30">
-              <p className="flex items-center gap-2">
-                <Droplet className="size-5 shrink-0 text-primary" aria-hidden />
-                <span className="font-display text-display-sm">{t('landing.laneHealthTitle')}</span>
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">{t('landing.laneHealthBody')}</p>
-            </div>
-
-            <div className="hairline rounded-sm bg-card p-5">
-              <p className="flex items-center gap-2">
-                <Package className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="font-display text-display-sm">{t('landing.laneGoodsTitle')}</span>
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">{t('landing.laneGoodsBody')}</p>
-            </div>
-          </div>
+          <h2 className="font-display text-display-md">{t('landing.rolesTitle')}</h2>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {ROLES.map(({ icon: Icon, label, body, terms }) => (
+              <li key={label} className="hairline flex flex-col rounded-sm bg-card p-5">
+                <Icon className="size-6 text-primary" aria-hidden />
+                <p className="mt-3 font-display text-display-sm">{t(label)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t(body)}</p>
+                {terms ? (
+                  <Link to="/terms" className="mt-auto pt-3 text-xs underline underline-offset-4">
+                    {t('auth.termsApply')}
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </section>
 
-        {/* ---- the journey, drawn ---- */}
+        {/* ---- what a donor can give ---- */}
+        <section className="mt-14 border-t border-border pt-10">
+          <h2 className="font-display text-display-md">{t('landing.typesTitle')}</h2>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+            {TYPES.map(({ icon: Icon, label, body }, index) => (
+              <li
+                key={label}
+                className={
+                  index === 0
+                    ? 'hairline flex gap-4 rounded-sm bg-card p-5 ring-1 ring-primary/30'
+                    : 'hairline flex gap-4 rounded-sm bg-card p-5'
+                }
+              >
+                <span className="grid size-12 shrink-0 place-items-center rounded-sm bg-primary/10 text-primary">
+                  <Icon className="size-6" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-display text-display-sm">{t(label)}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{t(body)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ---- the spec's key notes ---- */}
+        <section className="mt-14 border-t border-border pt-10">
+          <h2 className="font-display text-display-md">{t('landing.notesTitle')}</h2>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+            {NOTES.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-start gap-3 text-sm">
+                <Icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+                {t(label)}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ---- each journey, drawn ---- */}
         <section className="mt-14 border-t border-border pt-10">
           <div className="mb-4">
             <h2 className="font-display text-display-md">{t('landing.howTitle')}</h2>
             <p className="mt-1 text-muted-foreground">{t('landing.howLede')}</p>
           </div>
 
-          <FlowDiagram title={t('landing.laneHealthTitle')} steps={HEALTH_FLOW.donor} />
-
-          <h3 className="mt-10 font-display text-display-sm">{t('landing.goodsHowTitle')}</h3>
-          <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
-            {GOODS_STEPS.map((key) => (
-              <li key={key} className="flex items-start gap-2">
-                <Package className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {t(key)}
-              </li>
+          <div className="space-y-8">
+            {FLOWS.map((flow) => (
+              <FlowDiagram key={flow.title} title={t(flow.title)} steps={flow.steps} />
             ))}
-          </ul>
+          </div>
         </section>
 
         {/* ---- what we never do ---- */}

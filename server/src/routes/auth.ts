@@ -3,7 +3,7 @@ import { deleteCookie, setCookie } from 'hono/cookie'
 import { loginSchema, registerSchema } from '../../../src/lib/validation/auth.ts'
 import { withActor, withSystemActor } from '../lib/db.ts'
 import { hashPassword, verifyPassword } from '../lib/password.ts'
-import { SESSION_COOKIE, signSession } from '../lib/jwt.ts'
+import { SESSION_COOKIE, signSession, type SessionClaims } from '../lib/jwt.ts'
 import { actorOf, requireAuth, type AppEnv } from '../middleware/auth.ts'
 import { env } from '../lib/env.ts'
 import { log } from '../lib/logger.ts'
@@ -73,7 +73,7 @@ authRoutes.post('/dev-login', async (c) => {
     if (!found) return null
     return {
       userId: found.user_id as string,
-      role: found.role as string,
+      role: found.role as SessionClaims['role'],
       fullName: found.full_name as string,
     }
   })
@@ -95,13 +95,15 @@ authRoutes.post('/register', async (c) => {
     return c.json({ error: 'Check the form.', issues: parsed.error.flatten() }, 400)
   }
 
-  const { fullName, phone, password, role, email, address, pincode, lat, lng } = parsed.data
+  const { fullName, phone, password, role, email, address, pincode, lat, lng, orgType } =
+    parsed.data
   const passwordHash = await hashPassword(password)
 
   try {
     const session = await withActor(null, async (tx) => {
       const { rows } = await tx.query(
-        'select * from app.register_user($1, $2, $3, $4::public.user_role, $5, $6, $7, $8, $9)',
+        `select * from app.register_user(
+           $1, $2, $3, $4::public.user_role, $5, $6, $7, $8, $9, $10::public.org_type)`,
         [
           phone,
           passwordHash,
@@ -112,6 +114,9 @@ authRoutes.post('/register', async (c) => {
           pincode || null,
           lat ?? null,
           lng ?? null,
+          // Hospital only when it is an organisation and the terms were agreed;
+          // the schema has already refused anything else.
+          role === 'ngo' ? orgType : 'ngo',
         ],
       )
       const created = rows[0]
@@ -223,9 +228,10 @@ authRoutes.get('/me', async (c) => {
       // lands after signing in: a blood centre wants its requests, a clothes
       // charity wants the wall. Left-joined and coalesced, so a donor or a
       // volunteer simply gets an empty array rather than a null to guard.
-      `select p.id, p.full_name, p.phone, p.role, p.pincode, p.lat, p.lng, p.is_active,
+      `select p.id, p.full_name, p.phone, p.role, p.pincode, l.lat, l.lng, p.is_active,
               coalesce(n.health_categories::text[], '{}') as health_categories
        from public.profiles p
+       cross join app.my_location() l
        left join public.ngos n on n.profile_id = p.id
        where p.user_id = app.current_user_id()`,
     )

@@ -40,7 +40,23 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.removeItem('eegai.donation-draft'))
 })
 
-test('a donor posts an item through the whole wizard', async ({ page }) => {
+test('a donor posts an item through the whole wizard', async ({ page, baseURL }) => {
+  // Nothing on this flow may leave our origin. The compression worker used to
+  // fetch itself from a CDN on every photo, which stalled this test whenever
+  // the CDN was slow and sent a request from the donor's phone to a third party.
+  const foreign: string[] = []
+  page.on('request', (r) => {
+    const url = new URL(r.url())
+    if (!['http:', 'https:'].includes(url.protocol)) return
+    // The typefaces are the one deliberate exception, loaded by index.html.
+    const allowed = [
+      new URL(baseURL!).origin,
+      'https://fonts.googleapis.com',
+      'https://fonts.gstatic.com',
+    ]
+    if (!allowed.includes(url.origin)) foreign.push(r.url())
+  })
+
   await signInAsDonor(page)
   await page.getByRole('link', { name: 'Post an item' }).click()
 
@@ -81,6 +97,7 @@ test('a donor posts an item through the whole wizard', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/donor$/)
   await expect(page.getByRole('heading', { name: 'Winter jackets' }).first()).toBeVisible()
+  expect(foreign).toEqual([])
 })
 
 test('a failed condition gate blocks the post and says why', async ({ page }) => {

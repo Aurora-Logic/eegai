@@ -1,77 +1,102 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bell, Droplet, HeartHandshake, Package, Scissors, Settings2 } from 'lucide-react'
+import {
+  ArrowRight,
+  Baby,
+  Bell,
+  Droplet,
+  Package,
+  Scissors,
+  Settings2,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
-import { EmptyState } from '@/components/shared/empty-state'
 import { GuideCard } from '@/components/shared/guide-card'
 import { HomeHero } from '@/components/shared/home-hero'
 import { Disclosure } from '@/components/health/disclosure'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ApiError, api } from '@/lib/api'
-import { formatRelative } from '@/lib/dates'
-import { healthApi, type NearbyRequest } from '@/lib/health-client'
-import { CATEGORY_LABEL, URGENCY_LABEL, type HealthCategory } from '@/lib/validation/health'
-import { useState } from 'react'
-
-const ICON: Record<HealthCategory, typeof Droplet> = {
-  blood: Droplet,
-  hair: Scissors,
-  breast_milk: HeartHandshake,
-}
+import { api } from '@/lib/api'
+import { healthApi } from '@/lib/health-client'
+import { cn } from '@/lib/utils'
 
 /**
- * Nearby requests — the donor's half of the health lane.
+ * The donor's front door: the four donation types from the donor-module spec,
+ * in its order — Blood, Hair, Breast Milk, Material.
  *
- * Brief §2: an institution posts a need, nearby consenting donors are told,
- * the donor opts in and then goes there. Everything on this screen leads to
- * that one act, so there is exactly one button on each card.
- *
- * The contact number is not here. Brief §4 hands it over when somebody opts
- * in, and a scrollable list of direct lines into a blood bank would be a
- * different product from the one described.
+ * Each type is its own screen because each is a different journey: blood waits
+ * for an alert, hair and milk are offered to a partner, material goes on the
+ * wall. A single form that tried to be all four would ask every donor
+ * questions that only apply to one.
  */
-export default function DonorNeeds() {
-  const queryClient = useQueryClient()
-  const [error, setError] = useState<string | null>(null)
+interface DonationType {
+  icon: LucideIcon
+  label: string
+  hint: string
+  to: string
+  status?: string | undefined
+  attention?: boolean
+}
 
+/** The spec's key notes, said once, on the screen a donor starts from. */
+const KEY_NOTES = [
+  'Every hospital and organisation is verified by an admin.',
+  'Location is used to match you with who is near.',
+  'Your contact details are shared only after you agree.',
+  'EEGAI connects you. Screening is done by the organisation.',
+]
+
+export default function DonorNeeds() {
   const me = useQuery({ queryKey: ['health', 'me'], queryFn: healthApi.me })
-  // Only for the badge on the Alerts tile — a number somebody can act on.
   const inbox = useQuery({
     queryKey: ['inbox'],
     queryFn: () => api.get<{ unread: number }>('/inbox/notifications'),
   })
-
+  const bloodDonor = Boolean(me.data?.profile?.categories.includes('blood'))
   const wall = useQuery({
     queryKey: ['health', 'nearby'],
     queryFn: healthApi.nearby,
-    enabled: me.data?.consented === true,
+    enabled: me.data?.consented === true && bloodDonor,
   })
 
-  const respond = useMutation({
-    mutationFn: (id: string) => healthApi.respond(id),
-    onSuccess: async () => {
-      setError(null)
-      await queryClient.invalidateQueries({ queryKey: ['health'] })
-    },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'That did not go through.'),
-  })
-
+  const unanswered = (wall.data?.requests ?? []).filter(
+    (r) => r.category === 'blood' && r.my_answer === null,
+  ).length
   const unread = inbox.data?.unread ?? 0
 
-  // This is the donor's front door, so it carries both lanes and the alerts
-  // rather than a row of same-weight buttons that said nothing about which of
-  // them somebody was actually in.
-  // No tile for this screen. A link to the page somebody is already on is a
-  // dead end, and the heading above already says where they are.
-  const tiles = [
+  const types: DonationType[] = [
+    {
+      icon: Droplet,
+      label: 'Blood',
+      hint: 'Register once. Hospitals alert you when they need blood.',
+      to: '/health/blood',
+      status: !bloodDonor
+        ? 'Not registered'
+        : unanswered > 0
+          ? `${unanswered} ${unanswered === 1 ? 'alert needs' : 'alerts need'} your answer`
+          : 'Registered',
+      attention: unanswered > 0,
+    },
+    {
+      icon: Scissors,
+      label: 'Hair',
+      hint: 'For wigs, through a partner organisation.',
+      to: '/health/hair',
+    },
+    {
+      icon: Baby,
+      label: 'Breast milk',
+      hint: 'Through a Lactation Management Centre.',
+      to: '/health/milk',
+    },
     {
       icon: Package,
-      label: 'Things you no longer need',
-      hint: 'Clothes, books, household items',
+      label: 'Material',
+      hint: 'Clothes, books and household things. Picked up from your door.',
       to: '/donor',
     },
+  ]
+
+  const tiles = [
     {
       icon: Bell,
       label: 'Alerts',
@@ -82,147 +107,61 @@ export default function DonorNeeds() {
     },
     {
       icon: Settings2,
-      label: 'What you can offer',
-      hint: 'Categories, alerts and your consent',
+      label: 'Preferences',
+      hint: 'Alerts, location and your consent',
       to: '/health/settings',
     },
   ]
 
-  if (me.isLoading) {
-    return (
-      <AppShell title="Nearby requests">
-        <Skeleton className="h-40 w-full" />
-      </AppShell>
-    )
-  }
-
-  // Brief §5: consent is the gate, not a formality. Nothing is shown until it
-  // has been given, and the way to give it is the only thing on the screen.
-  if (!me.data?.consented) {
-    return (
-      <AppShell
-        title="Nearby requests"
-        subtitle="Hospitals, blood centres and milk banks near you."
-      >
-        <HomeHero tiles={tiles} className="mb-6" />
-        <EmptyState
-          title="Agree to the donor terms first"
-          hint="We only alert you about requests near you, in the categories you choose. Your exact location is never shown to anybody."
-          action={
-            <Button asChild>
-              <Link to="/health/settings">Read and agree</Link>
-            </Button>
-          }
-        />
-        {/* Somebody who has not agreed yet is exactly who needs the manual,
-            so the way to it is on this screen too. */}
-        <GuideCard className="mt-6" />
-        <Disclosure className="mt-4" />
-      </AppShell>
-    )
-  }
-
-  const requests = wall.data?.requests ?? []
-
   return (
-    <AppShell title="Nearby requests" subtitle="Hospitals, blood centres and milk banks near you.">
+    <AppShell title="What would you like to donate?">
       <HomeHero tiles={tiles} className="mb-6" />
 
-      {error ? (
-        <p role="alert" className="hairline mb-4 rounded-sm bg-card p-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <ul className="grid gap-3 sm:grid-cols-2" aria-label="Donation types">
+        {types.map((type) => (
+          <li key={type.to}>
+            <Link
+              to={type.to}
+              className={cn(
+                'hairline group flex h-full items-start gap-4 rounded-sm p-4 transition-colors',
+                type.attention
+                  ? 'border-primary/40 bg-primary/10 hover:bg-primary/15'
+                  : 'bg-card hover:bg-foreground/5',
+              )}
+            >
+              <span className="grid size-12 shrink-0 place-items-center rounded-sm bg-primary/10 text-primary">
+                <type.icon className="size-6" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-display-sm">{type.label}</span>
+                <span className="mt-0.5 block text-sm text-muted-foreground">{type.hint}</span>
+                {type.status ? (
+                  <span className="mt-2 block font-mono text-xs">{type.status}</span>
+                ) : null}
+              </span>
+              <ArrowRight
+                className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
 
-      {wall.isLoading ? (
-        <Skeleton className="h-40 w-full" />
-      ) : requests.length === 0 ? (
-        <EmptyState
-          title="Nothing near you right now"
-          hint="You will get an alert when a verified institution nearby needs what you have offered. Nothing to check back for."
-          action={
-            <Button asChild variant="outline">
-              <Link to="/health/settings">Change what you offer</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="space-y-3" aria-label="Nearby requests">
-          {requests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              busy={respond.isPending}
-              onRespond={() => respond.mutate(request.id)}
-            />
+      <section className="hairline mt-6 rounded-sm bg-card p-4">
+        <h2 className="font-display text-display-sm">Good to know</h2>
+        <ul className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+          {KEY_NOTES.map((note) => (
+            <li key={note} className="flex gap-2">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              <span className="text-muted-foreground">{note}</span>
+            </li>
           ))}
         </ul>
-      )}
+      </section>
 
       <GuideCard className="mt-6" />
       <Disclosure className="mt-4" />
     </AppShell>
-  )
-}
-
-function RequestCard({
-  request,
-  busy,
-  onRespond,
-}: {
-  request: NearbyRequest
-  busy: boolean
-  onRespond: () => void
-}) {
-  const Icon = ICON[request.category]
-  const short = request.donors_needed - request.responses_count
-
-  return (
-    <li className="hairline rounded-sm bg-card p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-primary/10 text-primary">
-          <Icon aria-hidden />
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{CATEGORY_LABEL[request.category]}</span>
-            {request.blood_group ? <Badge variant="tag">{request.blood_group}</Badge> : null}
-            {/* Urgency is the institution's own word for it, not a computed
-                priority — this app makes no medical judgements (brief §6). */}
-            <Badge variant={request.urgency === 'routine' ? 'muted' : 'destructive'}>
-              {URGENCY_LABEL[request.urgency]}
-            </Badge>
-          </p>
-
-          <p className="mt-1 text-sm">{request.institution}</p>
-          <p className="font-mono text-xs text-muted-foreground">
-            {request.distance_km} km away
-            {request.pincode ? ` · ${request.pincode}` : ''} · asked{' '}
-            {formatRelative(request.created_at)}
-          </p>
-
-          {request.note ? <p className="mt-2 text-sm">{request.note}</p> : null}
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            {short > 0
-              ? `${short} more ${short === 1 ? 'donor' : 'donors'} needed`
-              : 'Enough people have said yes'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        {request.responded ? (
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link to="/health/responses">You said yes · see the details</Link>
-          </Button>
-        ) : (
-          <Button className="w-full sm:w-auto" disabled={busy} onClick={onRespond}>
-            I&apos;m willing to help
-          </Button>
-        )}
-      </div>
-    </li>
   )
 }

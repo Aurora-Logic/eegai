@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, Boxes, HandHeart, Truck } from 'lucide-react'
+import { AlertCircle, Boxes, HandHeart, Hospital, Truck } from 'lucide-react'
 import { AuthLayout } from '@/components/shared/auth-layout'
 import { RoleScene } from '@/components/illustrations/roles'
 import { Combobox } from '@/components/ui/combobox'
 import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -18,16 +19,39 @@ import { ApiError } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import { registerSchema, type RegisterInput } from '@/lib/validation/auth'
 
+/**
+ * The four cards from the spec's home page, in its order.
+ *
+ * Hospital is not a role of its own: it is an organisation of type hospital,
+ * so it goes through the same verification as any NGO. The choice is kept
+ * separately from the form's `role` because two cards map to one role.
+ */
 const ROLE_CHOICES = [
-  { value: 'donor', icon: HandHeart, label: 'auth.roleDonor', hint: 'auth.roleDonorHint' },
-  { value: 'ngo', icon: Boxes, label: 'auth.roleNgo', hint: 'auth.roleNgoHint' },
+  {
+    value: 'hospital',
+    role: 'ngo',
+    icon: Hospital,
+    label: 'auth.roleHospital',
+    hint: 'auth.roleHospitalHint',
+  },
+  { value: 'ngo', role: 'ngo', icon: Boxes, label: 'auth.roleNgo', hint: 'auth.roleNgoHint' },
+  {
+    value: 'donor',
+    role: 'donor',
+    icon: HandHeart,
+    label: 'auth.roleDonor',
+    hint: 'auth.roleDonorHint',
+  },
   {
     value: 'volunteer',
+    role: 'volunteer',
     icon: Truck,
     label: 'auth.roleVolunteer',
     hint: 'auth.roleVolunteerHint',
   },
 ] as const
+
+type Choice = (typeof ROLE_CHOICES)[number]['value']
 
 export default function SignUp() {
   const { user, signUp } = useSession()
@@ -43,10 +67,12 @@ export default function SignUp() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: 'donor' },
+    defaultValues: { role: 'donor', orgType: 'ngo', acceptTerms: false },
   })
 
+  const [choice, setChoice] = useState<Choice>('donor')
   const role = watch('role')
+  const hospital = choice === 'hospital'
   const pincode = watch('pincode')
 
   if (user) return <Navigate to={homeFor(user)} replace />
@@ -81,47 +107,84 @@ export default function SignUp() {
       <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
         <fieldset>
           <legend className="mb-2 text-sm font-medium">{t('auth.roleQuestion')}</legend>
-          <Controller
-            control={control}
-            name="role"
-            render={({ field }) => (
-              <RadioGroup
-                value={field.value}
-                onValueChange={field.onChange}
-                className="gap-2"
-                aria-label={t('auth.roleQuestion')}
-              >
-                {ROLE_CHOICES.map((choice) => {
-                  const Icon = choice.icon
-                  const selected = role === choice.value
-                  return (
-                    <Label
-                      key={choice.value}
-                      htmlFor={`role-${choice.value}`}
-                      className={cn(
-                        'hairline flex cursor-pointer items-start gap-3 rounded-sm p-3 transition-colors',
-                        selected ? 'bg-primary/15' : 'bg-card hover:bg-foreground/5',
-                      )}
-                    >
-                      <RadioGroupItem
-                        value={choice.value}
-                        id={`role-${choice.value}`}
-                        className="mt-0.5"
-                      />
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium">{t(choice.label)}</span>
-                        <span className="block text-sm font-normal text-muted-foreground">
-                          {t(choice.hint)}
-                        </span>
+          <RadioGroup
+            value={choice}
+            onValueChange={(next) => {
+              const picked = ROLE_CHOICES.find((c) => c.value === next)
+              if (!picked) return
+              setChoice(picked.value)
+              setValue('role', picked.role, { shouldValidate: true })
+              setValue('orgType', picked.value === 'hospital' ? 'hospital' : 'ngo')
+              if (picked.value !== 'hospital') setValue('acceptTerms', false)
+            }}
+            className="gap-2 sm:grid-cols-2"
+            aria-label={t('auth.roleQuestion')}
+          >
+            {ROLE_CHOICES.map((option) => {
+              const Icon = option.icon
+              const selected = choice === option.value
+              return (
+                <Label
+                  key={option.value}
+                  htmlFor={`role-${option.value}`}
+                  className={cn(
+                    'hairline flex cursor-pointer items-start gap-3 rounded-sm p-3 transition-colors',
+                    selected ? 'bg-primary/15' : 'bg-card hover:bg-foreground/5',
+                  )}
+                >
+                  <RadioGroupItem
+                    value={option.value}
+                    id={`role-${option.value}`}
+                    className="mt-0.5"
+                  />
+                  <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{t(option.label)}</span>
+                    <span className="block text-sm font-normal text-muted-foreground">
+                      {t(option.hint)}
+                    </span>
+                    {option.value === 'hospital' ? (
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        {t('auth.termsApply')}
                       </span>
-                    </Label>
-                  )
-                })}
-              </RadioGroup>
-            )}
-          />
+                    ) : null}
+                  </span>
+                </Label>
+              )
+            })}
+          </RadioGroup>
           {errors.role ? <p className="text-sm text-destructive">{errors.role.message}</p> : null}
+
+          {hospital ? (
+            <div className="mt-3 space-y-1">
+              <Controller
+                control={control}
+                name="acceptTerms"
+                render={({ field }) => (
+                  <label
+                    htmlFor="accept-terms"
+                    className="flex min-h-11 cursor-pointer items-start gap-3 text-sm"
+                  >
+                    <Checkbox
+                      id="accept-terms"
+                      className="mt-0.5"
+                      checked={field.value === true}
+                      onCheckedChange={(v) => field.onChange(v === true)}
+                    />
+                    <span>
+                      {t('auth.acceptTerms')}{' '}
+                      <Link to="/terms" target="_blank" className="underline underline-offset-4">
+                        {t('auth.readTerms')}
+                      </Link>
+                    </span>
+                  </label>
+                )}
+              />
+              {errors.acceptTerms ? (
+                <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Only an organisation is asked for these, and it is asked because
               two things break without them. The wall policy reads
@@ -132,7 +195,9 @@ export default function SignUp() {
           {role === 'ngo' ? (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="address">Where should things be delivered?</Label>
+                <Label htmlFor="address">
+                  {hospital ? 'Hospital address' : 'Where should things be delivered?'}
+                </Label>
                 <Input
                   id="address"
                   autoComplete="street-address"
@@ -172,7 +237,11 @@ export default function SignUp() {
 
         <div className="space-y-1.5">
           <Label htmlFor="fullName">
-            {role === 'ngo' ? t('auth.orgName') : t('auth.fullName')}
+            {hospital
+              ? t('auth.hospitalName')
+              : role === 'ngo'
+                ? t('auth.orgName')
+                : t('auth.fullName')}
           </Label>
           <Input id="fullName" autoComplete="name" {...register('fullName')} />
           {errors.fullName ? (

@@ -340,3 +340,44 @@ describe('audit_log', () => {
     expect(rows[0].n).toBe(0)
   })
 })
+
+describe('a person’s coordinates', () => {
+  it('reach the other side of a donation as a name, never as a location', async () => {
+    // Migration 027. The counterparty policy shows an organisation the donor's
+    // row so it can ring them; before 027 that row carried lat and lng.
+    const { rows: pairs } = await adminPool.query(
+      `select d.donor_id, n.profile_id as ngo_profile_id, u.id as ngo_user_id
+       from public.donations d
+       join public.ngos n on n.id = d.claimed_by_ngo_id
+       join public.profiles np on np.id = n.profile_id
+       join public.users u on u.id = np.user_id
+       limit 1`,
+    )
+    const pair = pairs[0]
+    expect(pair, 'the seed should have at least one claimed donation').toBeTruthy()
+
+    const actor = { userId: pair.ngo_user_id as string, role: 'ngo' as const }
+    const named = await asActor(actor, async (tx) => {
+      const { rows } = await tx.query('select full_name from public.profiles where id = $1', [
+        pair.donor_id,
+      ])
+      return rows
+    })
+    expect(named).toHaveLength(1)
+
+    await expect(
+      asActor(actor, (tx) =>
+        tx.query('select lat, lng from public.profiles where id = $1', [pair.donor_id]),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('are still readable by their owner, through app.my_location()', async () => {
+    const rows = await asActor({ userId: donorA.userId, role: 'donor' }, async (tx) => {
+      const { rows } = await tx.query('select lat, lng from app.my_location()')
+      return rows
+    })
+    expect(rows).toHaveLength(1)
+    expect(typeof rows[0].lat).toBe('number')
+  })
+})

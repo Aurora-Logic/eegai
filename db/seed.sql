@@ -392,25 +392,53 @@ begin
   -- until an institution exists and a donor has consented.
   -- -------------------------------------------------------------------------
 
+  -- A hospital with a blood centre and a Lactation Management Centre.
   update public.ngos
   set health_categories = '{blood,breast_milk}'::public.health_category[],
+      org_type = 'hospital',
+      terms_accepted_at = now(),
       visit_instructions = 'Reception, Block B. Bring photo ID and eat something first.'
   where id = (
-    select id from public.ngos where verification_status = 'verified' order by created_at limit 1
+    select id from public.ngos where verification_status = 'verified' order by created_at, name limit 1
+  );
+
+  -- An NGO that takes hair for wigs. Without a second partner the hair form's
+  -- "select partner organisation" has one choice and looks like it is not one.
+  update public.ngos
+  set health_categories = '{hair}'::public.health_category[],
+      visit_instructions = 'Post the braid in a sealed bag to the address below, or drop it in on a weekday.'
+  -- Picked by excluding the hospital rather than by offset: the seeded
+  -- organisations share a created_at, so "offset 1" is not stable and landed on
+  -- the hospital itself, overwriting its blood approval with hair.
+  where id = (
+    select id from public.ngos
+    where verification_status = 'verified' and org_type = 'ngo' and health_categories = '{}'
+    order by name limit 1
   );
 
   -- Two donors who have consented and offer blood, and one who offers hair —
   -- so the category filter is visibly doing something rather than matching
   -- everybody.
   insert into public.donor_health_profiles
-    (profile_id, categories, blood_group, consented_at, consent_version)
-  select p.id, '{blood}'::public.health_category[], 'O+'::public.blood_group, now(), 1
+    (profile_id, categories, blood_group, consented_at, consent_version,
+     age, gender, last_blood_donation)
+  select p.id, '{blood,hair}'::public.health_category[], 'O+'::public.blood_group, now(), 1,
+         29, 'female'::public.gender, current_date - 120
   from public.profiles p where p.role = 'donor' order by p.created_at limit 2;
 
   insert into public.donor_health_profiles
     (profile_id, categories, consented_at, consent_version)
   select p.id, '{hair}'::public.health_category[], now(), 1
   from public.profiles p where p.role = 'donor' order by p.created_at offset 2 limit 1;
+
+  -- One hair offer waiting with the hair partner, so its queue is not empty.
+  insert into public.health_offers (profile_id, ngo_id, category, details)
+  select d.profile_id, n.id, 'hair',
+         '{"lengthInches":14,"cleanAndDry":true,"tied":true,"natural":true,"chemicallyTreated":false}'::jsonb
+  from public.donor_health_profiles d, public.ngos n
+  where 'hair' = any (d.categories) and 'hair' = any (n.health_categories)
+  order by d.created_at
+  limit 1;
 
   -- One open request, so the donor wall and the institution's list both have
   -- something in them.

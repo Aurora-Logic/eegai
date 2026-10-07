@@ -22,6 +22,10 @@ interface Metrics {
   needs_open: number
   needs_fulfilled: number
   offers: number
+  not_available: number
+  hospitals: number
+  donor_offers_open: number
+  donor_offers_completed: number
   consented_donors: number
   needs_unanswered: number
   reports_open: number
@@ -109,11 +113,21 @@ export function Overview() {
             tone={m.needs_unanswered > 0 ? 'warn' : 'good'}
           />
           <Tile label="Open right now" value={m.needs_open} hint={`${m.needs_fulfilled} filled`} />
-          <Tile label="People who said yes" value={m.offers} hint="not withdrawn" />
+          <Tile
+            label="Donors who said available"
+            value={m.offers}
+            hint={`${m.not_available} said not available`}
+          />
+          <Tile
+            label="Hair and milk offers waiting"
+            value={m.donor_offers_open}
+            hint={`${m.donor_offers_completed} received`}
+            tone={m.donor_offers_open > 0 ? 'warn' : 'default'}
+          />
           <Tile
             label="Donors signed up"
             value={m.consented_donors}
-            hint={`${m.institutions} institutions approved`}
+            hint={`${m.institutions} approved · ${m.hospitals} hospitals`}
           />
         </div>
       </div>
@@ -138,7 +152,7 @@ export function Overview() {
           tone={m.ngos_pending > 0 ? 'warn' : 'default'}
         />
         <Tile
-          label="Volunteers waiting"
+          label="Delivery partners waiting"
           value={m.volunteers_pending}
           hint={`${m.volunteers_verified} verified`}
           tone={m.volunteers_pending > 0 ? 'warn' : 'default'}

@@ -10,6 +10,7 @@ import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { t } from '@/lib/i18n'
+import { ROLE_LABEL } from '@/lib/roles'
 
 /** The frame every signed-in screen sits in. */
 export function AppShell({
@@ -123,7 +124,7 @@ export function AppShell({
             {subtitle ? <p className="mt-1 text-pretty text-muted-foreground">{subtitle}</p> : null}
             {user ? (
               <p className="mt-1 font-mono text-xs text-muted-foreground">
-                {user.fullName} · {user.role}
+                {user.fullName} · {ROLE_LABEL[user.role]}
               </p>
             ) : null}
           </div>

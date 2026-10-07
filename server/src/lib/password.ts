@@ -1,7 +1,21 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
-import { promisify } from 'node:util'
+import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto'
 
-const scryptAsync = promisify(scrypt)
+/**
+ * promisify(scrypt) is typed as the three-argument overload, so the cost
+ * parameters below were a type error the whole time the server went
+ * unchecked. They do apply at runtime — a too-small maxmem throws — but a
+ * wrapper states that in the types rather than leaving it to be re-proved.
+ */
+function scryptAsync(
+  password: string,
+  salt: Buffer,
+  keylen: number,
+  options: ScryptOptions,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, keylen, options, (error, key) => (error ? reject(error) : resolve(key)))
+  })
+}
 
 /**
  * scrypt from node:crypto rather than argon2 or bcrypt — both of those are

@@ -26,7 +26,7 @@ export default function DonorHome() {
     mutationFn: ({ id, method }: { id: string; method: 'volunteer' | 'courier' }) =>
       api.post(`/donations/${id}/delivery`, { method }),
     onSuccess: async () => {
-      setNotice('Done — a volunteer nearby can now offer to collect it.')
+      setNotice('Done — a delivery partner nearby can now offer to collect it.')
       await queryClient.invalidateQueries({ queryKey: ['donations'] })
     },
     onError: (error) =>
@@ -127,7 +127,7 @@ export default function DonorHome() {
                         >
                           {chooseDelivery.isPending && busyId === donation.id
                             ? 'Asking…'
-                            : 'A volunteer'}
+                            : 'A delivery partner'}
                         </Button>
                         <Button
                           size="sm"

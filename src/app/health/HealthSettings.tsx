@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/app-shell'
-import { REQUIRED_DISCLOSURE } from '@/components/health/disclosure'
+import { ConsentTerms } from '@/components/health/consent-gate'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ApiError } from '@/lib/api'
-import { healthApi } from '@/lib/health-client'
+import { healthApi, profileBody } from '@/lib/health-client'
 import { useSession } from '@/hooks/use-session'
 import {
   BLOOD_GROUPS,
@@ -70,12 +70,14 @@ export default function HealthSettings() {
 
   const save = useMutation({
     mutationFn: () =>
-      healthApi.savePreferences({
-        categories,
-        bloodGroup: bloodGroup === 'none' ? null : bloodGroup,
-        notify,
-        shareLocation,
-      }),
+      healthApi.savePreferences(
+        profileBody(data?.profile, {
+          categories,
+          bloodGroup: bloodGroup === 'none' ? null : bloodGroup,
+          notify,
+          shareLocation,
+        }),
+      ),
     onSuccess: async () => {
       setSaved(true)
       setError(null)
@@ -124,20 +126,7 @@ export default function HealthSettings() {
               </Badge>
             </div>
 
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                We use your area only to work out which requests are near you. Your exact location
-                is never shown to an institution or to anybody else.
-              </li>
-              <li>Only organisations we have verified can post a request or send you an alert.</li>
-              <li>
-                An institution learns your name and phone number only when you choose to say yes to
-                a request — never before.
-              </li>
-              <li>You can withdraw this at any time, from this screen.</li>
-            </ul>
-
-            <p className="text-xs text-muted-foreground">{REQUIRED_DISCLOSURE}</p>
+            <ConsentTerms />
 
             {consented ? (
               <Button
@@ -183,7 +172,7 @@ export default function HealthSettings() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="blood-group">Your blood group (optional)</Label>
+              <Label htmlFor="blood-group">Your blood group (required for blood)</Label>
               <Select
                 value={bloodGroup}
                 onValueChange={(v) => {
@@ -195,7 +184,7 @@ export default function HealthSettings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Prefer not to say</SelectItem>
+                  <SelectItem value="none">Not given</SelectItem>
                   {BLOOD_GROUPS.map((g) => (
                     <SelectItem key={g} value={g}>
                       {g}
@@ -206,14 +195,14 @@ export default function HealthSettings() {
               {/* Brief §6: no eligibility checks. Saying what this is for stops
                   it reading as a medical screening question. */}
               <p className="text-xs text-muted-foreground">
-                Only used so we do not alert you about a group that is not yours. We never decide
-                whether you can donate — the institution does that, in person.
+                Shown on the alerts you answer. We never decide whether you can donate — the
+                hospital does that, in person. Age and last donation are on the Blood screen.
               </p>
             </div>
 
             <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
               <span className="text-sm">
-                Alert me about nearby requests
+                Send me blood alerts
                 <span className="block text-xs text-muted-foreground">
                   Off means no messages. You can still look at this screen.
                 </span>
@@ -229,9 +218,9 @@ export default function HealthSettings() {
 
             <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
               <span className="text-sm">
-                Use my area to find nearby requests
+                Use my area to show how far a hospital is
                 <span className="block text-xs text-muted-foreground">
-                  Off means we cannot match you, so you will see nothing.
+                  Your exact location is never shown to anybody either way.
                 </span>
               </span>
               <Switch

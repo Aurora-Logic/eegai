@@ -20,8 +20,11 @@ profileRoutes.get('/', async (c) => {
 
   const data = await withActor(actor, async (tx) => {
     const { rows: profiles } = await tx.query(
-      `select p.id, p.full_name, p.phone, p.role, p.pincode, p.lat, p.lng, p.created_at
-       from public.profiles p where p.user_id = app.current_user_id()`,
+      // Coordinates through app.my_location(): the app role cannot select
+      // them from profiles (migration 027).
+      `select p.id, p.full_name, p.phone, p.role, p.pincode, l.lat, l.lng, p.created_at
+       from public.profiles p cross join app.my_location() l
+       where p.user_id = app.current_user_id()`,
     )
     const profile = profiles[0]
     if (!profile) return null
@@ -132,11 +135,18 @@ profileRoutes.patch('/', async (c) => {
       await tx.query(
         `update public.profiles
          set full_name = coalesce($1, full_name),
-             pincode = coalesce($2, pincode),
-             lat = coalesce($3, lat),
-             lng = coalesce($4, lng)
+             pincode = coalesce($2, pincode)
          where user_id = app.current_user_id()`,
-        [p.fullName ?? null, p.pincode ?? null, p.lat ?? null, p.lng ?? null],
+        [p.fullName ?? null, p.pincode ?? null],
+      )
+    }
+
+    // A separate statement, and only when coordinates arrived: `coalesce($n,
+    // lat)` reads the column, and the app role may write it but not read it.
+    if (p.lat !== undefined && p.lng !== undefined) {
+      await tx.query(
+        `update public.profiles set lat = $1, lng = $2 where user_id = app.current_user_id()`,
+        [p.lat, p.lng],
       )
     }
 

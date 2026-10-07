@@ -42,7 +42,11 @@ adminRoutes.get('/metrics', async (c) => {
         (select count(*) from public.health_requests)::int as needs_total,
         (select count(*) from public.health_requests where status = 'open')::int as needs_open,
         (select count(*) from public.health_requests where status = 'fulfilled')::int as needs_fulfilled,
-        (select count(*) from public.health_responses where withdrawn_at is null)::int as offers,
+        (select count(*) from public.health_responses where withdrawn_at is null and available)::int as offers,
+        (select count(*) from public.health_responses where withdrawn_at is null and not available)::int as not_available,
+        (select count(*) from public.ngos where org_type = 'hospital')::int as hospitals,
+        (select count(*) from public.health_offers where status in ('submitted','in_review'))::int as donor_offers_open,
+        (select count(*) from public.health_offers where status = 'completed')::int as donor_offers_completed,
         (select count(*) from public.donor_health_profiles
           where consented_at is not null and consent_withdrawn_at is null)::int as consented_donors,
         -- A request nobody answered is the number that should worry somebody.
@@ -79,6 +83,7 @@ adminRoutes.get('/ngos', async (c) => {
               n.accepts_categories::text[] as accepts_categories,
               n.health_categories::text[] as health_categories,
               n.visit_instructions,
+              n.org_type, n.terms_accepted_at,
               n.is_accepting,
               n.contact_person, n.contact_phone,
               n.created_at,
@@ -480,7 +485,7 @@ adminRoutes.get('/health-requests', async (c) => {
   const rows = await withActor(actor, async (tx) => {
     const { rows } = await tx.query(
       `select hr.id, hr.institution_name, hr.category, hr.blood_group, hr.urgency,
-              hr.donors_needed, hr.responses_count, hr.radius_km, hr.status,
+              hr.donors_needed, hr.responses_count, hr.not_available_count, hr.radius_km, hr.status,
               hr.note, hr.pincode, hr.created_at, hr.expires_at, hr.closed_at,
               n.verification_status as institution_status
        from public.health_requests hr
@@ -513,6 +518,71 @@ adminRoutes.post('/health-requests/:id/close', async (c) => {
   )
 
   log.info('health request closed by admin', { id: c.req.param('id'), status })
+  return c.json({ ok: true })
+})
+
+/**
+ * Hair and breast-milk offers, across every partner.
+ *
+ * "Everything verified by admin": an operator can see an offer that has sat
+ * unanswered and move it on the partner's behalf after ringing them. The same
+ * function the partner uses does the move, so the allowed steps are identical.
+ */
+adminRoutes.get('/health-offers', async (c) => {
+  const actor = actorOf(c)
+  const status = c.req.query('status') ?? 'open'
+
+  const rows = await withActor(actor, async (tx) => {
+    const { rows } = await tx.query(
+      `select o.id, o.category, o.status, o.details, o.photo_path, o.org_note,
+              o.created_at, o.decided_at,
+              n.name as organisation, n.contact_phone as organisation_phone,
+              p.full_name as donor_name, p.phone as donor_phone
+       from public.health_offers o
+       join public.ngos n on n.id = o.ngo_id
+       join public.profiles p on p.id = o.profile_id
+       where case $1
+               when 'open' then o.status in ('submitted', 'in_review')
+               when 'all' then true
+               else o.status::text = $1
+             end
+       order by o.created_at desc
+       limit 200`,
+      [status],
+    )
+    return rows
+  })
+
+  return c.json({ offers: rows })
+})
+
+adminRoutes.post('/health-offers/:id/decide', async (c) => {
+  const actor = actorOf(c)
+  const body = await c.req.json().catch(() => null)
+  const status = body?.status
+  const note = typeof body?.note === 'string' ? body.note.slice(0, 500) : null
+
+  if (!['in_review', 'accepted', 'declined', 'completed'].includes(status)) {
+    return c.json({ error: 'Choose in review, accepted, declined or completed.' }, 400)
+  }
+
+  try {
+    await withActor(actor, (tx) =>
+      tx.query('select app.decide_health_offer($1, $2::public.offer_status, $3)', [
+        c.req.param('id'),
+        status,
+        note,
+      ]),
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (/cannot become|say why|no such offer/i.test(message)) {
+      return c.json({ error: message }, 409)
+    }
+    throw error
+  }
+
+  log.info('health offer moved by admin', { id: c.req.param('id'), status })
   return c.json({ ok: true })
 })
 

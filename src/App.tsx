@@ -38,6 +38,9 @@ const Guide = lazy(() => import('./app/Guide'))
 // who only ever gives clothes never downloads it.
 const DonorNeeds = lazy(() => import('./app/health/DonorNeeds'))
 const DonorResponses = lazy(() => import('./app/health/DonorResponses'))
+const BloodDonor = lazy(() => import('./app/health/BloodDonor'))
+const HairDonor = lazy(() => import('./app/health/HairDonor'))
+const MilkDonor = lazy(() => import('./app/health/MilkDonor'))
 const HealthSettings = lazy(() => import('./app/health/HealthSettings'))
 const Inbox = lazy(() => import('./app/health/Inbox'))
 const InstitutionNeeds = lazy(() => import('./app/health/InstitutionNeeds'))
@@ -144,6 +147,32 @@ export default function App() {
             element={
               <ProtectedRoute allow={['donor']}>
                 <DonorNeeds />
+              </ProtectedRoute>
+            }
+          />
+          {/* The spec's donation types, one screen each. Material is the goods
+              wall at /donor. */}
+          <Route
+            path="/health/blood"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <BloodDonor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/health/hair"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <HairDonor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/health/milk"
+            element={
+              <ProtectedRoute allow={['donor']}>
+                <MilkDonor />
               </ProtectedRoute>
             }
           />

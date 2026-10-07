@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import imageCompression from 'browser-image-compression'
 import { Check, MapPin, PackageCheck, TriangleAlert, X } from 'lucide-react'
 import { AppShell } from '@/components/shared/app-shell'
 import { HandoverCodes } from '@/components/shared/handover-codes'
@@ -14,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError, api, photoUrl } from '@/lib/api'
+import { compressPhoto } from '@/lib/compress'
 import { cn } from '@/lib/utils'
 import { t } from '@/lib/i18n'
 import type { Condition, DonationStatus } from '@/lib/validation/donation'
@@ -104,12 +104,8 @@ export default function NgoItem() {
     setUploading(true)
     setError(null)
     try {
-      const compressed = await imageCompression(file, {
-        maxWidthOrHeight: 1600,
-        maxSizeMB: 0.4,
-        useWebWorker: true,
-      })
-      const { path } = await api.upload<{ path: string }>('/uploads', compressed as File, {
+      const compressed = await compressPhoto(file)
+      const { path } = await api.upload<{ path: string }>('/uploads', compressed, {
         kind: 'acknowledgement',
       })
       setPhotoPath(path)

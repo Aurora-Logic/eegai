@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import imageCompression from 'browser-image-compression'
 import { Check, Trash2, X } from 'lucide-react'
 import { StepMark } from '@/components/illustrations/steps'
 import { AppShell } from '@/components/shared/app-shell'
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { AREA_BY_PINCODE, areaOptions } from '@/lib/coimbatore'
+import { compressPhoto } from '@/lib/compress'
 import { api, ApiError } from '@/lib/api'
 import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -121,12 +121,8 @@ export default function PostItem() {
       for (const file of files.slice(0, room)) {
         // Compressed before it ever leaves the phone — most donors are on
         // patchy 4G and a 6MB camera shot would simply never arrive.
-        const compressed = await imageCompression(file, {
-          maxWidthOrHeight: 1600,
-          maxSizeMB: 0.4,
-          useWebWorker: true,
-        })
-        const { path } = await api.upload<{ path: string }>('/uploads', compressed as File)
+        const compressed = await compressPhoto(file)
+        const { path } = await api.upload<{ path: string }>('/uploads', compressed)
         setDraft((d) => ({ ...d, photoPaths: [...d.photoPaths, path] }))
       }
     } catch (e) {

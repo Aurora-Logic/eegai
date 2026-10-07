@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { GUIDE } from '@/lib/guide'
+import { ROLE_LABEL } from '@/lib/roles'
 import { TRANSITIONS, type Role } from '@/lib/state-machine'
 import { DONATION_STATUSES, type DonationStatus } from '@/lib/validation/donation'
 import { cn } from '@/lib/utils'
@@ -22,19 +23,12 @@ const STATUS_COPY: Record<DonationStatus, string> = {
   posted: 'On the wall. Visible to nearby organisations in matching categories.',
   claimed:
     'An organisation has asked for it. Invisible to everyone else. 48h to arrange collection.',
-  scheduled: 'A volunteer took a slot, or a courier has an AWB.',
+  scheduled: 'A delivery partner took a slot, or a courier has an AWB.',
   in_transit: 'Collected. The donor read their code out.',
   received: 'At the organisation. The delivery code was read out.',
   acknowledged: 'Confirmed with a photo and a note. The donor can download a record.',
   rejected: 'Sent back with a written reason and a photo. Both shown to the donor.',
   cancelled: 'Taken off the wall. Nothing is deleted; the trail stays.',
-}
-
-const ROLE_LABEL: Record<Role, string> = {
-  donor: 'Donor',
-  ngo: 'Organisation',
-  volunteer: 'Volunteer',
-  admin: 'Admin',
 }
 
 const TERMINAL = new Set<DonationStatus>(['acknowledged', 'rejected', 'cancelled'])
@@ -137,27 +131,35 @@ export function ProductPanel() {
             ['Claims expire', 'Unarranged after 48h, an item goes back on the wall automatically.'],
             [
               'Codes are spoken',
-              'Nobody can read a code meant for someone else, and a volunteer never sees one.',
+              'Nobody can read a code meant for someone else, and a delivery partner never sees one.',
             ],
             [
               'Nothing is deleted',
               'Removing an item cancels it. Disabling an account stops sign-in. The trail survives both.',
             ],
             [
-              'Two lanes, one login',
-              'Blood, hair and breast milk are a coordination layer — the donation happens at the institution and this app never touches it. Clothes and books are the wall, where a volunteer moves things. Nothing crosses between them.',
+              'Four donation types, one login',
+              'Blood waits for a hospital alert. Hair and breast milk are offered by the donor to a partner they choose. Material is the wall, where a delivery partner moves things. EEGAI connects; the organisation screens and collects.',
             ],
             [
-              'A donor location never reaches an institution',
-              'Matching happens inside the database and returns a count. An institution gets a name and a phone number when somebody says yes, and nothing else — the schema cannot give it a location.',
+              'A blood alert goes to every blood donor',
+              'Every registered, consenting blood donor who has alerts and availability on is told, whatever their group or distance. Each answers Available or Not available.',
             ],
             [
-              'Only approved institutions can ask',
-              'An admin grants blood, hair or milk per organisation from the Organisations tab. Nobody can grant it to themselves.',
+              'A hospital sees a donor only after they say Available',
+              'Then it gets name, phone, age, gender, group and last donation date — never an address or a location. Not available shares nothing and is only counted.',
+            ],
+            [
+              'A hospital is an organisation with terms',
+              'It registers as an organisation of type hospital, accepts the terms, and goes through the same verification. Blood is granted per organisation from the Organisations tab.',
+            ],
+            [
+              'Hair and milk offers are the partner’s to decide',
+              'Only the chosen partner (or an admin) can move an offer, and declining needs a reason the donor sees. Clean-and-dry hair and all seven milk points are enforced in the database.',
             ],
             [
               'No medical judgements anywhere',
-              'Blood groups filter alerts so an O- request does not page every A+ donor. Whether somebody can actually donate is decided at the institution, in person.',
+              'Age, gender and last donation date are shown, never computed on. Whether somebody can actually donate is decided by the organisation, in person.',
             ],
             [
               'Roles are asked for, never taken',

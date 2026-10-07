@@ -15,7 +15,7 @@ import { ProductPanel } from './panels/ProductPanel'
 const TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'ngos', label: 'Organisations' },
-  { value: 'volunteers', label: 'Volunteers' },
+  { value: 'volunteers', label: 'Delivery partners' },
   { value: 'items', label: 'Items' },
   // The health lane's own queue. Named for what an institution posts rather
   // than for the lane, because that is the word the rest of the product uses.

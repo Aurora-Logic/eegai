@@ -6,6 +6,7 @@ import { t } from '@/lib/i18n'
 import { FlowDiagram } from '@/components/shared/flow-diagram'
 import { flowsFor } from '@/lib/flows'
 import { GUIDE } from '@/lib/guide'
+import { ROLE_LABEL } from '@/lib/roles'
 import type { Role } from '@/lib/state-machine'
 
 /**
@@ -26,10 +27,7 @@ export default function Guide() {
   const steps = GUIDE[role]
 
   return (
-    <AppShell
-      title={t('guide.title')}
-      subtitle={`For ${role === 'ngo' ? 'organisations' : `${role}s`}.`}
-    >
+    <AppShell title={t('guide.title')} subtitle={`For ${ROLE_LABEL[role].toLowerCase()}s.`}>
       {/* The shape of the thing first, then the detail. "How does this work"
           is a question about order, and a numbered list of features never
           answers it — so the diagram leads and the steps explain. */}
@@ -59,7 +57,8 @@ export default function Guide() {
           <strong className="font-medium text-foreground">
             Handover codes are spoken, never sent.
           </strong>{' '}
-          Nobody can read a code meant for someone else, and a volunteer never sees one at all.
+          Nobody can read a code meant for someone else, and a delivery partner never sees one at
+          all.
         </p>
         <p>
           <strong className="font-medium text-foreground">No money changes hands.</strong> There is
