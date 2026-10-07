@@ -57,7 +57,7 @@ export function AddItemDialog() {
   const [draft, setDraft] = useState({
     title: '',
     description: '',
-    category: 'clothes' as Category,
+    category: 'clothing' as Category,
     quantity: 1,
     condition: 'good' as Condition,
     pickupAddress: '',
@@ -99,7 +99,7 @@ export function AddItemDialog() {
     setDraft({
       title: '',
       description: '',
-      category: 'clothes',
+      category: 'clothing',
       quantity: 1,
       condition: 'good',
       pickupAddress: '',

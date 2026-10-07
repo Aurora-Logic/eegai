@@ -229,7 +229,10 @@ authRoutes.get('/me', async (c) => {
       // charity wants the wall. Left-joined and coalesced, so a donor or a
       // volunteer simply gets an empty array rather than a null to guard.
       `select p.id, p.full_name, p.phone, p.role, p.pincode, l.lat, l.lng, p.is_active,
-              coalesce(n.health_categories::text[], '{}') as health_categories
+              coalesce(n.health_categories::text[], '{}') as health_categories,
+              -- A hospital has no goods wall, so the shell has to know which
+              -- kind of organisation this is before it renders anything.
+              n.org_type
        from public.profiles p
        cross join app.my_location() l
        left join public.ngos n on n.profile_id = p.id

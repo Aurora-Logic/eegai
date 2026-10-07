@@ -17,6 +17,7 @@ import { pickupRoutes } from './routes/pickups.ts'
 import { profileRoutes } from './routes/profile.ts'
 import { shipmentRoutes, trackOpenShipments } from './routes/shipments.ts'
 import { uploadRoutes } from './routes/uploads.ts'
+import { wantedRoutes } from './routes/wanted.ts'
 
 const app = new Hono<AppEnv>()
 
@@ -50,6 +51,7 @@ app.route('/api/acknowledgements', acknowledgementRoutes)
 app.route('/api/pickups', pickupRoutes)
 app.route('/api/profile', profileRoutes)
 app.route('/api/shipments', shipmentRoutes)
+app.route('/api/wanted', wantedRoutes)
 app.route('/api/uploads', uploadRoutes)
 app.route('/api/files', uploadRoutes)
 

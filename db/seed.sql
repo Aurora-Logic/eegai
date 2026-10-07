@@ -25,11 +25,11 @@ declare
   -- Deliberately uneven, so the RLS category filter is visible on a fresh
   -- reset: signing in as NGO 4 must show a different wall from NGO 1.
   ngo_cats constant text[] := array[
-    'clothes,books,toys,education,furniture,household',
-    'clothes,toys,household',
-    'clothes,furniture',
-    'books,education',
-    'books,toys,household'
+    'clothing,books,toys_games,stationery,household_bedding,kitchen',
+    'clothing,toys_games,kitchen',
+    'clothing,household_bedding,footwear',
+    'books,stationery,art_craft',
+    'books,toys_games,kitchen,baby_child'
   ];
 
   donor_names constant text[] := array[
@@ -51,7 +51,7 @@ declare
   ];
 
   cats constant text[] := array[
-    'clothes', 'books', 'toys', 'education', 'furniture', 'household'
+    'clothing', 'books', 'toys_games', 'stationery', 'household_bedding', 'kitchen'
   ];
 
   statuses constant text[] := array[
@@ -201,13 +201,14 @@ begin
       cats[1 + (i % 6)]::public.donation_category,
       1 + (i % 5),
       (array['like_new','good','usable'])[1 + (i % 3)]::public.donation_condition,
+      -- The gate keys for each category, from src/lib/validation/donation.ts.
       (case cats[1 + (i % 6)]
-        when 'clothes' then '{"washed":true,"undamaged":true,"complete_pairs":true,"would_wear":true}'
-        when 'books' then '{"complete":true,"dry":true,"binding":true}'
-        when 'toys' then '{"all_pieces":true,"clean":true,"safe":true,"battery":true}'
-        when 'education' then '{"unused_pages":true,"complete_set":true,"working":true,"current":true}'
-        when 'furniture' then '{"structurally_sound":true,"no_pests":true,"complete_fittings":true,"ready_to_move":true}'
-        else '{"clean":true,"working":true,"complete":true,"safe":true}'
+        when 'clothing' then '{"clean":true,"wearable":true,"undamaged":true}'
+        when 'books' then '{"good_condition":true,"complete":true,"dry":true}'
+        when 'toys_games' then '{"clean":true,"usable":true,"complete":true,"undamaged":true}'
+        when 'stationery' then '{"unused":true,"functional":"na","clean":true}'
+        when 'household_bedding' then '{"clean":true,"usable":true,"undamaged":true,"no_pests":true}'
+        else '{"clean":true,"usable":true,"undamaged":true,"safe":true}'
       end)::jsonb,
       'House ' || i::text || ', Coimbatore',
       ngo_pins[1 + (i % 5)],
@@ -287,7 +288,7 @@ begin
     values (
       v_profile, 'Kovai Karunai Illam ' || (i - 5)::text, 'TN/2024/' || (2000 + i)::text,
       'Ramanathapuram, Coimbatore', '641014', 10.9903, 76.9905,
-      'pending', 30, '{clothes,books}'::public.donation_category[],
+      'pending', 30, '{clothing,books}'::public.donation_category[],
       'Kovai Karunai Illam ' || (i - 5)::text, '910000000' || i::text
     )
     returning id into v_ngo;

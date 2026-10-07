@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { CATEGORIES } from '../../../src/lib/validation/donation.ts'
 import { HEALTH_CATEGORIES } from '../../../src/lib/validation/health.ts'
 import { donationDraftSchema } from '../../../src/lib/validation/donation.ts'
 import { withActor } from '../lib/db.ts'
@@ -373,8 +374,6 @@ adminRoutes.get('/users', async (c) => {
 // means operationally.
 // ---------------------------------------------------------------------------
 
-const CATEGORIES = ['clothes', 'books', 'toys', 'education', 'furniture', 'household']
-
 const ngoPatchSchema = z.object({
   name: z.string().trim().min(2).max(200).optional(),
   registrationNumber: z.string().trim().max(100).nullable().optional(),
@@ -397,7 +396,7 @@ const ngoPatchSchema = z.object({
   visitInstructions: z.string().trim().max(500).nullable().optional(),
   // No minimum: a hospital accepts no material at all, and an NGO that only
   // takes hair should not have to tick a material category to be saved.
-  acceptsCategories: z.array(z.enum(CATEGORIES as [string, ...string[]])).optional(),
+  acceptsCategories: z.array(z.enum(CATEGORIES as unknown as [string, ...string[]])).optional(),
   orgType: z.enum(['ngo', 'hospital']).optional(),
   contactPerson: z.string().trim().max(200).nullable().optional(),
   contactPhone: z.string().trim().max(20).nullable().optional(),

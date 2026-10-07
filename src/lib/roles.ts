@@ -13,3 +13,18 @@ export const ROLE_LABEL: Record<Role, string> = {
   volunteer: 'Delivery partner',
   admin: 'Admin',
 }
+
+/**
+ * What to call the signed-in person, hospital included.
+ *
+ * A hospital and an NGO share the `ngo` role but are two different things to
+ * everyone using the product, so the header says which one you are.
+ */
+export function labelForUser(user: {
+  role: Role
+  profile?: { org_type?: 'ngo' | 'hospital' | null }
+}): string {
+  if (user.role === 'ngo' && user.profile?.org_type === 'hospital') return 'Hospital'
+  if (user.role === 'ngo') return 'NGO'
+  return ROLE_LABEL[user.role]
+}

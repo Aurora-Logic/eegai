@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, Trash2, X } from 'lucide-react'
+import { Check, Minus, Trash2, X } from 'lucide-react'
 import { StepMark } from '@/components/illustrations/steps'
 import { AppShell } from '@/components/shared/app-shell'
 import { PhotoGrid } from '@/components/shared/photo-grid'
@@ -25,6 +25,9 @@ import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   CATEGORIES,
+  CATEGORY_EXAMPLES,
+  detectCategory,
+  type GateAnswer,
   CONDITION_GATES,
   donationDraftSchema,
   type Category,
@@ -54,7 +57,7 @@ interface Draft {
   category: Category
   quantity: number
   condition: Condition
-  conditionChecklist: Record<string, boolean>
+  conditionChecklist: Record<string, GateAnswer>
   pickupAddress: string
   pincode: string
   lat?: number
@@ -62,29 +65,63 @@ interface Draft {
   photoPaths: string[]
 }
 
+/**
+ * Where the gates start for a category.
+ *
+ * The compulsory ones start at yes — the spec asks for that, and most donors
+ * are posting things that are genuinely fine. The ones that can be not
+ * applicable start unanswered, because "this does not apply" has to be a
+ * decision the donor makes, not one made for them.
+ */
+function startingAnswers(category: Category): Record<string, GateAnswer> {
+  const answers: Record<string, GateAnswer> = {}
+  for (const gate of CONDITION_GATES[category]) {
+    if (!gate.optional) answers[gate.key] = true
+  }
+  return answers
+}
+
 const EMPTY: Draft = {
   title: '',
   description: '',
-  category: 'clothes',
+  category: 'clothing',
   quantity: 1,
   condition: 'good',
-  conditionChecklist: {},
+  conditionChecklist: startingAnswers('clothing'),
   pickupAddress: '',
   pincode: '',
   photoPaths: [],
+}
+
+/** A draft pre-filled from a link, when the query says what it is for. */
+function seeded(empty: Draft, params: URLSearchParams): Draft {
+  const category = params.get('category')
+  const title = params.get('title')
+  const known = CATEGORIES.includes(category as Category) ? (category as Category) : null
+  if (!known && !title) return empty
+  return {
+    ...empty,
+    ...(known ? { category: known, conditionChecklist: startingAnswers(known) } : {}),
+    ...(title ? { title: title.slice(0, 120) } : {}),
+  }
 }
 
 export default function PostItem() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [step, setStep] = useState(0)
+  // Handed over from "I can give this" on an organisation's request. It seeds
+  // an empty draft only: somebody mid-way through posting a sofa should not
+  // have it renamed to school bags by a link they tapped by accident.
+  const [params] = useSearchParams()
   const [draft, setDraft] = useState<Draft>(() => {
     // A dropped connection must not cost someone their whole post (PLAN.md §M2).
     try {
       const saved = localStorage.getItem(DRAFT_KEY)
-      return saved ? { ...EMPTY, ...(JSON.parse(saved) as Partial<Draft>) } : EMPTY
+      if (saved) return { ...EMPTY, ...(JSON.parse(saved) as Partial<Draft>) }
+      return seeded(EMPTY, params)
     } catch {
-      return EMPTY
+      return seeded(EMPTY, params)
     }
   })
   const [uploading, setUploading] = useState(false)
@@ -131,8 +168,17 @@ export default function PostItem() {
     }
   }
 
+  // What the name points at, offered rather than applied: a wrong guess filed
+  // silently would send the item to the wrong organisations.
+  const suggestion = detectCategory(draft.title)
   const gates = CONDITION_GATES[draft.category]
-  const failedGates = gates.filter((g) => draft.conditionChecklist[g.key] !== true)
+  // A gate passes on yes, or on not-applicable where the gate offers it.
+  // Unanswered is not a pass: the compulsory ones start at yes, so the only
+  // way to be unanswered is a question the donor was asked to decide.
+  const failedGates = gates.filter((g) => {
+    const answer = draft.conditionChecklist[g.key]
+    return !(answer === true || (g.optional === true && answer === 'na'))
+  })
   const parsed = donationDraftSchema.safeParse(draft)
 
   const canAdvance = [
@@ -227,8 +273,14 @@ export default function PostItem() {
             <Label htmlFor="category">{t('post.category')}</Label>
             <Select
               value={draft.category}
-              // Changing category invalidates the answers to the old gates.
-              onValueChange={(v) => patch({ category: v as Category, conditionChecklist: {} })}
+              // Changing category invalidates the answers to the old gates, and
+              // is a decision: it stops the name steering it from then on.
+              onValueChange={(v) =>
+                patch({
+                  category: v as Category,
+                  conditionChecklist: startingAnswers(v as Category),
+                })
+              }
             >
               <SelectTrigger id="category">
                 <SelectValue />
@@ -241,6 +293,24 @@ export default function PostItem() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">{CATEGORY_EXAMPLES[draft.category]}</p>
+            {suggestion && suggestion !== draft.category ? (
+              <p className="text-sm">
+                Looks like {t(`category.${suggestion}` as StringKey).toLowerCase()}.{' '}
+                <button
+                  type="button"
+                  className="underline underline-offset-4"
+                  onClick={() =>
+                    patch({
+                      category: suggestion,
+                      conditionChecklist: startingAnswers(suggestion),
+                    })
+                  }
+                >
+                  Use that instead
+                </button>
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -278,19 +348,17 @@ export default function PostItem() {
         <section className="space-y-3">
           {gates.map((gate) => {
             const answer = draft.conditionChecklist[gate.key]
+            const answerGate = (value: GateAnswer) =>
+              patch({ conditionChecklist: { ...draft.conditionChecklist, [gate.key]: value } })
             return (
               <div key={gate.key} className="hairline rounded-sm bg-card p-3">
                 <p className="font-medium">{gate.question}</p>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
                     variant={answer === true ? 'default' : 'outline'}
-                    onClick={() =>
-                      patch({
-                        conditionChecklist: { ...draft.conditionChecklist, [gate.key]: true },
-                      })
-                    }
+                    onClick={() => answerGate(true)}
                   >
                     <Check aria-hidden /> Yes
                   </Button>
@@ -298,18 +366,31 @@ export default function PostItem() {
                     type="button"
                     size="sm"
                     variant={answer === false ? 'destructive' : 'outline'}
-                    onClick={() =>
-                      patch({
-                        conditionChecklist: { ...draft.conditionChecklist, [gate.key]: false },
-                      })
-                    }
+                    onClick={() => answerGate(false)}
                   >
                     <X aria-hidden /> No
                   </Button>
+                  {/* Only where the question can genuinely not apply — a pencil
+                      has no packaging. Never the starting answer. */}
+                  {gate.optional ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={answer === 'na' ? 'secondary' : 'outline'}
+                      onClick={() => answerGate('na')}
+                    >
+                      <Minus aria-hidden /> Not applicable
+                    </Button>
+                  ) : null}
                 </div>
                 {answer === false ? (
                   <p role="alert" className="mt-2 text-sm text-destructive">
                     {gate.blocks}
+                  </p>
+                ) : null}
+                {answer === undefined ? (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Choose one — it does not have to be yes.
                   </p>
                 ) : null}
               </div>

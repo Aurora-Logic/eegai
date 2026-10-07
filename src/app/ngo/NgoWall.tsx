@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { hasGoodsWall, useSession } from '@/hooks/use-session'
+import { WantedList } from './WantedList'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Droplet } from 'lucide-react'
@@ -11,9 +14,11 @@ import { Wall, WallEmpty } from '@/components/wall/wall'
 import { ApiError, api } from '@/lib/api'
 import { t } from '@/lib/i18n'
 
-type Tab = 'wall' | 'claimed'
+type Tab = 'wall' | 'claimed' | 'wanted'
 
 export default function NgoWall() {
+  const { user } = useSession()
+
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('wall')
   // Ids mid-animation. The brick stays mounted until its lift-off finishes,
@@ -62,12 +67,24 @@ export default function NgoWall() {
     },
   })
 
+  // A hospital has no goods wall. It registered to post blood alerts, its
+  // accepts list is empty by design, and an empty wall with no explanation
+  // reads as a broken screen rather than a deliberate one. After the hooks,
+  // because a conditional hook is a worse bug than the one this prevents.
   const active = tab === 'wall' ? wall : claimed
   const donations = active.data?.donations ?? []
 
+  if (user && !hasGoodsWall(user)) return <Navigate to="/ngo/needs" replace />
+
   return (
     <AppShell
-      title={tab === 'wall' ? t('ngo.wallTitle') : t('ngo.claimsTitle')}
+      title={
+        tab === 'wall'
+          ? t('ngo.wallTitle')
+          : tab === 'claimed'
+            ? t('ngo.claimsTitle')
+            : 'What we need'
+      }
       subtitle={tab === 'wall' ? t('ngo.wallSubtitle') : undefined}
       actions={
         <div className="flex flex-wrap gap-2">
@@ -88,6 +105,12 @@ export default function NgoWall() {
           >
             {t('ngo.tabClaims')}
           </Button>
+          <Button
+            variant={tab === 'wanted' ? 'default' : 'outline'}
+            onClick={() => setTab('wanted')}
+          >
+            What we need
+          </Button>
         </div>
       }
     >
@@ -100,7 +123,9 @@ export default function NgoWall() {
         </p>
       ) : null}
 
-      {active.isLoading ? (
+      {tab === 'wanted' ? (
+        <WantedList />
+      ) : active.isLoading ? (
         <p className="text-muted-foreground">Loading the wall.</p>
       ) : active.isError ? (
         <p role="alert" className="text-destructive">

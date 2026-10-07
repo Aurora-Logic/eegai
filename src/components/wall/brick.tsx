@@ -4,7 +4,7 @@ import { ImageOff, Images } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { photoUrl } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { t, type StringKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { DonationStatus, Category, Condition } from '@/lib/validation/donation'
 
@@ -93,7 +93,7 @@ export function Brick({
 
         {/* The kraft tag, pinned to the corner of the tile. */}
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-          <Badge>{donation.category}</Badge>
+          <Badge>{t(`category.${donation.category}` as StringKey)}</Badge>
           <Badge>{CONDITION_LABEL[donation.condition]}</Badge>
         </div>
 
